@@ -14,8 +14,8 @@ import {
 } from "./types";
 import type {
     CitationQuote,
-    RtpCitationAnnotation,
-    RtpEditAnnotation,
+    AppCitationAnnotation,
+    AppEditAnnotation,
 } from "./types";
 
 function isDocxFilename(name: string): boolean {
@@ -31,10 +31,10 @@ function isDocxFilename(name: string): boolean {
  */
 export type DocPanelMode =
     | { kind: "document" }
-    | { kind: "citation"; citation: RtpCitationAnnotation }
+    | { kind: "citation"; citation: AppCitationAnnotation }
     | {
           kind: "edit";
-          edit: RtpEditAnnotation;
+          edit: AppEditAnnotation;
           /**
            * True while an accept/reject request for this exact edit is in
            * flight. Scoped per-edit (not per-document) so sibling edits on
@@ -206,7 +206,7 @@ function CitationHeader({
     filename,
     isReloading,
 }: {
-    citation: RtpCitationAnnotation;
+    citation: AppCitationAnnotation;
     documentId: string;
     versionId: string | null;
     filename: string;
@@ -307,7 +307,7 @@ function EditResolveButtons({
     onResolved,
     onError,
 }: {
-    edit: RtpEditAnnotation;
+    edit: AppEditAnnotation;
     /**
      * True while an accept/reject for any edit on this document is in
      * flight (triggered from here, the inline EditCard, the bulk bar, or

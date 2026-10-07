@@ -267,7 +267,7 @@
 }
 
 /* Onboarding tour (driver.js) */
-.rtp-tour-popover.driver-popover {
+.capscreen-tour-popover.driver-popover {
     max-width: 360px;
     border-radius: 12px;
     border: 1px solid #e5e7eb;
@@ -276,7 +276,7 @@
     color: #111827;
 }
 
-.rtp-tour-popover .driver-popover-title {
+.capscreen-tour-popover .driver-popover-title {
     font-family: var(--font-eb-garamond), Georgia, serif;
     font-size: 1.25rem;
     font-weight: 500;
@@ -284,18 +284,18 @@
     color: #111827;
 }
 
-.rtp-tour-popover .driver-popover-description {
+.capscreen-tour-popover .driver-popover-description {
     font-size: 0.875rem;
     line-height: 1.55;
     color: #4b5563;
 }
 
-.rtp-tour-popover .driver-popover-progress-text {
+.capscreen-tour-popover .driver-popover-progress-text {
     font-size: 0.75rem;
     color: #9ca3af;
 }
 
-.rtp-tour-popover .driver-popover-navigation-btns button {
+.capscreen-tour-popover .driver-popover-navigation-btns button {
     border-radius: 8px;
     font-size: 0.8125rem;
     font-weight: 500;
@@ -303,29 +303,29 @@
     text-shadow: none;
 }
 
-.rtp-tour-popover .driver-popover-next-btn,
-.rtp-tour-popover .driver-popover-done-btn {
+.capscreen-tour-popover .driver-popover-next-btn,
+.capscreen-tour-popover .driver-popover-done-btn {
     background-color: #111827;
     color: #fff;
     border: none;
 }
 
-.rtp-tour-popover .driver-popover-next-btn:hover,
-.rtp-tour-popover .driver-popover-done-btn:hover {
+.capscreen-tour-popover .driver-popover-next-btn:hover,
+.capscreen-tour-popover .driver-popover-done-btn:hover {
     background-color: #1f2937;
 }
 
-.rtp-tour-popover .driver-popover-prev-btn {
+.capscreen-tour-popover .driver-popover-prev-btn {
     background-color: #fff;
     color: #374151;
     border: 1px solid #e5e7eb;
 }
 
-.rtp-tour-popover .driver-popover-close-btn {
+.capscreen-tour-popover .driver-popover-close-btn {
     color: #9ca3af;
 }
 
-.rtp-tour-popover .driver-popover-close-btn:hover {
+.capscreen-tour-popover .driver-popover-close-btn:hover {
     color: #374151;
 }
 

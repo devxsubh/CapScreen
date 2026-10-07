@@ -9,9 +9,8 @@ export type EmailTokenType =
 export const VERIFY_EMAIL_EXPIRY_HOURS = 24;
 export const PASSWORD_RESET_EXPIRY_HOURS = 1;
 
-const DEFAULT_APP_NAME = "RTP Global VC Screener";
-const DEFAULT_LOGO_URL =
-  "https://rtp.vc/wp-content/uploads/2023/03/rtp_logo_blackRGB-01.svg";
+const DEFAULT_APP_NAME = "CapScreen";
+const DEFAULT_LOGO_PATH = "/icon.svg";
 
 export function emailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY?.trim());
@@ -40,7 +39,7 @@ export function getFrontendUrl(): string {
 }
 
 export function getEmailLogoUrl(): string {
-  return process.env.EMAIL_LOGO_URL?.trim() || DEFAULT_LOGO_URL;
+  return process.env.EMAIL_LOGO_URL?.trim() || `${getFrontendUrl()}${DEFAULT_LOGO_PATH}`;
 }
 
 export function logEmailStartupWarnings(): void {

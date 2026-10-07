@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Building2, Folder, Search, X } from "lucide-react";
-import type { RtpProject } from "./types";
+import type { AppProject } from "./types";
 
 interface Props {
-    projects: RtpProject[];
+    projects: AppProject[];
     loading: boolean;
     selectedId: string | null;
     onSelect: (id: string | null) => void;

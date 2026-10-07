@@ -1,4 +1,4 @@
-# Compliance Platform Patterns — Reference for RTP Global
+# Compliance Platform Patterns — Reference for CapScreen
 
 Use this when implementing chat-first legal/compliance features in the VC screener.
 
@@ -8,7 +8,7 @@ Use this when implementing chat-first legal/compliance features in the VC screen
 
 - **Empty state:** animated logo + serif greeting + rich `ChatInput` (attach docs, workflows, model toggle).
 - **Active chat:** scrollable thread, pinned composer, `PreResponseWrapper` for tool/reasoning steps, side panel for structured artifacts (graphs, tables, doc viewer).
-- **RTP Global mapping:** `InitialView` + `ChatView`; screener results → `ScreeningResultsPanel` (React Flow graph + risk table).
+- **CapScreen mapping:** `InitialView` + `ChatView`; screener results → `ScreeningResultsPanel` (React Flow graph + risk table).
 
 ---
 
@@ -23,7 +23,7 @@ while stop_reason == tool_use:
 return final text (+ structured artifacts)
 ```
 
-RTP Global implementation: `backend/src/lib/llm/agent.ts` + `createToolExecutor()`.
+CapScreen implementation: `backend/src/lib/llm/agent.ts` + `createToolExecutor()`.
 
 **When adding a tool:**
 
@@ -39,7 +39,7 @@ RTP Global implementation: `backend/src/lib/llm/agent.ts` + `createToolExecutor(
 
 Workflows = markdown system prompts users attach via `[Workflow: title (id: …)]`.
 
-RTP Global today:
+CapScreen today:
 
 - UI: `AssistantWorkflowModal`, `builtinWorkflows.ts`
 - **Target:** screener workflows, e.g.:
@@ -53,7 +53,7 @@ Wire by: workflow selection → prepend marker to user message → chat system p
 
 ## 4. Memory
 
-| Layer | RTP Global (current) | RTP Global (target) |
+| Layer | CapScreen (current) | CapScreen (target) |
 |---|---|---|
 | Conversation DB | Client-held messages + MongoDB `lastScreeningResult` per startup | Persist chats per startup in MongoDB |
 | Agent memory files | `.claude/agent-memory/` | Same — compliance playbooks learned per firm |
@@ -65,7 +65,7 @@ Wire by: workflow selection → prepend marker to user message → chat system p
 
 Pipeline: ingest → chunk → embed → vector store → hybrid retrieve → cite with substring validation.
 
-RTP Global extensions:
+CapScreen extensions:
 
 - **Structured retrieval:** screening results are already structured — tools are the retrieval layer.
 - **Document RAG:** add for PDF policy docs; citations must pass `chunkText.includes(quote)` check.

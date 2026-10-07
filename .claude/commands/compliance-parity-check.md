@@ -1,4 +1,4 @@
-# /compliance-parity-check — Audit RTP Global Platform Completeness
+# /compliance-parity-check — Audit CapScreen Platform Completeness
 
 Compare this repo against the target compliance-platform patterns (chat-first UI, agent tools, memory, RAG) and produce a gap report the user can prioritize.
 
@@ -28,7 +28,7 @@ Compare this repo against the target compliance-platform patterns (chat-first UI
 ### 3. Output report
 
 ```markdown
-## RTP Global parity report — {date}
+## CapScreen parity report — {date}
 
 ### ✅ At parity
 - ...

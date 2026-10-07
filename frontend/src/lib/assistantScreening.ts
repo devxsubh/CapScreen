@@ -1,9 +1,9 @@
-import type { RtpMessage } from "@/app/components/shared/types";
+import type { AppMessage } from "@/app/components/shared/types";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 
 /** Latest persisted screening payload from assistant message events. */
 export function latestScreeningFromMessages(
-  messages: RtpMessage[],
+  messages: AppMessage[],
 ): ScreeningResult | null {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i];

@@ -14,11 +14,11 @@ import {
     streamTabularGeneration,
     updateTabularReview,
     uploadReviewDocument,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import type {
     ColumnConfig,
-    RtpDocument,
-    RtpProject,
+    AppDocument,
+    AppProject,
     TabularCell,
     TabularReview,
 } from "../shared/types";
@@ -45,9 +45,9 @@ interface Props {
 export function TRView({ reviewId, projectId }: Props) {
     const { setSidebarOpen } = useSidebar();
     const [review, setReview] = useState<TabularReview | null>(null);
-    const [project, setProject] = useState<RtpProject | null>(null);
+    const [project, setProject] = useState<AppProject | null>(null);
     const [cells, setCells] = useState<TabularCell[]>([]);
-    const [documents, setDocuments] = useState<RtpDocument[]>([]);
+    const [documents, setDocuments] = useState<AppDocument[]>([]);
     const [columns, setColumns] = useState<ColumnConfig[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
@@ -157,7 +157,7 @@ export function TRView({ reviewId, projectId }: Props) {
         }
     }
 
-    async function handleAddDocuments(newDocs: RtpDocument[]) {
+    async function handleAddDocuments(newDocs: AppDocument[]) {
         const toAdd = newDocs.filter(
             (d) => !documents.some((existing) => existing.id === d.id),
         );
@@ -198,7 +198,7 @@ export function TRView({ reviewId, projectId }: Props) {
         if (files.length === 0) return;
         setUploadingDroppedFilenames(files.map((file) => file.name));
         try {
-            const uploaded: RtpDocument[] = [];
+            const uploaded: AppDocument[] = [];
             const documentIds = documents.map((document) => document.id);
             for (const file of files) {
                 const document = await uploadReviewDocument(reviewId, file, {
@@ -411,7 +411,7 @@ export function TRView({ reviewId, projectId }: Props) {
         );
     }
 
-    function handleDocumentClick(doc: RtpDocument) {
+    function handleDocumentClick(doc: AppDocument) {
         if (!doc.id.startsWith("startup:")) return;
         const startupId = doc.id.slice("startup:".length);
         router.push(`/startups/${startupId}`);
@@ -974,7 +974,7 @@ export function TRView({ reviewId, projectId }: Props) {
                 <AddProjectDocsModal
                     open={addDocsOpen}
                     onClose={() => setAddDocsOpen(false)}
-                    onSelect={(docs: RtpDocument[]) =>
+                    onSelect={(docs: AppDocument[]) =>
                         handleAddDocuments(docs)
                     }
                     breadcrumb={[
@@ -994,7 +994,7 @@ export function TRView({ reviewId, projectId }: Props) {
                 <AddDocumentsModal
                     open={addDocsOpen}
                     onClose={() => setAddDocsOpen(false)}
-                    onSelect={(docs: RtpDocument[]) =>
+                    onSelect={(docs: AppDocument[]) =>
                         handleAddDocuments(docs)
                     }
                     breadcrumb={[

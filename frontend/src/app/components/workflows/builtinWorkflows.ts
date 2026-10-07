@@ -1,4 +1,4 @@
-import type { RtpWorkflow } from "../shared/types";
+import type { AppWorkflow } from "../shared/types";
 
 const SYSTEM = {
     user_id: null as null,
@@ -10,7 +10,7 @@ const SYSTEM = {
  * Built-in workflows for the VC sanctions & AML screener.
  * Legal-transaction templates (NDA, SPA, credit agreements, etc.) are excluded.
  */
-export const BUILT_IN_WORKFLOWS: RtpWorkflow[] = [
+export const BUILT_IN_WORKFLOWS: AppWorkflow[] = [
     // ─── Assistant workflows ────────────────────────────────────────────────────
     {
         ...SYSTEM,

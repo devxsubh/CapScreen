@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FileText } from "lucide-react";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { ChatMarkdown } from "@/app/components/shared/ChatMarkdown";
 import { PreResponseWrapper } from "@/app/components/shared/PreResponseWrapper";
 import { IcMemoDownloadCard } from "@/app/components/startups/IcMemoDownloadCard";
@@ -40,7 +40,7 @@ function ResponseStatus({ status }: { status: StatusState }) {
 
   return (
     <div className="w-full h-9 flex items-center mb-2">
-      <RtpGlobalIcon
+      <CapScreenIcon
         spin={isActive}
         done={showDone && doneVisible}
         error={isError}

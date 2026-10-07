@@ -1,4 +1,4 @@
-# CLAUDE.md — RTP Global VC Sanctions & Cap-Table Screener
+# CLAUDE.md — CapScreen VC Sanctions & Cap-Table Screener
 
 > **Claude Code:** Read `.claude/PROJECT.md` for platform capability map, custom agents, memory layout, and RAG roadmap. Slash commands live in `.claude/commands/`.
 
@@ -103,7 +103,7 @@ Env vars (root `.env` — see `.env.example`):
 
 Production secrets live in `.env.production` on EC2 (from `.env.example`); never commit. Vercel only needs `NEXT_PUBLIC_*` vars.
 
-> `pnpm dev` at the root starts both services on the host. Individual: `pnpm --filter vc-screener-backend dev` or `pnpm --filter rtp-global dev`.
+> `pnpm dev` at the root starts both services on the host. Individual: `pnpm --filter vc-screener-backend dev` or `pnpm --filter capscreen dev`.
 
 **Preview mode:** Set `ALLOW_PREVIEW_MODE=true` and `NEXT_PUBLIC_ALLOW_PREVIEW_MODE=true` in root `.env` for local dev without auth — never in production.
 
@@ -168,7 +168,7 @@ Context is carried per-request: the caller always sends `{ messages, screeningRe
 frontend/src/
   app/
     (pages)/
-      assistant/            — RTP Global compliance assistant (general + screener)
+      assistant/            — CapScreen compliance assistant (general + screener)
         page.tsx
         chat/[id]/page.tsx
       projects/
@@ -196,7 +196,7 @@ frontend/src/
                               Carries context across all turns in a session
     lib/
       screenerApi.ts        — sendChatMessage, screenCapTable (fetch wrappers)
-      rtpGlobalApi.ts       — RTP Global API (projects, chats, documents)
+      capScreenApi.ts       — CapScreen API (projects, chats, documents)
   lib/
     screenerTypes.ts        — ScreeningResult, EntityResult, OwnershipEdge types
     startupsApi.ts          — listStartups, createStartup, listCsvs, saveCsv, etc.
@@ -219,7 +219,7 @@ frontend/src/
 |---|---|---|
 | `/startups` | `StartupsPage` | List + create startups |
 | `/startups/:id` | `StartupScreenerPage` | CSV strip + full screener chat |
-| `/assistant` | RTP Global compliance assistant | Primary chat shell |
+| `/assistant` | CapScreen compliance assistant | Primary chat shell |
 | `/assistant/chat/:id` | Persisted chat view | |
 | `/screen` | Redirects → `/assistant` | Unused |
 
@@ -275,9 +275,9 @@ pnpm --filter vc-screener-backend run build
 pnpm --filter vc-screener-backend run typecheck
 
 # Frontend only
-pnpm --filter rtp-global run dev
-pnpm --filter rtp-global run build
-pnpm --filter rtp-global run lint
+pnpm --filter capscreen run dev
+pnpm --filter capscreen run build
+pnpm --filter capscreen run lint
 
 # Watchman (local dev)
 docker compose -f docker-compose.dev.yml up

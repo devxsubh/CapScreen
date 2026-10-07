@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { generateChatTitle } from "@/app/lib/rtpGlobalApi";
+import { generateChatTitle } from "@/app/lib/capScreenApi";
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 
 export function useGenerateChatTitle() {

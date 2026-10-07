@@ -6,10 +6,10 @@ import { useUserProfile } from "@/contexts/UserProfileContext";
 import { AppLogo } from "@/components/app-logo";
 import { ChatInput } from "./ChatInput";
 import { SelectAssistantProjectModal } from "./SelectAssistantProjectModal";
-import type { RtpMessage } from "../shared/types";
+import type { AppMessage } from "../shared/types";
 
 interface InitialViewProps {
-    onSubmit: (message: RtpMessage) => void;
+    onSubmit: (message: AppMessage) => void;
 }
 
 const ICON_SIZE = 35;

@@ -23,7 +23,7 @@ export function SiteLogo({
 }: SiteLogoProps) {
     const landingHref =
         process.env.NODE_ENV === "production"
-            ? "https://rtpglobal.com"
+            ? "/"
             : "http://localhost:3000";
 
     const logo = (

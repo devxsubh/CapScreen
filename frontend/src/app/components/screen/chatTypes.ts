@@ -1,4 +1,4 @@
-// Minimal chat types for the screener (subset of the RTP Global assistant)
+// Minimal chat types for the screener (subset of the CapScreen assistant)
 
 import type { ScreeningProgressEvent } from "@/lib/screenerTypes";
 

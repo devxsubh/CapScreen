@@ -1,4 +1,4 @@
-# /compliance-rag-roadmap — Document RAG for RTP Global
+# /compliance-rag-roadmap — Document RAG for CapScreen
 
 Plan or implement document retrieval for the VC screener **inside the existing repo** — do not scaffold a greenfield app.
 
@@ -6,7 +6,7 @@ Plan or implement document retrieval for the VC screener **inside the existing r
 
 ---
 
-## What RAG is for in RTP Global
+## What RAG is for in CapScreen
 
 | Corpus | Example | Retrieval use |
 |---|---|---|
@@ -25,7 +25,7 @@ Structured screening output (`ScreeningResult`) stays tool-backed. RAG supplemen
 INGEST (admin / per-firm)
   PDF/DOCX/Markdown → parse → chunk (token-aware) → embed → store
 
-STORAGE (pick one for RTP Global)
+STORAGE (pick one for CapScreen)
   Option A: MongoDB Atlas Vector Search  ← aligns with existing mongoose stack
   Option B: PostgreSQL + pgvector       ← separate vector DB
 
@@ -59,7 +59,7 @@ QUERY (on chat turn)
 
 ---
 
-## Files to touch (existing RTP Global layout)
+## Files to touch (existing CapScreen layout)
 
 ```
 backend/src/

@@ -6,17 +6,17 @@ import {
     addDocumentToProject,
     createProject,
     uploadProjectDocument,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import { useDirectoryData } from "../shared/useDirectoryData";
 import { FileDirectory } from "../shared/FileDirectory";
 import { EmailPillInput } from "../shared/EmailPillInput";
-import type { RtpProject } from "../shared/types";
+import type { AppProject } from "../shared/types";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
     open: boolean;
     onClose: () => void;
-    onCreated: (project: RtpProject) => void;
+    onCreated: (project: AppProject) => void;
 }
 
 export function NewProjectModal({ open, onClose, onCreated }: Props) {

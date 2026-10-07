@@ -13,7 +13,7 @@ import {
     Trash2,
     Loader2,
 } from "lucide-react";
-import type { RtpDocument, RtpProject } from "./types";
+import type { AppDocument, AppProject } from "./types";
 import { csvAssetId } from "@/lib/workflowAssetIds";
 import { VersionChip } from "./VersionChip";
 
@@ -33,8 +33,8 @@ export function DocFileIcon({ fileType }: { fileType: string | null }) {
 }
 
 interface FileDirectoryProps {
-    standaloneDocs: RtpDocument[];
-    directoryProjects: RtpProject[];
+    standaloneDocs: AppDocument[];
+    directoryProjects: AppProject[];
     loading: boolean;
     selectedIds: Set<string>;
     onChange: (ids: Set<string>) => void;
@@ -85,7 +85,7 @@ export function FileDirectory({
         ...directoryProjects.flatMap((p) => p.documents ?? []),
     ];
 
-    function projectAssetCount(project: RtpProject): number {
+    function projectAssetCount(project: AppProject): number {
         return (
             (project.documents?.length ?? 0) +
             (project.csvs?.length ?? 0) +

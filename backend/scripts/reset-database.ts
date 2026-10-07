@@ -72,7 +72,7 @@ function ask(question: string): Promise<string> {
 async function chooseMode(): Promise<ResetMode | null> {
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
-║              RTP Global — MongoDB Reset Tool                 ║
+║              CapScreen — MongoDB Reset Tool                  ║
 ╚══════════════════════════════════════════════════════════════╝
 
 This script deletes DOCUMENTS only. Collections, schemas, and indexes stay.

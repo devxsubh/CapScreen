@@ -1,4 +1,4 @@
-import type { AssistantEvent, RtpMessage } from "@/app/components/shared/types";
+import type { AssistantEvent, AppMessage } from "@/app/components/shared/types";
 
 function hasContentEvent(events: AssistantEvent[]): boolean {
     return events.some((e) => e.type === "content" && e.text.trim().length > 0);
@@ -16,7 +16,7 @@ function finalizePersistedEvent(event: AssistantEvent): AssistantEvent {
     return event;
 }
 
-export function normalizeRtpMessage(msg: RtpMessage): RtpMessage {
+export function normalizeAppMessage(msg: AppMessage): AppMessage {
     if (msg.role !== "assistant") return msg;
 
     let events = (msg.events ?? []).map(finalizePersistedEvent);
@@ -31,6 +31,6 @@ export function normalizeRtpMessage(msg: RtpMessage): RtpMessage {
         : msg;
 }
 
-export function normalizeRtpMessages(messages: RtpMessage[]): RtpMessage[] {
-    return messages.map(normalizeRtpMessage);
+export function normalizeAppMessages(messages: AppMessage[]): AppMessage[] {
+    return messages.map(normalizeAppMessage);
 }

@@ -1,4 +1,4 @@
-import type { RtpMessage } from "@/app/components/shared/types";
+import type { AppMessage } from "@/app/components/shared/types";
 
 export type AssistantStartupHandoff = {
   filename: string;
@@ -44,12 +44,12 @@ export function csvFileFromHandoff(
   return new File([handoff.content], handoff.filename, { type: "text/csv" });
 }
 
-export function lastAssistantMessageIndex(messages: RtpMessage[]): number {
+export function lastAssistantMessageIndex(messages: AppMessage[]): number {
   return messages.map((m) => m.role).lastIndexOf("assistant");
 }
 
 export function resolveCsvFromMessages(
-  messages: RtpMessage[],
+  messages: AppMessage[],
   csvContent?: string | null,
   csvFilename?: string | null,
 ): { filename: string; content: string } | null {

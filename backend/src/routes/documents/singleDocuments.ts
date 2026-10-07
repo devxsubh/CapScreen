@@ -14,7 +14,7 @@ import {
   r2Configured,
   uploadObject,
 } from "../../lib/infra/r2Storage";
-import { toRtpDocument } from "./serializers";
+import { toAppDocument } from "./serializers";
 
 export const singleDocumentsRouter = Router();
 
@@ -40,7 +40,7 @@ singleDocumentsRouter.get("/", async (req, res) => {
   const docs = await StoredDocument.find({ ownerId: userId, projectId: null })
     .sort({ createdAt: -1 })
     .lean();
-  res.json(docs.map((d) => toRtpDocument(d as Record<string, unknown>)));
+  res.json(docs.map((d) => toAppDocument(d as Record<string, unknown>)));
 });
 
 singleDocumentsRouter.post("/", upload.single("file"), async (req, res) => {
@@ -81,7 +81,7 @@ singleDocumentsRouter.post("/", upload.single("file"), async (req, res) => {
     });
     doc.storageKey = storageKey;
     await doc.save();
-    res.status(201).json(toRtpDocument(doc.toObject() as Record<string, unknown>));
+    res.status(201).json(toAppDocument(doc.toObject() as Record<string, unknown>));
   } catch (err) {
     await doc.deleteOne();
     const detail = err instanceof Error ? err.message : "Upload failed";
@@ -197,7 +197,7 @@ projectDocumentsRouter.post(
       });
       doc.storageKey = storageKey;
       await doc.save();
-      res.status(201).json(toRtpDocument(doc.toObject() as Record<string, unknown>));
+      res.status(201).json(toAppDocument(doc.toObject() as Record<string, unknown>));
     } catch (err) {
       await doc.deleteOne();
       const detail = err instanceof Error ? err.message : "Upload failed";

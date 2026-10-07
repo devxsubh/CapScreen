@@ -4,17 +4,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Download, Trash2, X } from "lucide-react";
 import { DocView } from "./DocView";
-import { getDocumentUrl } from "@/app/lib/rtpGlobalApi";
-import type { RtpDocument } from "./types";
+import { getDocumentUrl } from "@/app/lib/capScreenApi";
+import type { AppDocument } from "./types";
 
 interface Props {
-    doc: RtpDocument | null;
+    doc: AppDocument | null;
     /** Optional specific version to display. Only honoured for DOCX. */
     versionId?: string | null;
     /** Optional label suffix for the header (e.g. "V3"). */
     versionLabel?: string | null;
     onClose: () => void;
-    onDelete?: (doc: RtpDocument) => void;
+    onDelete?: (doc: AppDocument) => void;
 }
 
 export function DocViewModal({

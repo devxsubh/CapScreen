@@ -1,6 +1,6 @@
-# Series A Demo Cap Table — RTP Global Sanctions Screening
+# Series A Demo Cap Table — CapScreen Sanctions Screening
 
-This dataset simulates a **Series A due-diligence engagement** for RTP Global's evaluation of **NexaFlow AI Inc.**, an enterprise AI startup. It is designed for customer demos, workflow walkthroughs, and regression testing of ownership-graph traversal and Watchman sanctions matching.
+This dataset simulates a **Series A due-diligence engagement** for a VC fund's evaluation of **NexaFlow AI Inc.**, an enterprise AI startup. It is designed for customer demos, workflow walkthroughs, and regression testing of ownership-graph traversal and Watchman sanctions matching.
 
 **File:** `sample-cap-table.csv`  
 **Format:** Strict 5-column cap table (`entity`, `entity_type`, `owner`, `owner_type`, `ownership_pct`)
@@ -11,7 +11,7 @@ This dataset simulates a **Series A due-diligence engagement** for RTP Global's 
 
 ## Engagement narrative
 
-RTP Global receives NexaFlow's cap table ahead of a $18M Series A lead. The table includes founders, an employee option pool, a Riverside angel syndicate, Horizon Seed Fund (prior round), Atlantic Bridge Ventures (Series A lead), a Cascade Series A SPV (co-investor vehicle), and Apex Circular Holdings (legacy investor with a known circular structure).
+The fund receives NexaFlow's cap table ahead of a $18M Series A lead. The table includes founders, an employee option pool, a Riverside angel syndicate, Horizon Seed Fund (prior round), Atlantic Bridge Ventures (Series A lead), a Cascade Series A SPV (co-investor vehicle), and Apex Circular Holdings (legacy investor with a known circular structure).
 
 Compliance must answer:
 

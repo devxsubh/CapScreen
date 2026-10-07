@@ -7,12 +7,12 @@ import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { Copy, Check, ChevronDown, Download, Loader2, ShieldAlert } from "lucide-react";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { displayCitationQuote, formatCitationPage } from "../shared/types";
 import type {
     AssistantEvent,
-    RtpCitationAnnotation,
-    RtpEditAnnotation,
+    AppCitationAnnotation,
+    AppEditAnnotation,
 } from "../shared/types";
 import { EditCard, applyOptimisticResolution } from "./EditCard";
 import { PreResponseWrapper } from "../shared/PreResponseWrapper";
@@ -75,11 +75,11 @@ function BulkEditActions({
     onError,
 }: {
     pending: {
-        annotation: RtpEditAnnotation;
+        annotation: AppEditAnnotation;
         filename: string;
     }[];
     filenameByDocId: Map<string, string>;
-    onViewClick?: (ann: RtpEditAnnotation, filename: string) => void;
+    onViewClick?: (ann: AppEditAnnotation, filename: string) => void;
     onResolveStart?: (args: {
         editId: string;
         documentId: string;
@@ -251,13 +251,13 @@ function EditCardsSection({
     onError,
 }: {
     pending: {
-        annotation: RtpEditAnnotation;
+        annotation: AppEditAnnotation;
         filename: string;
     }[];
     filenameByDocId: Map<string, string>;
     cards: React.ReactNode[];
     resolvedCount: number;
-    onViewClick?: (ann: RtpEditAnnotation, filename: string) => void;
+    onViewClick?: (ann: AppEditAnnotation, filename: string) => void;
     onResolveStart?: (args: {
         editId: string;
         documentId: string;
@@ -360,7 +360,7 @@ function ResponseStatus({ status }: { status: StatusState }) {
 
     return (
         <div className="w-full h-9 flex items-center mb-2">
-            <RtpGlobalIcon
+            <CapScreenIcon
                 spin={isActive}
                 done={showDone && doneVisible}
                 error={isError}
@@ -922,8 +922,8 @@ function DocEditedBlock({
 
 function preprocessCitations(
     text: string,
-    annotations: RtpCitationAnnotation[],
-    citationsList: RtpCitationAnnotation[],
+    annotations: AppCitationAnnotation[],
+    citationsList: AppCitationAnnotation[],
 ): string {
     // Replace [N] or [N, M, ...] inline markers with internal §idx§ tokens backed by annotations
     return text.replace(/\[(\d+(?:,\s*\d+)*)\]/g, (full, refsStr) => {
@@ -952,8 +952,8 @@ function MarkdownContent({
     divRef,
 }: {
     text: string;
-    citationsList: RtpCitationAnnotation[];
-    onCitationClick?: (c: RtpCitationAnnotation) => void;
+    citationsList: AppCitationAnnotation[];
+    onCitationClick?: (c: AppCitationAnnotation) => void;
     divRef?: React.RefObject<HTMLDivElement | null>;
 }) {
     return (
@@ -1128,11 +1128,11 @@ interface Props {
     isError?: boolean;
     /** Human-readable error text rendered alongside the red assistant icon. */
     errorMessage?: string;
-    annotations?: RtpCitationAnnotation[];
-    onCitationClick?: (citation: RtpCitationAnnotation) => void;
+    annotations?: AppCitationAnnotation[];
+    onCitationClick?: (citation: AppCitationAnnotation) => void;
     minHeight?: string;
     onWorkflowClick?: (workflowId: string) => void;
-    onEditViewClick?: (ann: RtpEditAnnotation, filename: string) => void;
+    onEditViewClick?: (ann: AppEditAnnotation, filename: string) => void;
     /**
      * Opens the editor panel for a document without auto-highlighting any
      * specific edit. Used by the download card click — opening a doc to
@@ -1248,7 +1248,7 @@ export function AssistantMessage({
     // Pre-process citations for all content events. Each [N] marker resolves
     // to exactly one annotation (models are instructed to use shared refs
     // only for cross-page continuations via the [[PAGE_BREAK]] sentinel).
-    const citationsList: RtpCitationAnnotation[] = [];
+    const citationsList: AppCitationAnnotation[] = [];
     const processedTexts: string[] = [];
     let messageOptions = null as ReturnType<typeof parseMessageOptions> | null;
 
@@ -1602,7 +1602,7 @@ export function AssistantMessage({
                                     { type: "doc_edited" }
                                 >[];
                                 const pending: {
-                                    annotation: RtpEditAnnotation;
+                                    annotation: AppEditAnnotation;
                                     filename: string;
                                 }[] = [];
                                 const filenameByDocId = new Map<
@@ -1610,7 +1610,7 @@ export function AssistantMessage({
                                     string
                                 >();
                                 // Effective status = external override if any, else the annotation's DB status.
-                                const statusOf = (ann: RtpEditAnnotation) =>
+                                const statusOf = (ann: AppEditAnnotation) =>
                                     resolvedEditStatuses?.[ann.edit_id] ??
                                     ann.status;
                                 for (const e of editedEvents) {

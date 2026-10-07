@@ -6,13 +6,13 @@ import {
     saveChatMessages,
     streamChat,
     streamProjectChat,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import { useGenerateChatTitle } from "./useGenerateChatTitle";
 import type {
     AssistantEvent,
-    RtpCitationAnnotation,
-    RtpMessage,
+    AppCitationAnnotation,
+    AppMessage,
 } from "@/app/components/shared/types";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import {
@@ -27,7 +27,7 @@ import {
 import { latestScreeningFromMessages } from "@/lib/assistantScreening";
 
 interface UseAssistantChatOptions {
-    initialMessages?: RtpMessage[];
+    initialMessages?: AppMessage[];
     chatId?: string;
     projectId?: string;
 }
@@ -70,7 +70,7 @@ export function useAssistantChat({
     } = useChatHistoryContext();
     const { generate: generateTitle } = useGenerateChatTitle();
 
-    const [messages, setMessages] = useState<RtpMessage[]>(initialMessages);
+    const [messages, setMessages] = useState<AppMessage[]>(initialMessages);
     const [isResponseLoading, setIsResponseLoading] = useState(false);
     const [isLoadingCitations, setIsLoadingCitations] = useState(false);
     const [screeningResult, setScreeningResult] =
@@ -78,7 +78,7 @@ export function useAssistantChat({
     const [startupHandoff, setStartupHandoff] =
         useState<AssistantStartupHandoff | null>(null);
     const [chatId, setChatId] = useState<string | undefined>(initialChatId);
-    const messagesRef = useRef<RtpMessage[]>(initialMessages);
+    const messagesRef = useRef<AppMessage[]>(initialMessages);
     const csvRef = useRef<string | null>(null);
     const csvFilenameRef = useRef<string | null>(null);
     const screeningResultRef = useRef<ScreeningResult | null>(null);
@@ -100,10 +100,10 @@ export function useAssistantChat({
     };
 
     const updateLastContentEvent = (
-        prev: RtpMessage[],
+        prev: AppMessage[],
         text: string,
         isStreaming?: boolean,
-    ): RtpMessage[] => {
+    ): AppMessage[] => {
         const updated = [...prev];
         const last = updated[updated.length - 1];
         if (last?.role !== "assistant") return prev;
@@ -309,7 +309,7 @@ export function useAssistantChat({
         [chatId, initialChatId],
     );
 
-    function stripClientOnlyFields(next: RtpMessage[]): RtpMessage[] {
+    function stripClientOnlyFields(next: AppMessage[]): AppMessage[] {
         return next.map(
             ({ csvContent: _csv, screeningResult: _sr, ...rest }) => rest,
         );
@@ -403,7 +403,7 @@ export function useAssistantChat({
     };
 
     const handleChat = async (
-        message: RtpMessage,
+        message: AppMessage,
         opts?: {
             displayedDoc?: { filename: string; documentId: string } | null;
         },
@@ -431,7 +431,7 @@ export function useAssistantChat({
             lastMessage.role === "user" &&
             lastMessage.content === message.content;
 
-        const newMessages: RtpMessage[] = isMessageAlreadyAdded
+        const newMessages: AppMessage[] = isMessageAlreadyAdded
             ? messages
             : [...messages, message];
 
@@ -997,7 +997,7 @@ export function useAssistantChat({
                                     download_url:
                                         (data.download_url as string) ?? "",
                                     annotations: Array.isArray(data.annotations)
-                                        ? (data.annotations as import("@/app/components/shared/types").RtpEditAnnotation[])
+                                        ? (data.annotations as import("@/app/components/shared/types").AppEditAnnotation[])
                                         : [],
                                     error:
                                         typeof data.error === "string"
@@ -1016,7 +1016,7 @@ export function useAssistantChat({
                             // finalised message.
                             clearStreamingPlaceholders();
                             const incoming = (data.citations ??
-                                []) as RtpCitationAnnotation[];
+                                []) as AppCitationAnnotation[];
                             setMessages((prev) => {
                                 const updated = [...prev];
                                 const last = updated[updated.length - 1];
@@ -1184,7 +1184,7 @@ export function useAssistantChat({
     };
 
     const handleNewChat = async (
-        message: RtpMessage,
+        message: AppMessage,
         projectId?: string,
     ): Promise<string | null> => {
         if (!message.content.trim()) return null;

@@ -8,9 +8,9 @@ import { UserMessage } from "@/app/components/assistant/UserMessage";
 import { AssistantGreeting } from "@/app/components/assistant/AssistantGreeting";
 import { ChatInput } from "@/app/components/assistant/ChatInput";
 import { ScreenerAssistantMessage } from "@/app/components/screen/ScreenerAssistantMessage";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import type { ScreenerMessage } from "@/app/components/screen/chatTypes";
-import type { RtpMessage } from "@/app/components/shared/types";
+import type { AppMessage } from "@/app/components/shared/types";
 import { shouldShowMessageOptions } from "@/lib/parseMessageOptions";
 
 interface Props {
@@ -65,7 +65,7 @@ export function StartupChatPanel({
 
     const showEmpty = messages.length === 0;
 
-    function handleSubmit(message: RtpMessage) {
+    function handleSubmit(message: AppMessage) {
         handleChat({
             role: "user",
             content: message.content,
@@ -76,7 +76,7 @@ export function StartupChatPanel({
     return (
         <div className="flex flex-col h-full min-h-0 bg-white">
             <div className="h-10 flex items-center gap-2 px-4 border-b border-gray-200 shrink-0">
-                <RtpGlobalIcon size={16} />
+                <CapScreenIcon size={16} />
                 <span className="text-xs text-gray-700">Project Assistant</span>
             </div>
 

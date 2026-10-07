@@ -1,4 +1,4 @@
-# RTP Global — VC Cap-Table Compliance Screener
+# CapScreen — VC Cap-Table Compliance Screener
 
 > Chat-first legal/compliance platform for VC firms: screen startup cap tables against sanctions lists (Watchman / OFAC / EU), with agentic tool-calling, persistent memory, and document RAG on the roadmap.
 
@@ -17,7 +17,7 @@
 
 ## Platform capability map
 
-| Capability | RTP Global status | Where / next step |
+| Capability | CapScreen status | Where / next step |
 |---|---|---|
 | Chat-first assistant UI | ✅ Restored | `frontend/.../assistant/`, `InitialView`, `ChatView`, workflows modal |
 | Agent tool-calling loop | ✅ Partial | `backend/src/lib/llm/agent.ts`, `chatTools.ts`, `POST /api/chat` |
@@ -42,7 +42,7 @@ User message (+ optional CSV attach)
       → tool: get_entity_details
       → tool: list_entities
   → { content, screeningResult, toolActivity }
-  → Frontend: PreResponseWrapper + RtpGlobalIcon + markdown (assistant event model)
+  → Frontend: PreResponseWrapper + CapScreenIcon + markdown (assistant event model)
 ```
 
 **Extend tools:** add definitions in `SCREENER_TOOLS` + cases in `createToolExecutor()` in `backend/src/lib/chatTools.ts`. Mirror UI events in `AssistantEvent` types on the frontend.
@@ -64,7 +64,7 @@ Seed project memories live in `.claude/agent-memory/project/` (checked into git)
 
 ## RAG system (target architecture)
 
-RTP Global today grounds chat in **structured screening results**, not embedded document chunks. Document RAG is the next layer for:
+CapScreen today grounds chat in **structured screening results**, not embedded document chunks. Document RAG is the next layer for:
 
 - Firm compliance policies & escalation playbooks  
 - Uploaded side letters / LP agreements (PDF/DOCX)  
@@ -92,7 +92,7 @@ Roadmap: `.claude/commands/compliance-rag-roadmap.md`.
 | `/init-memory` | Initialize Claude Code project memory index |
 | `/make-agent` | Create a new agent + memory directory |
 | `/new-project-setup` | Bootstrap `.claude/` skeleton (idempotent) |
-| `/compliance-rag-roadmap` | Plan/implement document RAG in RTP Global |
+| `/compliance-rag-roadmap` | Plan/implement document RAG in CapScreen |
 | `/compliance-agent-feature` | Add a new chat tool + UI event end-to-end |
 | `/compliance-parity-check` | Audit platform feature completeness |
 
@@ -102,5 +102,5 @@ Roadmap: `.claude/commands/compliance-rag-roadmap.md`.
 
 - **Backend:** Express + TypeScript strict; tools in `chatTools.ts`; screening orchestration in `runScreening.ts`.
 - **Frontend:** Assistant UI under `assistant/`, `workflows/`, `shared/` — preserve compliance shell features unless asked to remove.
-- **Types:** Screener domain types in `frontend/src/lib/screenerTypes.ts`; assistant types in `shared/types.ts` (`Rtp*` prefix).
+- **Types:** Screener domain types in `frontend/src/lib/screenerTypes.ts`; assistant types in `shared/types.ts` (`App*` prefix).
 - **Env:** Local — Watchman via `docker-compose.dev.yml`; production — EC2 compose stack + Vercel frontend. `ANTHROPIC_API_KEY` on EC2 only.

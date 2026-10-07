@@ -1,6 +1,6 @@
 import { driver, type Driver } from "driver.js";
 
-export const TOUR_STORAGE_KEY = "rtp_onboarding_tour_v1";
+export const TOUR_STORAGE_KEY = "capscreen_onboarding_tour_v1";
 
 export function hasCompletedTour(): boolean {
     if (typeof window === "undefined") return true;
@@ -26,7 +26,7 @@ export function createTourDriver(opts: { onComplete?: () => void }): Driver {
         overlayOpacity: 0.55,
         stagePadding: 8,
         stageRadius: 10,
-        popoverClass: "rtp-tour-popover",
+        popoverClass: "capscreen-tour-popover",
         nextBtnText: "Next",
         prevBtnText: "Back",
         doneBtnText: "Get started",
@@ -34,7 +34,7 @@ export function createTourDriver(opts: { onComplete?: () => void }): Driver {
         steps: [
             {
                 popover: {
-                    title: "Welcome to RTP Global",
+                    title: "Welcome to CapScreen",
                     description:
                         "This workspace helps you screen cap tables for sanctions risk — with ownership graphs, structured grids, and AI-assisted review. We'll show you the key areas in under a minute.",
                     side: "over",

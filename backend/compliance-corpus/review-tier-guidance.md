@@ -71,4 +71,4 @@ FinCEN AML/KYC guidance (January 2026) requires ERAs and RIAs to:
 
 - Screen all investors and beneficial owners against OFAC SDN.
 - Maintain records of screening dates, outcomes, and reviewer decisions.
-- Re-screen at least annually (RTP Global policy: quarterly).
+- Re-screen at least annually (firm policy: quarterly).

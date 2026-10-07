@@ -9,7 +9,7 @@ import {
 } from "../../lib/sample/sampleAssets";
 import { Startup } from "../../models";
 import { StoredDocument } from "../../models/documents/storedDocument";
-import { toRtpDocument } from "../documents/serializers";
+import { toAppDocument } from "../documents/serializers";
 
 export const projectsRouter = Router();
 
@@ -100,7 +100,7 @@ projectsRouter.get("/:projectId", async (req, res) => {
   res.json(
     toProject(
       startupDoc,
-      docs.map((d) => toRtpDocument(d as Record<string, unknown>)),
+      docs.map((d) => toAppDocument(d as Record<string, unknown>)),
       assets ?? { csvs: [], screening_assets: [] },
       userId,
     ),
@@ -130,7 +130,7 @@ projectsRouter.patch("/:projectId", async (req, res) => {
   res.json(
     toProject(
       startup,
-      docs.map((d) => toRtpDocument(d as Record<string, unknown>)),
+      docs.map((d) => toAppDocument(d as Record<string, unknown>)),
     ),
   );
 });

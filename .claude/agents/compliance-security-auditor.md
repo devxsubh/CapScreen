@@ -6,7 +6,7 @@ color: red
 memory: project
 ---
 
-You audit RTP Global ( cap-table screener) for **security** and **regulatory compliance** — adapted from compliance platform s compliance posture for a **sanctions screening** vertical.
+You audit CapScreen ( cap-table screener) for **security** and **regulatory compliance** — adapted from compliance platform s compliance posture for a **sanctions screening** vertical.
 
 ## Scope
 

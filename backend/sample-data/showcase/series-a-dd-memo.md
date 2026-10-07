@@ -1,12 +1,12 @@
 # Series A Due Diligence — Sanctions Screening Memo (Draft)
 
 **Company:** NexaFlow AI Inc  
-**Round:** $18M Series A (RTP Global lead)  
+**Round:** $18M Series A (fund is lead investor)  
 **Date:** Demo dataset — synthetic engagement
 
 ## Executive summary
 
-RTP Global completed an ownership-graph sanctions screen of NexaFlow's extended Series A cap table. The platform screened all entities in the ownership graph against Watchman (OFAC SDN and EU Consolidated lists). **One entity is flagged for immediate compliance review**, **two entities are in the review tier** for human verification, and the majority of founders, institutional investors, and LPs cleared.
+The fund completed an ownership-graph sanctions screen of NexaFlow's extended Series A cap table. The platform screened all entities in the ownership graph against Watchman (OFAC SDN and EU Consolidated lists). **One entity is flagged for immediate compliance review**, **two entities are in the review tier** for human verification, and the majority of founders, institutional investors, and LPs cleared.
 
 The highest-priority finding is **Ivan Petrovich Kozlov**, who does not appear on the cap table directly but is the ultimate beneficial owner behind a four-layer chain through Cascade Series A SPV LLC. His effective indirect stake in NexaFlow is approximately **11%**.
 

@@ -11,7 +11,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { isModelAvailable } from "@/app/lib/modelAvailability";
-import type { ApiKeyState } from "@/app/lib/rtpGlobalApi";
+import type { ApiKeyState } from "@/app/lib/capScreenApi";
 
 export interface ModelOption {
     id: string;

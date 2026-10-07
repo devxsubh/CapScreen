@@ -7,7 +7,7 @@ import {
     deleteWorkflowShare,
     listWorkflowShares,
     shareWorkflow,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { EmailPillInput } from "../shared/EmailPillInput";
 

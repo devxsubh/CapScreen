@@ -36,13 +36,13 @@ import {
     uploadProjectDocument,
     renameDocumentVersion,
     getProjectPeople,
-    type RtpDocumentVersion,
-} from "@/app/lib/rtpGlobalApi";
+    type AppDocumentVersion,
+} from "@/app/lib/capScreenApi";
 import type {
-    RtpDocument,
-    RtpFolder,
-    RtpProject,
-    RtpChat,
+    AppDocument,
+    AppFolder,
+    AppProject,
+    AppChat,
     TabularReview,
 } from "@/app/components/shared/types";
 import { ToolbarTabs } from "@/app/components/shared/ToolbarTabs";
@@ -86,9 +86,9 @@ interface Props {
 }
 
 export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
-    const [project, setProject] = useState<RtpProject | null>(null);
-    const [folders, setFolders] = useState<RtpFolder[]>([]);
-    const [chats, setChats] = useState<RtpChat[]>([]);
+    const [project, setProject] = useState<AppProject | null>(null);
+    const [folders, setFolders] = useState<AppFolder[]>([]);
+    const [chats, setChats] = useState<AppChat[]>([]);
     const [projectReviews, setProjectReviews] = useState<TabularReview[]>([]);
     const [loading, setLoading] = useState(true);
     const searchParams = useSearchParams();
@@ -102,8 +102,8 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
     const [ownerOnlyAction, setOwnerOnlyAction] = useState<string | null>(null);
     const { user } = useAuth();
     const [uploadVersionDoc, setUploadVersionDoc] =
-        useState<RtpDocument | null>(null);
-    const [viewingDoc, setViewingDoc] = useState<RtpDocument | null>(null);
+        useState<AppDocument | null>(null);
+    const [viewingDoc, setViewingDoc] = useState<AppDocument | null>(null);
     const [viewingDocVersion, setViewingDocVersion] = useState<{
         id: string;
         label: string;
@@ -125,7 +125,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
         Set<string>
     >(() => new Set());
     const [versionsByDocId, setVersionsByDocId] = useState<
-        Map<string, RtpDocumentVersion[]>
+        Map<string, AppDocumentVersion[]>
     >(() => new Map());
     const [loadingVersionDocIds, setLoadingVersionDocIds] = useState<
         Set<string>
@@ -188,12 +188,12 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
      * latest_version_number) and re-fetch the version list so the history
      * panel shows the new row.
      */
-    function handleUploadNewVersion(doc: RtpDocument) {
+    function handleUploadNewVersion(doc: AppDocument) {
         setUploadVersionDoc(doc);
     }
 
     async function submitNewVersion(
-        doc: RtpDocument,
+        doc: AppDocument,
         file: File,
         displayName: string,
     ) {
@@ -293,7 +293,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
     useEffect(() => {
         Promise.all([
             getProject(projectId),
-            listProjectChats(projectId).catch(() => [] as RtpChat[]),
+            listProjectChats(projectId).catch(() => [] as AppChat[]),
             listTabularReviews(projectId).catch(() => []),
         ])
             .then(([proj, projectChats, projectReviews]) => {
@@ -373,7 +373,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
         setCreatingFolderIn(undefined);
         // eslint-disable-next-line react-hooks/purity
         const tempId = `temp-${Date.now()}`;
-        const optimistic: RtpFolder = {
+        const optimistic: AppFolder = {
             id: tempId,
             project_id: projectId,
             user_id: "",
@@ -428,7 +428,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
 
     // ── Doc/chat/review handlers ──────────────────────────────────────────────
 
-    function handleDocsSelected(newDocs: RtpDocument[]) {
+    function handleDocsSelected(newDocs: AppDocument[]) {
         setProject((prev) =>
             prev ? {
                 ...prev,
@@ -679,7 +679,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
         }
     }
 
-    async function handleDeleteChatRow(chat: RtpChat) {
+    async function handleDeleteChatRow(chat: AppChat) {
         if (user?.id && chat.user_id !== user.id) {
             setOwnerOnlyAction("delete this chat");
             return;
@@ -701,7 +701,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
 
     function wouldCreateCycle(movingId: string, targetId: string): boolean {
         // Returns true if targetId is movingId or a descendant of it
-        let cur: RtpFolder | undefined = folders.find((f) => f.id === targetId);
+        let cur: AppFolder | undefined = folders.find((f) => f.id === targetId);
         while (cur) {
             if (cur.id === movingId) return true;
             if (!cur.parent_folder_id) break;
@@ -713,8 +713,8 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
     function hasMovePayload(dt: DataTransfer): boolean {
         return Array.from(dt.types).some(
             (type) =>
-                type === "application/rtp-doc" ||
-                type === "application/rtp-folder",
+                type === "application/capscreen-doc" ||
+                type === "application/capscreen-folder",
         );
     }
 
@@ -740,8 +740,8 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
 
     async function handleDropOnFolder(targetFolderId: string | null, dt: DataTransfer) {
         if (!hasMovePayload(dt)) return;
-        const docId = dt.getData("application/rtp-doc");
-        const subFolderId = dt.getData("application/rtp-folder");
+        const docId = dt.getData("application/capscreen-doc");
+        const subFolderId = dt.getData("application/capscreen-folder");
         if (docId) {
             const doc = (project?.documents ?? []).find((d) => d.id === docId);
             if (!doc || (doc.folder_id ?? null) === targetFolderId) return;
@@ -876,7 +876,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
                                         e.preventDefault();
                                         return;
                                     }
-                                    e.dataTransfer.setData("application/rtp-doc", doc.id);
+                                    e.dataTransfer.setData("application/capscreen-doc", doc.id);
                                     e.dataTransfer.effectAllowed = "move";
                                 }}
                                 onClick={() => {
@@ -1058,7 +1058,7 @@ export function ProjectPage({ projectId, initialTab = "documents" }: Props) {
                                         e.preventDefault();
                                         return;
                                     }
-                                    e.dataTransfer.setData("application/rtp-folder", folder.id);
+                                    e.dataTransfer.setData("application/capscreen-folder", folder.id);
                                     e.dataTransfer.effectAllowed = "move";
                                     e.stopPropagation();
                                 }}

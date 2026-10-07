@@ -1,7 +1,7 @@
 # OFAC Escalation Playbook
 
 **Last updated:** June 2026  
-**Applies to:** All cap-table screenings and entity reviews conducted by the RTP Global compliance team.
+**Applies to:** All cap-table screenings and entity reviews conducted by the compliance team.
 
 ---
 

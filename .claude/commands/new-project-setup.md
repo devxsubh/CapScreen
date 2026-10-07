@@ -2,7 +2,7 @@
 
 Scaffold the full Claude Code project configuration for a new or existing project: settings, audit logging hook, agent directories, and memory initialization.
 
-**RTP Global:** This repo is already bootstrapped. Read `.claude/PROJECT.md` instead of re-running blindly. Re-run only to add missing dirs (idempotent).
+**CapScreen:** This repo is already bootstrapped. Read `.claude/PROJECT.md` instead of re-running blindly. Re-run only to add missing dirs (idempotent).
 
 ## Steps
 

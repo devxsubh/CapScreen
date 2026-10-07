@@ -1,12 +1,12 @@
 "use client";
 
 import { FileText, File, X, AlertCircle, Loader2 } from "lucide-react";
-import type { RtpDocument } from "./types";
+import type { AppDocument } from "./types";
 
 interface Props {
-  document: RtpDocument;
+  document: AppDocument;
   onRemove?: (id: string) => void;
-  onClick?: (doc: RtpDocument) => void;
+  onClick?: (doc: AppDocument) => void;
   selected?: boolean;
 }
 

@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import { listStartups } from "@/lib/startupsApi";
 import { ProjectPicker } from "../shared/ProjectPicker";
-import type { RtpProject } from "../shared/types";
+import type { AppProject } from "../shared/types";
 
 interface Props {
     open: boolean;
@@ -20,7 +20,7 @@ export function SelectAssistantProjectModal({ open, onClose }: Props) {
     const router = useRouter();
     const { saveChat } = useChatHistoryContext();
     const [loading, setLoading] = useState(false);
-    const [startups, setStartups] = useState<RtpProject[]>([]);
+    const [startups, setStartups] = useState<AppProject[]>([]);
 
     useEffect(() => {
         if (!open) return;

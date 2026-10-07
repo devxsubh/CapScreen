@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X, MessageSquare, Table2 } from "lucide-react";
-import { createWorkflow, updateWorkflow } from "@/app/lib/rtpGlobalApi";
-import type { RtpWorkflow } from "../shared/types";
+import { createWorkflow, updateWorkflow } from "@/app/lib/capScreenApi";
+import type { AppWorkflow } from "../shared/types";
 import { PRACTICE_OPTIONS } from "./practices";
 
 interface Props {
     open: boolean;
     onClose: () => void;
-    onCreated: (workflow: RtpWorkflow) => void;
-    editWorkflow?: RtpWorkflow;
-    onUpdated?: (workflow: RtpWorkflow) => void;
+    onCreated: (workflow: AppWorkflow) => void;
+    editWorkflow?: AppWorkflow;
+    onUpdated?: (workflow: AppWorkflow) => void;
 }
 
 export function NewWorkflowModal({ open, onClose, onCreated, editWorkflow, onUpdated }: Props) {

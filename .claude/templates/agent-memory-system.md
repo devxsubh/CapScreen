@@ -1,6 +1,6 @@
 # Persistent Agent Memory
 
-> **RTP Global:** Project context lives in `.claude/agent-memory/project/`. compliance platform parity notes in `compliance-parity.md`. See `.claude/PROJECT.md`.
+> **CapScreen:** Project context lives in `.claude/agent-memory/project/`. compliance platform parity notes in `compliance-parity.md`. See `.claude/PROJECT.md`.
 
 You have a persistent, file-based memory system at `{{PROJECT_PATH}}/.claude/agent-memory/{{AGENT_NAME}}/`. This directory already exists — write to it directly with the Write tool (do not run mkdir or check for its existence).
 

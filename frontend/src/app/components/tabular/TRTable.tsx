@@ -2,7 +2,7 @@
 
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { Loader2, Plus, Table2, Upload } from "lucide-react";
-import type { ColumnConfig, RtpDocument, TabularCell } from "../shared/types";
+import type { ColumnConfig, AppDocument, TabularCell } from "../shared/types";
 import { TabularCell as TabularCellComponent } from "./TabularCell";
 import { TREditColumnMenu } from "./TREditColumnMenu";
 
@@ -25,7 +25,7 @@ export interface TRTableHandle {
 interface Props {
     loading: boolean;
     columns: ColumnConfig[];
-    documents: RtpDocument[];
+    documents: AppDocument[];
     cells: TabularCell[];
     savingColumn: boolean;
     savingColumnsConfig: boolean;
@@ -40,7 +40,7 @@ interface Props {
     onDeleteColumn: (colIndex: number) => void;
     onAddColumn: () => void;
     onAddDocuments: () => void;
-    onDocumentClick?: (doc: RtpDocument) => void;
+    onDocumentClick?: (doc: AppDocument) => void;
     statusColumnIndexes?: number[];
     onStatusCellEdit?: (
         docId: string,

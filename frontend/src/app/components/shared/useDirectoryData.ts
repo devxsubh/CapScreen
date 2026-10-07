@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getProject, listProjects, listStandaloneDocuments } from "@/app/lib/rtpGlobalApi";
-import type { RtpDocument, RtpProject } from "./types";
+import { getProject, listProjects, listStandaloneDocuments } from "@/app/lib/capScreenApi";
+import type { AppDocument, AppProject } from "./types";
 
 const CACHE_TTL_MS = 30_000;
 
 interface DirectoryCache {
-    standaloneDocuments: RtpDocument[];
-    projects: RtpProject[];
+    standaloneDocuments: AppDocument[];
+    projects: AppProject[];
     fetchedAt: number;
 }
 
@@ -20,8 +20,8 @@ export function invalidateDirectoryCache() {
 
 export function useDirectoryData(enabled: boolean) {
     const [loading, setLoading] = useState(true);
-    const [standaloneDocuments, setStandaloneDocuments] = useState<RtpDocument[]>([]);
-    const [projects, setProjects] = useState<RtpProject[]>([]);
+    const [standaloneDocuments, setStandaloneDocuments] = useState<AppDocument[]>([]);
+    const [projects, setProjects] = useState<AppProject[]>([]);
 
     useEffect(() => {
         if (!enabled) return;

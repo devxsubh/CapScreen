@@ -186,7 +186,7 @@ export async function runPortfolioRescreen(options?: {
 
   await syncPortfolioMonitoringReview({
     userId: options?.ownerId ?? "preview-user",
-    userEmail: options?.userEmail ?? "admin@rtpglobal.com",
+    userEmail: options?.userEmail ?? "admin@capscreen.local",
   });
 
   const newFlags = allChanges.filter((c) => c.newRisk === "flagged").length;

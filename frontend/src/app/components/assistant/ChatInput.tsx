@@ -37,18 +37,18 @@ import {
     StartupMentionMenu,
     insertStartupMention,
 } from "./StartupMentionMenu";
-import type { RtpDocument, RtpMessage } from "../shared/types";
+import type { AppDocument, AppMessage } from "../shared/types";
 import {
     ASSISTANT_SAMPLE_PROMPTS,
     type AssistantSamplePrompt,
 } from "@/lib/assistantSamplePrompts";
 
 export interface ChatInputHandle {
-    addDoc: (doc: RtpDocument) => void;
+    addDoc: (doc: AppDocument) => void;
 }
 
 interface Props {
-    onSubmit: (message: RtpMessage) => void;
+    onSubmit: (message: AppMessage) => void;
     onCancel: () => void;
     isLoading: boolean;
     hideAddDocButton?: boolean;
@@ -78,7 +78,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
     ref,
 ) {
     const [value, setValue] = useState("");
-    const [attachedDocs, setAttachedDocs] = useState<RtpDocument[]>([]);
+    const [attachedDocs, setAttachedDocs] = useState<AppDocument[]>([]);
     const [attachedCsvFile, setAttachedCsvFile] = useState<File | null>(null);
     const [selectedWorkflow, setSelectedWorkflow] = useState<{
         id: string;
@@ -96,7 +96,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
     const [mentionOpen, setMentionOpen] = useState(false);
 
     useImperativeHandle(ref, () => ({
-        addDoc: (doc: RtpDocument) => {
+        addDoc: (doc: AppDocument) => {
             setAttachedDocs((prev) => {
                 if (prev.some((d) => d.id === doc.id)) return prev;
                 return [...prev, doc];
@@ -104,7 +104,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         },
     }));
 
-    const handleAddDocFromProject = useCallback((doc: RtpDocument) => {
+    const handleAddDocFromProject = useCallback((doc: AppDocument) => {
         setAttachedDocs((prev) => {
             if (prev.some((d) => d.id === doc.id)) return prev;
             return [...prev, doc];
@@ -112,7 +112,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
     }, []);
 
     const handleAddDocsFromSelector = useCallback(
-        (selectedDocs: RtpDocument[]) => {
+        (selectedDocs: AppDocument[]) => {
             setAttachedDocs((prev) => {
                 const existing = new Set(prev.map((d) => d.id));
                 return [

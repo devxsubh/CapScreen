@@ -14,7 +14,7 @@ import {
     Upload,
 } from "lucide-react";
 
-const CLOSE_ROW_ACTIONS_EVENT = "rtpGlobal:close-row-actions";
+const CLOSE_ROW_ACTIONS_EVENT = "capScreen:close-row-actions";
 
 export function closeRowActionMenus() {
     document.dispatchEvent(new Event(CLOSE_ROW_ACTIONS_EVENT));

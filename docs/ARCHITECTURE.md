@@ -1,4 +1,4 @@
-# Architecture — RTP Global VC Screener
+# Architecture — CapScreen
 
 Decision-support platform for screening startup cap tables against sanctions lists. Chat-first UI, agentic backend, deterministic Watchman matching.
 
@@ -8,7 +8,7 @@ Decision-support platform for screening startup cap tables against sanctions lis
 
 ## Deployment topology
 
-![RTP Global system architecture](./architecture-diagram.svg)
+![CapScreen system architecture](./architecture-diagram.svg)
 
 _Full SVG (editable): [`docs/architecture-diagram.svg`](./architecture-diagram.svg)_
 
@@ -29,7 +29,7 @@ Reverse proxy on EC2 (ALB or nginx) terminates TLS and forwards to `:3001`. Set 
 ## Monorepo layout
 
 ```
-rtp/                          pnpm workspace root
+capscreen/                          pnpm workspace root
 ├── frontend/                 Next.js app → deployed to Vercel
 ├── backend/                  Express API → Docker image on EC2
 ├── docker-compose.yml        Production: backend + watchman on EC2
@@ -128,7 +128,7 @@ curl https://<your-api-host>/health
 ### Vercel (frontend)
 
 - Root directory: `frontend` (or monorepo with `frontend` as app path)
-- Build: `pnpm --filter rtp-global build` (or Vercel auto-detect)
+- Build: `pnpm --filter capscreen build` (or Vercel auto-detect)
 - Environment: `NEXT_PUBLIC_API_BASE_URL=https://<api-host>`
 
 Redeploy Vercel whenever the public API URL changes. Redeploy/restart EC2 when backend env or Docker image changes.

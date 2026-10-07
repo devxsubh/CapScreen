@@ -1,10 +1,10 @@
 /**
- * RTP Global API client — all requests to the Node.js backend.
+ * CapScreen API client — all requests to the Node.js backend.
  * Runs in preview mode backed by MongoDB; no auth token required.
  */
 
 import { getAuthHeaders } from "@/lib/apiAuth";
-import { normalizeRtpMessages } from "@/lib/normalizeRtpMessages";
+import { normalizeAppMessages } from "@/lib/normalizeAppMessages";
 import { UI_PREVIEW_MODE, PREVIEW_PROFILE } from "@/lib/uiPreview";
 import {
     listStartups,
@@ -15,7 +15,7 @@ import {
     type StartupRecord,
 } from "@/lib/startupsApi";
 
-function startupToProject(s: StartupRecord): RtpProject {
+function startupToProject(s: StartupRecord): AppProject {
     return {
         id: s.id,
         name: s.name,
@@ -29,13 +29,13 @@ function startupToProject(s: StartupRecord): RtpProject {
 }
 import type {
     AssistantEvent,
-    RtpChat,
-    RtpChatDetailOut,
-    RtpDocument,
-    RtpFolder,
-    RtpMessage,
-    RtpProject,
-    RtpWorkflow,
+    AppChat,
+    AppChatDetailOut,
+    AppDocument,
+    AppFolder,
+    AppMessage,
+    AppProject,
+    AppWorkflow,
     TabularReview,
     TabularReviewDetailOut,
 } from "@/app/components/shared/types";
@@ -76,18 +76,18 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 // Projects
 // ---------------------------------------------------------------------------
 
-export async function listProjects(): Promise<RtpProject[]> {
+export async function listProjects(): Promise<AppProject[]> {
     if (UI_PREVIEW_MODE) return (await listStartups()).map(startupToProject);
-    return apiRequest<RtpProject[]>("/projects");
+    return apiRequest<AppProject[]>("/projects");
 }
 
 export async function createProject(
     name: string,
     cm_number?: string,
     shared_with?: string[],
-): Promise<RtpProject> {
+): Promise<AppProject> {
     if (UI_PREVIEW_MODE) return startupToProject(await createStartup(name));
-    return apiRequest<RtpProject>("/projects", {
+    return apiRequest<AppProject>("/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, cm_number, shared_with }),
@@ -149,10 +149,10 @@ export async function saveApiKey(
     });
 }
 
-export async function getProject(projectId: string): Promise<RtpProject> {
+export async function getProject(projectId: string): Promise<AppProject> {
     if (UI_PREVIEW_MODE)
         return startupToProject(await getStartup(projectId));
-    return apiRequest<RtpProject>(`/projects/${projectId}`);
+    return apiRequest<AppProject>(`/projects/${projectId}`);
 }
 
 export async function updateProject(
@@ -162,13 +162,13 @@ export async function updateProject(
         cm_number?: string;
         shared_with?: string[];
     },
-): Promise<RtpProject> {
+): Promise<AppProject> {
     if (UI_PREVIEW_MODE) {
         if (payload.name)
             return startupToProject(await renameStartup(projectId, payload.name));
         return getProject(projectId);
     }
-    return apiRequest<RtpProject>(`/projects/${projectId}`, {
+    return apiRequest<AppProject>(`/projects/${projectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -210,8 +210,8 @@ export async function createProjectFolder(
     projectId: string,
     name: string,
     parentFolderId?: string | null,
-): Promise<RtpFolder> {
-    return apiRequest<RtpFolder>(`/projects/${projectId}/folders`, {
+): Promise<AppFolder> {
+    return apiRequest<AppFolder>(`/projects/${projectId}/folders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -225,8 +225,8 @@ export async function renameProjectFolder(
     projectId: string,
     folderId: string,
     name: string,
-): Promise<RtpFolder> {
-    return apiRequest<RtpFolder>(
+): Promise<AppFolder> {
+    return apiRequest<AppFolder>(
         `/projects/${projectId}/folders/${folderId}`,
         {
             method: "PATCH",
@@ -249,8 +249,8 @@ export async function moveSubfolderToFolder(
     projectId: string,
     folderId: string,
     parentFolderId: string | null,
-): Promise<RtpFolder> {
-    return apiRequest<RtpFolder>(
+): Promise<AppFolder> {
+    return apiRequest<AppFolder>(
         `/projects/${projectId}/folders/${folderId}`,
         {
             method: "PATCH",
@@ -264,8 +264,8 @@ export async function moveDocumentToFolder(
     projectId: string,
     documentId: string,
     folderId: string | null,
-): Promise<RtpDocument> {
-    return apiRequest<RtpDocument>(
+): Promise<AppDocument> {
+    return apiRequest<AppDocument>(
         `/projects/${projectId}/documents/${documentId}/folder`,
         {
             method: "PATCH",
@@ -279,8 +279,8 @@ export async function renameProjectDocument(
     projectId: string,
     documentId: string,
     filename: string,
-): Promise<RtpDocument> {
-    return apiRequest<RtpDocument>(
+): Promise<AppDocument> {
+    return apiRequest<AppDocument>(
         `/projects/${projectId}/documents/${documentId}`,
         {
             method: "PATCH",
@@ -293,14 +293,14 @@ export async function renameProjectDocument(
 export async function addDocumentToProject(
     projectId: string,
     documentId: string,
-): Promise<RtpDocument> {
-    return apiRequest<RtpDocument>(
+): Promise<AppDocument> {
+    return apiRequest<AppDocument>(
         `/projects/${projectId}/documents/${documentId}`,
         { method: "POST" },
     );
 }
 
-export interface RtpDocumentVersion {
+export interface AppDocumentVersion {
     id: string;
     version_number: number | null;
     source: string;
@@ -310,7 +310,7 @@ export interface RtpDocumentVersion {
 
 export async function listDocumentVersions(documentId: string): Promise<{
     current_version_id: string | null;
-    versions: RtpDocumentVersion[];
+    versions: AppDocumentVersion[];
 }> {
     return apiRequest(`/single-documents/${documentId}/versions`);
 }
@@ -319,7 +319,7 @@ export async function uploadDocumentVersion(
     documentId: string,
     file: File,
     displayName?: string,
-): Promise<RtpDocumentVersion> {
+): Promise<AppDocumentVersion> {
 
     const authHeaders = await getAuthHeaders();
     const form = new FormData();
@@ -334,15 +334,15 @@ export async function uploadDocumentVersion(
         },
     );
     if (!response.ok) throw new Error(await response.text());
-    return response.json() as Promise<RtpDocumentVersion>;
+    return response.json() as Promise<AppDocumentVersion>;
 }
 
 export async function renameDocumentVersion(
     documentId: string,
     versionId: string,
     displayName: string | null,
-): Promise<RtpDocumentVersion> {
-    return apiRequest<RtpDocumentVersion>(
+): Promise<AppDocumentVersion> {
+    return apiRequest<AppDocumentVersion>(
         `/single-documents/${documentId}/versions/${versionId}`,
         {
             method: "PATCH",
@@ -355,7 +355,7 @@ export async function renameDocumentVersion(
 export async function uploadProjectDocument(
     projectId: string,
     file: File,
-): Promise<RtpDocument> {
+): Promise<AppDocument> {
 
     const authHeaders = await getAuthHeaders();
     const form = new FormData();
@@ -369,12 +369,12 @@ export async function uploadProjectDocument(
         },
     );
     if (!response.ok) throw new Error(await response.text());
-    return response.json() as Promise<RtpDocument>;
+    return response.json() as Promise<AppDocument>;
 }
 
 export async function uploadStandaloneDocument(
     file: File,
-): Promise<RtpDocument> {
+): Promise<AppDocument> {
 
     const authHeaders = await getAuthHeaders();
     const form = new FormData();
@@ -385,11 +385,11 @@ export async function uploadStandaloneDocument(
         body: form,
     });
     if (!response.ok) throw new Error(await response.text());
-    return response.json() as Promise<RtpDocument>;
+    return response.json() as Promise<AppDocument>;
 }
 
-export async function listStandaloneDocuments(): Promise<RtpDocument[]> {
-    return apiRequest<RtpDocument[]>("/single-documents");
+export async function listStandaloneDocuments(): Promise<AppDocument[]> {
+    return apiRequest<AppDocument[]>("/single-documents");
 }
 
 export async function deleteDocument(documentId: string): Promise<void> {
@@ -431,7 +431,7 @@ export async function downloadDocumentsZip(
 
 export async function saveChatMessages(
     chatId: string,
-    messages: RtpMessage[],
+    messages: AppMessage[],
 ): Promise<void> {
     if (!chatId) return;
     await apiRequest(`/api/chats/${chatId}/messages`, {
@@ -444,7 +444,7 @@ export async function saveChatMessages(
 /** @deprecated Use saveChatMessages */
 export function savePreviewChatMessages(
     chatId: string,
-    messages: RtpMessage[],
+    messages: AppMessage[],
 ): void {
     void saveChatMessages(chatId, messages);
 }
@@ -459,23 +459,23 @@ export async function createChat(payload?: {
     });
 }
 
-export async function listChats(options?: { limit?: number }): Promise<RtpChat[]> {
+export async function listChats(options?: { limit?: number }): Promise<AppChat[]> {
     const params = new URLSearchParams();
     if (options?.limit) params.set("limit", String(options.limit));
     const query = params.toString();
-    return apiRequest<RtpChat[]>(`/api/chats${query ? `?${query}` : ""}`);
+    return apiRequest<AppChat[]>(`/api/chats${query ? `?${query}` : ""}`);
 }
 
-export async function listProjectChats(projectId: string): Promise<RtpChat[]> {
+export async function listProjectChats(projectId: string): Promise<AppChat[]> {
     const chats = await listChats();
     return chats.filter((c) => c.project_id === projectId);
 }
 
-export async function getChat(chatId: string): Promise<RtpChatDetailOut> {
-    const data = await apiRequest<RtpChatDetailOut>(`/api/chats/${chatId}`);
+export async function getChat(chatId: string): Promise<AppChatDetailOut> {
+    const data = await apiRequest<AppChatDetailOut>(`/api/chats/${chatId}`);
     return {
         ...data,
-        messages: normalizeRtpMessages(data.messages ?? []),
+        messages: normalizeAppMessages(data.messages ?? []),
     };
 }
 
@@ -651,7 +651,7 @@ export async function uploadReviewDocument(
         documentIds?: string[];
         columnsConfig?: { index: number; name: string; prompt: string }[];
     },
-): Promise<RtpDocument> {
+): Promise<AppDocument> {
     const uploaded = options?.projectId
         ? await uploadProjectDocument(options.projectId, file)
         : await uploadStandaloneDocument(file);
@@ -817,16 +817,16 @@ export async function clearTabularCells(
 // Workflows
 // ---------------------------------------------------------------------------
 
-type WorkflowType = RtpWorkflow["type"];
+type WorkflowType = AppWorkflow["type"];
 
 export async function listWorkflows(
     type: WorkflowType,
-): Promise<RtpWorkflow[]> {
-    return apiRequest<RtpWorkflow[]>(`/workflows?type=${type}`);
+): Promise<AppWorkflow[]> {
+    return apiRequest<AppWorkflow[]>(`/workflows?type=${type}`);
 }
 
-export async function getWorkflow(workflowId: string): Promise<RtpWorkflow> {
-    return apiRequest<RtpWorkflow>(`/workflows/${workflowId}`);
+export async function getWorkflow(workflowId: string): Promise<AppWorkflow> {
+    return apiRequest<AppWorkflow>(`/workflows/${workflowId}`);
 }
 
 export async function createWorkflow(payload: {
@@ -835,8 +835,8 @@ export async function createWorkflow(payload: {
     prompt_md?: string;
     columns_config?: { index: number; name: string; prompt: string }[];
     practice?: string | null;
-}): Promise<RtpWorkflow> {
-    return apiRequest<RtpWorkflow>("/workflows", {
+}): Promise<AppWorkflow> {
+    return apiRequest<AppWorkflow>("/workflows", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -851,8 +851,8 @@ export async function updateWorkflow(
         columns_config?: { index: number; name: string; prompt: string }[];
         practice?: string | null;
     },
-): Promise<RtpWorkflow> {
-    return apiRequest<RtpWorkflow>(`/workflows/${workflowId}`, {
+): Promise<AppWorkflow> {
+    return apiRequest<AppWorkflow>(`/workflows/${workflowId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

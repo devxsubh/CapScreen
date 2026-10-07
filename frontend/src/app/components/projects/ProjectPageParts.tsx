@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import { HeaderSearchBtn } from "@/app/components/shared/HeaderSearchBtn";
 import { RenameableTitle } from "@/app/components/shared/RenameableTitle";
-import type { RtpProject } from "@/app/components/shared/types";
-import type { RtpDocumentVersion } from "@/app/lib/rtpGlobalApi";
+import type { AppProject } from "@/app/components/shared/types";
+import type { AppDocumentVersion } from "@/app/lib/capScreenApi";
 
 export type ProjectTab = "documents" | "assistant" | "reviews";
 
@@ -88,7 +88,7 @@ export function DocVersionHistory({
     docId: string;
     filename: string;
     loading: boolean;
-    versions: RtpDocumentVersion[];
+    versions: AppDocumentVersion[];
     depth?: number;
     onDownloadVersion: (
         docId: string,
@@ -342,7 +342,7 @@ export function ProjectPageHeader({
     onNewChat,
     onNewReview,
 }: {
-    project: RtpProject;
+    project: AppProject;
     tab: ProjectTab;
     search: string;
     creatingChat: boolean;

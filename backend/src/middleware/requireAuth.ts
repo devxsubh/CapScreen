@@ -5,7 +5,7 @@ import { connectDb } from "../lib/infra/db";
 import { findUserById } from "../models";
 
 const PREVIEW_USER_ID = "preview-user";
-const PREVIEW_USER_EMAIL = "admin@rtpglobal.com";
+const PREVIEW_USER_EMAIL = "admin@capscreen.local";
 
 function setPreviewUser(res: Response): void {
   res.locals.userId = PREVIEW_USER_ID;

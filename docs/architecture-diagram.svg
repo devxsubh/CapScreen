@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" role="img" aria-labelledby="title desc">
-  <title id="title">RTP Global VC Screener - System Architecture</title>
+  <title id="title">CapScreen - System Architecture</title>
   <desc id="desc">Production deployment: Vercel frontend, AWS EC2 Docker backend with Watchman, and managed external services.</desc>
 
   <defs>
@@ -53,7 +53,7 @@
   <rect width="1200" height="920" fill="url(#bg)"/>
 
   <!-- Title -->
-  <text x="600" y="38" text-anchor="middle" class="h1">RTP Global VC Screener - Architecture</text>
+  <text x="600" y="38" text-anchor="middle" class="h1">CapScreen - Architecture</text>
   <text x="600" y="58" text-anchor="middle" class="h2">Production | Vercel frontend | AWS EC2 Docker | Managed services</text>
 
   <!-- User -->

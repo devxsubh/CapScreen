@@ -15,8 +15,10 @@ const ebGaramond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-    metadataBase: new URL("https://app.rtpglobal.com"),
-    title: "RTP Global — Compliance Platform",
+    metadataBase: new URL(
+        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+    ),
+    title: "CapScreen — Compliance Platform",
     description:
         "VC cap-table sanctions screening and legal compliance decision support.",
     icons: {
@@ -31,9 +33,9 @@ export const metadata: Metadata = {
     },
     openGraph: {
         type: "website",
-        url: "https://app.rtpglobal.com",
-        siteName: "RTP Global",
-        title: "RTP Global — Compliance Platform",
+        url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+        siteName: "CapScreen",
+        title: "CapScreen — Compliance Platform",
         description:
             "VC cap-table sanctions screening and legal compliance decision support.",
         images: [
@@ -41,13 +43,13 @@ export const metadata: Metadata = {
                 url: "/link-image.jpg",
                 width: 1200,
                 height: 651,
-                alt: "RTP Global",
+                alt: "CapScreen",
             },
         ],
     },
     twitter: {
         card: "summary_large_image",
-        title: "RTP Global — Compliance Platform",
+        title: "CapScreen — Compliance Platform",
         description:
             "VC cap-table sanctions screening and legal compliance decision support.",
         images: ["/link-image.jpg"],

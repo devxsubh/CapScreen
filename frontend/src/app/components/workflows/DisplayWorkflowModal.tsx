@@ -12,8 +12,8 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { RtpDocument, RtpMessage, RtpWorkflow } from "../shared/types";
-import { createTabularReview } from "@/app/lib/rtpGlobalApi";
+import type { AppDocument, AppMessage, AppWorkflow } from "../shared/types";
+import { createTabularReview } from "@/app/lib/capScreenApi";
 import { getStartup, listCsvs } from "@/lib/startupsApi";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import {
@@ -26,12 +26,12 @@ import { useRouter } from "next/navigation";
 import { formatIcon, formatLabel } from "../tabular/columnFormat";
 import { useDirectoryData } from "../shared/useDirectoryData";
 import { FileDirectory } from "../shared/FileDirectory";
-import type { RtpProject } from "../shared/types";
+import type { AppProject } from "../shared/types";
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 
 interface Props {
-    workflows: RtpWorkflow[];
-    workflow: RtpWorkflow | null;
+    workflows: AppWorkflow[];
+    workflow: AppWorkflow | null;
     onClose: () => void;
 }
 
@@ -60,7 +60,7 @@ function SimpleProjectPicker({
     selectedId,
     onSelect,
 }: {
-    projects: RtpProject[];
+    projects: AppProject[];
     selectedId: string | null;
     onSelect: (id: string | null) => void;
 }) {
@@ -180,7 +180,7 @@ function MarkdownBody({ content }: { content: string }) {
 // ---------------------------------------------------------------------------
 // Right panel for assistant workflows (select screen)
 // ---------------------------------------------------------------------------
-function AssistantPanel({ workflow }: { workflow: RtpWorkflow }) {
+function AssistantPanel({ workflow }: { workflow: AppWorkflow }) {
     return (
         <div className="flex-1 border-l border-t border-gray-200 flex flex-col overflow-hidden px-3 pb-3">
             <div className="py-3 shrink-0">
@@ -200,7 +200,7 @@ function AssistantPanel({ workflow }: { workflow: RtpWorkflow }) {
 // ---------------------------------------------------------------------------
 // Right panel for tabular workflows — accordion column list (select screen)
 // ---------------------------------------------------------------------------
-function TabularPanel({ workflow }: { workflow: RtpWorkflow }) {
+function TabularPanel({ workflow }: { workflow: AppWorkflow }) {
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
     const columns = (workflow.columns_config ?? []).sort(
         (a, b) => a.index - b.index,
@@ -291,7 +291,7 @@ function TabularPanel({ workflow }: { workflow: RtpWorkflow }) {
 // ---------------------------------------------------------------------------
 export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
     const [screen, setScreen] = useState<"select" | "configure">("select");
-    const [selected, setSelected] = useState<RtpWorkflow | null>(workflow);
+    const [selected, setSelected] = useState<AppWorkflow | null>(workflow);
     const [listSearch, setListSearch] = useState("");
     const selectedRowRef = useRef<HTMLButtonElement>(null);
 
@@ -359,7 +359,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
         csvContent?: string;
         screeningResult?: ScreeningResult;
     }> {
-        const allDocs: RtpDocument[] = [
+        const allDocs: AppDocument[] = [
             ...standaloneDocuments,
             ...projects.flatMap((p) => p.documents || []),
         ];
@@ -425,7 +425,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
                 ? `Run the "${wf.title}" workflow.\n\n${assistantPrompt.trim()}`
                 : `Run the "${wf.title}" workflow.`;
 
-            const message: RtpMessage = {
+            const message: AppMessage = {
                 role: "user",
                 content,
                 workflow: { id: wf.id, title: wf.title },
@@ -447,7 +447,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
     }
 
     async function handleCreateReview() {
-        const allDocs: RtpDocument[] = [
+        const allDocs: AppDocument[] = [
             ...standaloneDocuments,
             ...projects.flatMap((p) => p.documents || []),
         ];

@@ -24,7 +24,7 @@ import {
     setScreenerInitialPrompt,
 } from "@/lib/screenerInitialPrompt";
 import { AssistantWorkflowModal } from "@/app/components/assistant/AssistantWorkflowModal";
-import type { RtpWorkflow } from "@/app/components/shared/types";
+import type { AppWorkflow } from "@/app/components/shared/types";
 
 type AnalysisMode = "default" | "custom" | "workflow";
 
@@ -35,7 +35,7 @@ interface Props {
     initialCsv?: { filename: string; content: string } | null;
 }
 
-function workflowToPrompt(wf: RtpWorkflow): string {
+function workflowToPrompt(wf: AppWorkflow): string {
     const body = (wf.prompt_md ?? "")
         .replace(/^#+\s+/gm, "")
         .replace(/\*\*/g, "")
@@ -71,7 +71,7 @@ export function NewStartupModal({ open, onClose, onCreated, initialCsv }: Props)
     const [analysisMode, setAnalysisMode] = useState<AnalysisMode>("default");
     const [customPrompt, setCustomPrompt] = useState("");
     const [selectedWorkflow, setSelectedWorkflow] =
-        useState<RtpWorkflow | null>(null);
+        useState<AppWorkflow | null>(null);
     const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
     const [csvAnalysis, setCsvAnalysis] = useState<CsvIngestAnalysis | null>(
         null,

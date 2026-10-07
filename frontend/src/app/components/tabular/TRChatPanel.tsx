@@ -13,7 +13,7 @@ import {
     ChevronDown,
     Trash2,
 } from "lucide-react";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import {
     streamTabularChat,
     getTabularChats,
@@ -22,11 +22,11 @@ import {
     mapTRMessages,
     type TRChat,
     type TRCitationAnnotation,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import type {
     AssistantEvent,
     ColumnConfig,
-    RtpDocument,
+    AppDocument,
 } from "../shared/types";
 import { PreResponseWrapper } from "../shared/PreResponseWrapper";
 
@@ -49,7 +49,7 @@ interface Props {
     reviewTitle?: string | null;
     projectName?: string | null;
     columns: ColumnConfig[];
-    documents: RtpDocument[];
+    documents: AppDocument[];
     onCitationClick: (colIdx: number, rowIdx: number) => void;
     onClose: () => void;
     initialChatId?: string | null;
@@ -196,7 +196,7 @@ function TRResponseStatus({ isActive }: { isActive: boolean }) {
 
     return (
         <div className="w-full h-9 flex items-center mb-2">
-            <RtpGlobalIcon
+            <CapScreenIcon
                 spin={isActive}
                 done={showDone && doneVisible}
                 brand={!(showDone && doneVisible)}
@@ -1334,7 +1334,7 @@ export function TRChatPanel({
             {/* Header */}
             <div className="flex items-center justify-between h-8 px-2 border-b border-gray-200 shrink-0">
                 <div className="flex items-center gap-1.5 px-2 min-w-0">
-                    <RtpGlobalIcon brand size={14} />
+                    <CapScreenIcon brand size={14} />
                     <div
                         onMouseEnter={(e) => {
                             const el = e.currentTarget;
@@ -1411,7 +1411,7 @@ export function TRChatPanel({
             >
                 {messages.length === 0 && !isLoadingMessages && (
                     <div className="flex flex-1 flex-col items-center justify-center gap-2">
-                        <RtpGlobalIcon size={24} />
+                        <CapScreenIcon size={24} />
                         <p className="text-sm text-gray-400 text-center">
                             Ask a question about this tabular review.
                         </p>

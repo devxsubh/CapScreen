@@ -7,8 +7,8 @@ import { ScreeningResultsContent } from "../screen/ScreeningResultsPanel";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 import type {
-    RtpCitationAnnotation,
-    RtpEditAnnotation,
+    AppCitationAnnotation,
+    AppEditAnnotation,
 } from "../shared/types";
 
 // ---------------------------------------------------------------------------
@@ -41,12 +41,12 @@ export type DocumentTab = CommonTab & { kind: "document" };
 
 export type CitationTab = CommonTab & {
     kind: "citation";
-    citation: RtpCitationAnnotation;
+    citation: AppCitationAnnotation;
 };
 
 export type EditTab = CommonTab & {
     kind: "edit";
-    edit: RtpEditAnnotation;
+    edit: AppEditAnnotation;
 };
 
 export type ScreeningTab = {

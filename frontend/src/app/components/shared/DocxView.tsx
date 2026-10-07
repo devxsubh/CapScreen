@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { getAuthHeaders } from "@/lib/apiAuth";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { useFetchDocxBytes } from "@/app/hooks/useFetchDocxBytes";
 import {
     clearDocxQuoteHighlights,
@@ -490,7 +490,7 @@ export function DocxView({
             >
                 {loading && !bytes && (
                     <div className="flex h-full items-center justify-center">
-                        <RtpGlobalIcon spin brand size={28} />
+                        <CapScreenIcon spin brand size={28} />
                     </div>
                 )}
                 {error && (

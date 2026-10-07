@@ -60,7 +60,7 @@ export async function sendVerificationEmail(
   const link = `${getFrontendUrl()}/verify-email?token=${encodeURIComponent(token)}`;
   await dispatchEmail({
     to: email,
-    subject: "Verify your RTP Global VC Screener account",
+    subject: "Verify your CapScreen account",
     html,
     text,
     devLogLabel: "Verification link",
@@ -75,7 +75,7 @@ export async function sendPasswordResetEmail(
   const { html, text } = buildPasswordResetEmail(token);
   await dispatchEmail({
     to: email,
-    subject: "Reset your RTP Global VC Screener password",
+    subject: "Reset your CapScreen password",
     html,
     text,
     devLogLabel: "Password reset link",

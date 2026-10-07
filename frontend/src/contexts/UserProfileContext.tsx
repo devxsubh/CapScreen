@@ -16,7 +16,7 @@ import {
     getUserProfile,
     saveApiKey,
     updateUserProfile,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import { PREVIEW_PROFILE, UI_PREVIEW_MODE } from "@/lib/uiPreview";
 
 interface UserProfile {

@@ -10,7 +10,7 @@ import { OnboardingTourProvider } from "@/app/contexts/OnboardingTourContext";
 import { AppSidebar } from "@/app/components/shared/AppSidebar";
 import { UI_PREVIEW_MODE } from "@/lib/uiPreview";
 
-export default function RtpGlobalLayout({
+export default function CapScreenLayout({
     children,
 }: {
     children: React.ReactNode;

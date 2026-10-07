@@ -4,12 +4,12 @@ export const UI_PREVIEW_MODE =
 
 export const PREVIEW_USER = {
   id: "preview-user",
-  email: "admin@rtpglobal.com",
+  email: "admin@capscreen.local",
 };
 
 export const PREVIEW_PROFILE = {
-  displayName: "RTP Admin",
-  organisation: "RTP Global",
+  displayName: "CapScreen Admin",
+  organisation: "CapScreen",
   apiKeys: {
     claude: { configured: true, source: "user" as const },
     gemini: { configured: false, source: null },

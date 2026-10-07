@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { useFetchSingleDoc } from "@/app/hooks/useFetchSingleDoc";
 import { DocxView } from "./DocxView";
 import type { CitationQuote } from "./types";
@@ -545,7 +545,7 @@ export function DocView({
             >
                 {loading && (
                     <div className="flex h-full items-center justify-center">
-                        <RtpGlobalIcon spin brand size={28} />
+                        <CapScreenIcon spin brand size={28} />
                     </div>
                 )}
                 {error && (

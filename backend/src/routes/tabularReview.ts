@@ -293,7 +293,7 @@ tabularReviewRouter.delete("/:id", async (req, res) => {
 });
 
 tabularReviewRouter.get("/:id/people", async (_req, res) => {
-  res.json({ owner: { email: "admin@rtpglobal.com", name: "RTP Admin" }, shared: [] });
+  res.json({ owner: { email: "admin@capscreen.local", name: "CapScreen Admin" }, shared: [] });
 });
 
 function writeSse(write: (line: string) => void, payload: unknown) {
@@ -444,7 +444,7 @@ tabularReviewRouter.delete("/:id/chats/:chatId", async (_req, res) => {
 });
 
 const TABULAR_BASE_SYSTEM =
-  `You are RTP Global's compliance assistant helping a user analyze a tabular review grid.\n\n` +
+  `You are CapScreen's compliance assistant helping a user analyze a tabular review grid.\n\n` +
   `Answer questions using the grid data in context. Reference rows by document/company name and columns by header.\n\n` +
   `When the user @-mentions a startup, use list_mentioned_startups and screening tools for deeper detail.\n\n` +
   `For portfolio monitoring grids, explain that "Co-investor risk: Not screened" means no co-investor roster screen has been run yet — suggest screening the startup's vendor/co-investor roster.\n\n` +

@@ -11,8 +11,8 @@ import {
     createTabularReview,
     listProjects,
     updateTabularReview,
-} from "@/app/lib/rtpGlobalApi";
-import type { TabularReview, RtpProject } from "@/app/components/shared/types";
+} from "@/app/lib/capScreenApi";
+import type { TabularReview, AppProject } from "@/app/components/shared/types";
 import { ToolbarTabs } from "@/app/components/shared/ToolbarTabs";
 import { AddNewTRModal } from "@/app/components/tabular/AddNewTRModal";
 import { PortfolioMonitoringCard } from "@/app/components/startups/PortfolioMonitoringCard";
@@ -40,7 +40,7 @@ function formatDate(iso: string) {
 
 export default function TabularReviewsPage() {
     const [reviews, setReviews] = useState<TabularReview[]>([]);
-    const [projects, setProjects] = useState<RtpProject[]>([]);
+    const [projects, setProjects] = useState<AppProject[]>([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
     const [newTROpen, setNewTROpen] = useState(false);

@@ -1,4 +1,4 @@
-export function toRtpDocument(doc: Record<string, unknown>) {
+export function toAppDocument(doc: Record<string, unknown>) {
   return {
     id: String(doc._id),
     user_id: doc.ownerId,

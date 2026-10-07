@@ -3,7 +3,7 @@ export function getR2AccountId(): string | null {
 }
 
 export function getR2BucketName(): string {
-  return process.env.R2_BUCKET_NAME?.trim() || "rtp-global-screener";
+  return process.env.R2_BUCKET_NAME?.trim() || "capscreen-screener";
 }
 
 export function getR2EndpointUrl(): string | null {

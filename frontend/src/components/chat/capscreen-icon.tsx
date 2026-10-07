@@ -88,7 +88,7 @@ function Blades({ ids }: { ids: Record<string, string> }) {
     );
 }
 
-export function RtpGlobalIcon({
+export function CapScreenIcon({
     spin = false,
     done = false,
     error = false,

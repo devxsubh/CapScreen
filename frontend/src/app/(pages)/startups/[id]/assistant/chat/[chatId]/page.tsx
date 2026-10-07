@@ -30,7 +30,7 @@ import {
     deleteProjectFolder,
     moveDocumentToFolder,
     moveSubfolderToFolder,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import { useAssistantChat } from "@/app/hooks/useAssistantChat";
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import { UserMessage } from "@/app/components/assistant/UserMessage";
@@ -43,18 +43,18 @@ import { DocView } from "@/app/components/shared/DocView";
 import { ResizeDivider } from "@/app/components/shared/ResizeDivider";
 import { OwnerOnlyModal } from "@/app/components/shared/OwnerOnlyModal";
 import { DocxView } from "@/app/components/shared/DocxView";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { AssistantGreeting } from "@/app/components/assistant/AssistantGreeting";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useSidebar } from "@/app/contexts/SidebarContext";
 import type {
     CitationQuote,
-    RtpCitationAnnotation,
-    RtpDocument,
-    RtpEditAnnotation,
-    RtpMessage,
-    RtpProject,
+    AppCitationAnnotation,
+    AppDocument,
+    AppEditAnnotation,
+    AppMessage,
+    AppProject,
 } from "@/app/components/shared/types";
 import { expandCitationToEntries } from "@/app/components/shared/types";
 
@@ -101,7 +101,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
     const username =
         profile?.displayName?.trim() || user?.email?.split("@")[0] || "there";
 
-    const [project, setProject] = useState<RtpProject | null>(null);
+    const [project, setProject] = useState<AppProject | null>(null);
     const [chatTitle, setChatTitle] = useState<string | null>(null);
     const [chatOwnerId, setChatOwnerId] = useState<string | null>(null);
     const [ownerOnlyAction, setOwnerOnlyAction] = useState<string | null>(null);
@@ -149,7 +149,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         chats,
         saveChat,
     } = useChatHistoryContext();
-    const [initialMessages] = useState<RtpMessage[]>(newChatMessages ?? []);
+    const [initialMessages] = useState<AppMessage[]>(newChatMessages ?? []);
     const { messages, isResponseLoading, handleChat, setMessages, cancel } =
         useAssistantChat({ initialMessages, chatId, projectId });
 
@@ -365,7 +365,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
 
     // ── Handlers ──────────────────────────────────────────────────────────────
     const handleSubmit = useCallback(
-        (message: RtpMessage) => {
+        (message: AppMessage) => {
             if (!activeTab) return handleChat(message);
             return handleChat(message, {
                 displayedDoc: {
@@ -377,11 +377,11 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         [activeTab, handleChat],
     );
 
-    const handleDocClick = (doc: RtpDocument) => {
+    const handleDocClick = (doc: AppDocument) => {
         openTab(doc.id, doc.filename);
     };
 
-    const handleCitationClick = (citation: RtpCitationAnnotation) => {
+    const handleCitationClick = (citation: AppCitationAnnotation) => {
         openTab(
             citation.document_id,
             citation.filename,
@@ -398,7 +398,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         openTab(args.documentId, args.filename, undefined, args.versionId);
     };
 
-    const handleEditViewClick = (ann: RtpEditAnnotation, filename: string) => {
+    const handleEditViewClick = (ann: AppEditAnnotation, filename: string) => {
         openTab(ann.document_id, filename, undefined, ann.version_id ?? null);
         setEditScrollTarget({
             key: `${ann.edit_id}-${Date.now()}`,
@@ -455,7 +455,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
 
     const handleChatDrop = (e: React.DragEvent) => {
         e.preventDefault();
-        const docId = e.dataTransfer.getData("application/rtp-doc");
+        const docId = e.dataTransfer.getData("application/capscreen-doc");
         if (!docId) return;
         const doc = project?.documents?.find((d) => d.id === docId);
         if (doc) chatInputRef.current?.addDoc(doc);
@@ -733,10 +733,10 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                 // Only show the upload overlay for external file drags, not internal moves
                                 const isInternal =
                                     Array.from(e.dataTransfer.types).includes(
-                                        "application/rtp-doc",
+                                        "application/capscreen-doc",
                                     ) ||
                                     Array.from(e.dataTransfer.types).includes(
-                                        "application/rtp-folder",
+                                        "application/capscreen-folder",
                                     );
                                 if (!isInternal) setExplorerDragOver(true);
                             }}
@@ -805,10 +805,10 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                 onDrop={async (e) => {
                                     e.preventDefault();
                                     const docId = e.dataTransfer.getData(
-                                        "application/rtp-doc",
+                                        "application/capscreen-doc",
                                     );
                                     const folderId = e.dataTransfer.getData(
-                                        "application/rtp-folder",
+                                        "application/capscreen-folder",
                                     );
                                     if (docId) {
                                         e.stopPropagation();
@@ -1020,7 +1020,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                     onDrop={handleChatDrop}
                 >
                     <div className="h-10 flex items-center gap-2 px-4 border-b border-gray-200 shrink-0">
-                        <RtpGlobalIcon size={16} />
+                        <CapScreenIcon size={16} />
                         <span className="text-xs text-gray-700">
                             Project Assistant
                         </span>

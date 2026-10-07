@@ -215,7 +215,7 @@ startupsRouter.post("/:id/csvs", async (req, res) => {
     startupId: req.params.id,
     eventType: "csv_uploaded",
     performedBy: res.locals.userId ?? "preview-user",
-    performedByEmail: res.locals.userEmail ?? "admin@rtpglobal.com",
+    performedByEmail: res.locals.userEmail ?? "admin@capscreen.local",
     details: {
       filename: filename.trim(),
       recordCount,
@@ -277,7 +277,7 @@ startupsRouter.patch("/:id/csvs/:csvId", async (req, res) => {
     startupId: req.params.id,
     eventType: "csv_updated",
     performedBy: res.locals.userId ?? "preview-user",
-    performedByEmail: res.locals.userEmail ?? "admin@rtpglobal.com",
+    performedByEmail: res.locals.userEmail ?? "admin@capscreen.local",
     details: {
       csvId: req.params.csvId,
       recordCount,
@@ -439,7 +439,7 @@ startupsRouter.post("/:id/screen", async (req, res) => {
 
     await syncPortfolioMonitoringReview({
       userId: res.locals.userId ?? "preview-user",
-      userEmail: res.locals.userEmail ?? "admin@rtpglobal.com",
+      userEmail: res.locals.userEmail ?? "admin@capscreen.local",
     }).catch(() => {});
     res.json({
       screeningResult: result,
@@ -617,7 +617,7 @@ startupsRouter.post("/:id/entity-reviews", async (req, res) => {
   }
 
   const reviewedBy = res.locals.userId ?? "preview-user";
-  const reviewedByEmail = res.locals.userEmail ?? "admin@rtpglobal.com";
+  const reviewedByEmail = res.locals.userEmail ?? "admin@capscreen.local";
 
   await syncEntityReviewStatus({
     startupId: req.params.id,

@@ -10,7 +10,7 @@ import Link from "next/link";
 import { SiteLogo } from "@/components/site-logo";
 import { CheckCircle2, Mail } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { updateUserProfile } from "@/app/lib/rtpGlobalApi";
+import { updateUserProfile } from "@/app/lib/capScreenApi";
 import {
   PASSWORD_REQUIREMENTS,
   validatePasswordClient,
@@ -315,7 +315,7 @@ export default function SignupPage() {
                     <div className="mt-4 text-center text-xs text-gray-500">
                         By signing up, you agree to our{" "}
                         <Link
-                            href="https://rtpglobal.com/terms"
+                            href="#"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-neutral-900 underline underline-offset-2 hover:text-neutral-600"
@@ -324,7 +324,7 @@ export default function SignupPage() {
                         </Link>{" "}
                         and{" "}
                         <Link
-                            href="https://rtpglobal.com/privacy"
+                            href="#"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-neutral-900 underline underline-offset-2 hover:text-neutral-600"

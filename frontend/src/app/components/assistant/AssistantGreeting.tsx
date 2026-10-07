@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useUserProfile } from "@/contexts/UserProfileContext";
-import { RtpGlobalIcon } from "@/components/chat/rtp-global-icon";
+import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 
 const ICON_SIZE = 28;
 const GAP = 14;
@@ -46,7 +46,7 @@ export function AssistantGreeting({ username, compact }: Props) {
                             "transform 900ms cubic-bezier(0.25, 0.46, 0.45, 0.94)",
                     }}
                 >
-                    <RtpGlobalIcon size={ICON_SIZE} />
+                    <CapScreenIcon size={ICON_SIZE} />
                 </div>
                 <h1
                     ref={textRef}

@@ -1,6 +1,6 @@
 # /compliance-agent-feature — Add a Chat Tool End-to-End (compliance platform Style)
 
-Add a new capability to the RTP Global agent loop: backend tool + executor + optional UI event.
+Add a new capability to the CapScreen agent loop: backend tool + executor + optional UI event.
 
 **Arguments:** `$ARGUMENTS` = short feature name (e.g. `compare-screenings`, `export-ic-memo`).
 

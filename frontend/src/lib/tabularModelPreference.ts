@@ -6,7 +6,7 @@ import {
   DEFAULT_MODEL_ID,
 } from "@/app/components/assistant/ModelToggle";
 
-const STORAGE_KEY = "rtp_tabular_model";
+const STORAGE_KEY = "capscreen_tabular_model";
 
 export function getTabularModelPreference(): string {
   if (typeof window === "undefined") return DEFAULT_MODEL_ID;

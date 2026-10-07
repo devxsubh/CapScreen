@@ -318,7 +318,7 @@ async function seedStartupDocuments(
     `**Screened:** ${screenedAt}  \n` +
     `**Entities:** ${capTableResult.totalEntities} | **Flagged:** ${capTableResult.flaggedCount} | **Review:** ${capTableResult.reviewCount}\n\n` +
     `## Executive summary\n\n` +
-    `RTP Global screened NexaFlow's extended Series A cap table. **${capTableResult.flaggedCount} flagged** and **${capTableResult.reviewCount} review** entities require human verification; the majority cleared. Highest priority: **${focus?.name ?? "see triage queue"}**.\n\n` +
+    `The fund screened NexaFlow's extended Series A cap table. **${capTableResult.flaggedCount} flagged** and **${capTableResult.reviewCount} review** entities require human verification; the majority cleared. Highest priority: **${focus?.name ?? "see triage queue"}**.\n\n` +
     `## Flagged / review entities\n\n` +
     exceptions
       .map(
@@ -464,7 +464,7 @@ export async function resolveSeedUser(
       userEmail: user.email,
     };
   }
-  return { userId: "preview-user", userEmail: "admin@rtpglobal.com" };
+  return { userId: "preview-user", userEmail: "admin@capscreen.local" };
 }
 
 async function retireLegacyPerUserDemos(): Promise<void> {

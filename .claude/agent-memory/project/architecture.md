@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: RTP Global deployment topology, Docker, and service boundaries
+description: CapScreen deployment topology, Docker, and service boundaries
 metadata:
   type: project
 ---

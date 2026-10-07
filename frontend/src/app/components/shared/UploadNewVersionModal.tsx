@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Upload } from "lucide-react";
-import { listDocumentVersions } from "@/app/lib/rtpGlobalApi";
-import type { RtpDocument } from "./types";
+import { listDocumentVersions } from "@/app/lib/capScreenApi";
+import type { AppDocument } from "./types";
 
 interface Props {
     open: boolean;
     onClose: () => void;
-    doc: RtpDocument | null;
+    doc: AppDocument | null;
     onSubmit: (file: File, displayName: string) => Promise<void>;
 }
 

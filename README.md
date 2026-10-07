@@ -1,4 +1,4 @@
-# RTP Global — VC Sanctions & Cap-Table Screener
+# CapScreen — VC Sanctions & Cap-Table Screener
 
 A decision-support tool for venture firms. Upload a startup cap table (CSV), screen every owner (including UBOs behind shell-company layers) against OFAC/EU sanctions lists, and get a plain-English risk report with ownership graph, entity table, and Claude-generated analyst notes.
 
@@ -6,11 +6,23 @@ A decision-support tool for venture firms. Upload a startup cap table (CSV), scr
 
 ---
 
+## Features
+
+- **Cap-table screening** — upload a CSV (strict format, column aliases, or AI-inferred schema) and screen every owner, including UBOs behind shell-company layers
+- **Ownership graph** — interactive React Flow graph with flagged / review highlighting and circular-ownership detection
+- **AI analyst notes** — Claude explains who matched, why, how confident, and the suggested next step
+- **Agentic chat** — follow-up questions against stored screening results via tool-use
+- **Startups & projects** — per-startup CSV history, documents, and persisted screening results
+- **Tabular review & workflows** — grid-based document analysis and reusable assistant workflows
+- **Auth & audit** — JWT (RS256) cookie auth, email verification, audit logs
+
+---
+
 ## Architecture
 
 Production stack: **Vercel** hosts the Next.js UI; **AWS EC2** runs the Express API and Watchman in Docker; managed services handle data, cache, storage, and LLMs.
 
-![RTP Global system architecture](docs/architecture-diagram.svg)
+![CapScreen system architecture](docs/architecture-diagram.svg)
 
 | Layer | Where | Role |
 |-------|--------|------|
@@ -61,7 +73,7 @@ pnpm dev    # backend :3001 + frontend :3000
 
 ```bash
 pnpm --filter vc-screener-backend dev
-pnpm --filter rtp-global dev
+pnpm --filter capscreen dev
 ```
 
 ---
@@ -120,6 +132,21 @@ docker compose --env-file .env.production up -d --build
 
 # Local Watchman only
 docker compose -f docker-compose.dev.yml up
+```
+
+---
+
+## Project structure
+
+```
+capscreen/
+├── frontend/   Next.js 15 app (package: capscreen) — deployed to Vercel
+├── backend/    Express API (package: vc-screener-backend) — Docker on EC2
+│   ├── src/            routes, screening pipeline, LLM agent, auth
+│   ├── sample-data/    demo cap tables and walkthrough
+│   └── compliance-corpus/  reference policy docs
+├── docs/       architecture doc + diagram
+└── docker-compose*.yml   production stack / local Watchman
 ```
 
 ---

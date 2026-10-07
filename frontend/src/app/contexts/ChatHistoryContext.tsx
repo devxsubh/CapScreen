@@ -15,11 +15,11 @@ import {
     deleteChat,
     listChats,
     renameChat,
-} from "@/app/lib/rtpGlobalApi";
-import type { RtpChat, RtpMessage } from "@/app/components/shared/types";
+} from "@/app/lib/capScreenApi";
+import type { AppChat, AppMessage } from "@/app/components/shared/types";
 
 interface ChatHistoryContextType {
-    chats: RtpChat[] | null;
+    chats: AppChat[] | null;
     hasMoreChats: boolean;
     currentChatId: string | null;
     setCurrentChatId: (chatId: string | null) => void;
@@ -27,8 +27,8 @@ interface ChatHistoryContextType {
     loadMoreChats: () => void;
     saveChat: (projectId?: string) => Promise<string | null>;
     renameChat: (chatId: string, title: string) => Promise<void>;
-    newChatMessages: RtpMessage[] | null;
-    setNewChatMessages: (messages: RtpMessage[] | null) => void;
+    newChatMessages: AppMessage[] | null;
+    setNewChatMessages: (messages: AppMessage[] | null) => void;
     replaceChatId: (
         oldChatId: string,
         newChatId: string,
@@ -46,12 +46,12 @@ const CHAT_LIMIT_INCREMENT = 10;
 
 export function ChatHistoryProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
-    const [chats, setChats] = useState<RtpChat[] | null>(null);
+    const [chats, setChats] = useState<AppChat[] | null>(null);
     const [chatLimit, setChatLimit] = useState(INITIAL_CHAT_LIMIT);
     const [hasMoreChats, setHasMoreChats] = useState(false);
     const [currentChatId, setCurrentChatId] = useState<string | null>(null);
     const [newChatMessages, setNewChatMessages] = useState<
-        RtpMessage[] | null
+        AppMessage[] | null
     >(null);
 
     const loadChats = useCallback(async () => {
@@ -122,7 +122,7 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
                     projectId ? { project_id: projectId } : undefined,
                 );
                 const now = new Date().toISOString();
-                const newChat: RtpChat = {
+                const newChat: AppChat = {
                     id,
                     project_id: projectId ?? null,
                     user_id: user?.id ?? "",

@@ -8,7 +8,7 @@ import { LogOut, Check, Compass } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useOnboardingTour } from "@/app/contexts/OnboardingTourContext";
-import { deleteAccount } from "@/app/lib/rtpGlobalApi";
+import { deleteAccount } from "@/app/lib/capScreenApi";
 
 export default function AccountPage() {
     const router = useRouter();

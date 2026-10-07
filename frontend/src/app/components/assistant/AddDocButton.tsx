@@ -8,14 +8,14 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { uploadStandaloneDocument } from "@/app/lib/rtpGlobalApi";
+import { uploadStandaloneDocument } from "@/app/lib/capScreenApi";
 import {
     uploadRagDocument,
     type RagDocumentRecord,
 } from "@/lib/startupsApi";
-import type { RtpDocument } from "../shared/types";
+import type { AppDocument } from "../shared/types";
 
-function ragDocToRtp(doc: RagDocumentRecord): RtpDocument {
+function ragDocToApp(doc: RagDocumentRecord): AppDocument {
     const ext = doc.filename.split(".").pop()?.toLowerCase() ?? "";
     const file_type =
         ext === "pdf" ? "pdf" : ext === "docx" || ext === "doc" ? "docx" : ext;
@@ -49,7 +49,7 @@ function isCsvFile(file: File): boolean {
 }
 
 interface Props {
-    onSelectDoc: (doc: RtpDocument) => void;
+    onSelectDoc: (doc: AppDocument) => void;
     onSelectCsvFile?: (file: File) => void;
     onBrowseAll: () => void;
     selectedDocIds?: string[];
@@ -91,7 +91,7 @@ export function AddDocButton({
             const uploaded = await Promise.all(
                 docFiles.map((f) =>
                     startupId
-                        ? uploadRagDocument(startupId, f).then(ragDocToRtp)
+                        ? uploadRagDocument(startupId, f).then(ragDocToApp)
                         : uploadStandaloneDocument(f),
                 ),
             );

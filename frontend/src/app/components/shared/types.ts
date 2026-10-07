@@ -1,8 +1,8 @@
-// Shared TypeScript types for RTP Global compliance assistant
+// Shared TypeScript types for CapScreen compliance assistant
 
 import type { ScreeningResult } from "@/lib/screenerTypes";
 
-export interface RtpFolder {
+export interface AppFolder {
   id: string;
   project_id: string;
   user_id: string;
@@ -12,7 +12,7 @@ export interface RtpFolder {
   updated_at: string;
 }
 
-export interface RtpCapTableCsvMeta {
+export interface AppCapTableCsvMeta {
   id: string;
   filename: string;
   uploaded_at: string;
@@ -22,7 +22,7 @@ export interface RtpCapTableCsvMeta {
   record_count: number;
 }
 
-export interface RtpScreeningAsset {
+export interface AppScreeningAsset {
   id: string;
   label: string;
   purpose: "cap_table" | "co_investor" | "vendor";
@@ -33,7 +33,7 @@ export interface RtpScreeningAsset {
   review_count: number;
 }
 
-export interface RtpProject {
+export interface AppProject {
   id: string;
   user_id: string;
   is_owner?: boolean;
@@ -44,16 +44,16 @@ export interface RtpProject {
   shared_with: string[];
   created_at: string;
   updated_at: string;
-  documents?: RtpDocument[];
-  folders?: RtpFolder[];
-  csvs?: RtpCapTableCsvMeta[];
-  screening_assets?: RtpScreeningAsset[];
+  documents?: AppDocument[];
+  folders?: AppFolder[];
+  csvs?: AppCapTableCsvMeta[];
+  screening_assets?: AppScreeningAsset[];
   document_count?: number;
   chat_count?: number;
   review_count?: number;
 }
 
-export interface RtpDocument {
+export interface AppDocument {
   id: string;
   user_id?: string;
   project_id: string | null;
@@ -80,7 +80,7 @@ export interface StructureNode {
   children: StructureNode[];
 }
 
-export interface RtpChat {
+export interface AppChat {
   id: string;
   project_id: string | null;
   user_id: string;
@@ -88,7 +88,7 @@ export interface RtpChat {
   created_at: string;
 }
 
-export interface RtpEditAnnotation {
+export interface AppEditAnnotation {
   type?: "edit_data";
   kind?: "edit";
   edit_id: string;
@@ -176,13 +176,13 @@ export type AssistantEvent =
         /** Per-document monotonic Vn written at emit time. */
         version_number?: number | null;
         download_url: string;
-        annotations: RtpEditAnnotation[];
+        annotations: AppEditAnnotation[];
         error?: string;
         isStreaming?: boolean;
     }
   | { type: "content"; text: string; isStreaming?: boolean };
 
-export interface RtpMessage {
+export interface AppMessage {
   role: "user" | "assistant";
   content: string;
   files?: { filename: string; document_id?: string }[];
@@ -192,7 +192,7 @@ export interface RtpMessage {
   csvContent?: string;
   /** Client-only screening result for workflow bootstrap; not persisted. */
   screeningResult?: ScreeningResult;
-  annotations?: RtpCitationAnnotation[];
+  annotations?: AppCitationAnnotation[];
   events?: AssistantEvent[];
   /** Set when streaming failed; rendered as a red error block. */
   error?: string;
@@ -210,7 +210,7 @@ export interface CitationQuote {
  * like "41-42" and a `quote` containing the `[[PAGE_BREAK]]` sentinel at the
  * break point (text before is on page 41, text after is on page 42).
  */
-export interface RtpCitationAnnotation {
+export interface AppCitationAnnotation {
   type: "citation_data";
   ref: number;
   doc_id: string;
@@ -230,7 +230,7 @@ const PAGE_BREAK_SENTINEL = "[[PAGE_BREAK]]";
  * cross-page citation with page "N-M" and a `[[PAGE_BREAK]]` split yields two.
  */
 export function expandCitationToEntries(
-  a: RtpCitationAnnotation,
+  a: AppCitationAnnotation,
 ): CitationQuote[] {
   const rangeMatch =
     typeof a.page === "string"
@@ -252,13 +252,13 @@ export function expandCitationToEntries(
 }
 
 /** Format the page(s) of a citation for display, e.g. "Page 3" or "Page 41-42". */
-export function formatCitationPage(a: RtpCitationAnnotation): string {
+export function formatCitationPage(a: AppCitationAnnotation): string {
   if (typeof a.page === "string") return `Page ${a.page}`;
   return `Page ${a.page}`;
 }
 
 /** Produce a reader-friendly version of the quote (replaces [[PAGE_BREAK]] with "..."). */
-export function displayCitationQuote(a: RtpCitationAnnotation): string {
+export function displayCitationQuote(a: AppCitationAnnotation): string {
   return a.quote.replaceAll(PAGE_BREAK_SENTINEL, "...");
 }
 
@@ -318,7 +318,7 @@ export interface TabularCell {
 
 // Workflows
 
-export interface RtpWorkflow {
+export interface AppWorkflow {
   id: string;
   user_id: string | null;
   title: string;
@@ -335,13 +335,13 @@ export interface RtpWorkflow {
 
 // API helpers
 
-export interface RtpChatDetailOut {
-  chat: RtpChat;
-  messages: RtpMessage[];
+export interface AppChatDetailOut {
+  chat: AppChat;
+  messages: AppMessage[];
 }
 
 export interface TabularReviewDetailOut {
   review: TabularReview;
   cells: TabularCell[];
-  documents: RtpDocument[];
+  documents: AppDocument[];
 }

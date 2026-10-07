@@ -8,8 +8,8 @@ import {
     uploadProjectDocument,
     addDocumentToProject,
     deleteDocument,
-} from "@/app/lib/rtpGlobalApi";
-import type { RtpDocument } from "./types";
+} from "@/app/lib/capScreenApi";
+import type { AppDocument } from "./types";
 import { FileDirectory } from "./FileDirectory";
 import { useDirectoryData, invalidateDirectoryCache } from "./useDirectoryData";
 import { OwnerOnlyModal } from "./OwnerOnlyModal";
@@ -29,7 +29,7 @@ function isCsvFile(file: File): boolean {
 interface Props {
     open: boolean;
     onClose: () => void;
-    onSelect: (documents: RtpDocument[], projectId?: string) => void;
+    onSelect: (documents: AppDocument[], projectId?: string) => void;
     onSelectCsvFile?: (file: File) => void;
     breadcrumb: string[];
     allowMultiple?: boolean;
@@ -51,7 +51,7 @@ export function AddDocumentsModal({
     const [uploading, setUploading] = useState(false);
     const [uploadingFilenames, setUploadingFilenames] = useState<string[]>([]);
     const [search, setSearch] = useState("");
-    const [extraUploadedDocs, setExtraUploadedDocs] = useState<RtpDocument[]>([]);
+    const [extraUploadedDocs, setExtraUploadedDocs] = useState<AppDocument[]>([]);
     // IDs deleted in this session — hidden locally since `useDirectoryData`'s
     // cached state won't re-fetch until the modal reopens.
     const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
@@ -145,7 +145,7 @@ export function AddDocumentsModal({
     async function handleDelete(ids: string[]) {
         // Server only allows the doc creator to delete. Filter to owned
         // and warn for the rest.
-        const docsById = new Map<string, RtpDocument>();
+        const docsById = new Map<string, AppDocument>();
         for (const d of [
             ...standaloneDocuments,
             ...extraUploadedDocs,

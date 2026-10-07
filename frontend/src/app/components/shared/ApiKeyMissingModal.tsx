@@ -18,7 +18,7 @@ export function ApiKeyMissingModal({ open, onClose, provider, message }: Props) 
     const providerName = provider ? providerLabel(provider) : "the selected model";
     const body =
         message ??
-        `${providerName} is not available on this deployment. Contact your RTP Global administrator — API keys are managed on the server, not in user settings.`;
+        `${providerName} is not available on this deployment. Contact your CapScreen administrator — API keys are managed on the server, not in user settings.`;
 
     return createPortal(
         <div

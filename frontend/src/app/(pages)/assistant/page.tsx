@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAssistantChat } from "@/app/hooks/useAssistantChat";
 import { InitialView } from "@/app/components/assistant/InitialView";
 import { ChatView } from "@/app/components/assistant/ChatView";
-import type { RtpMessage } from "@/app/components/shared/types";
+import type { AppMessage } from "@/app/components/shared/types";
 
 function AssistantPageContent() {
     const router = useRouter();
@@ -26,7 +26,7 @@ function AssistantPageContent() {
         });
     }, [searchParams, messages.length, handleNewChat, router]);
 
-    async function handleInitialSubmit(message: RtpMessage) {
+    async function handleInitialSubmit(message: AppMessage) {
         const chatId = await handleNewChat(message);
         if (chatId) router.push(`/assistant/chat/${chatId}`);
     }

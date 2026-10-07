@@ -41,7 +41,7 @@ jobs:
         run: pnpm --filter vc-screener-backend run typecheck
 
       - name: Frontend — lint
-        run: pnpm --filter rtp-global run lint
+        run: pnpm --filter capscreen run lint
 
 # ─── Job 2a: Backend build ────────────────────────────────────────────────────
   build-backend:
@@ -92,7 +92,7 @@ jobs:
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
           NEXT_TELEMETRY_DISABLED: "1"
-        run: pnpm --filter rtp-global run build
+        run: pnpm --filter capscreen run build
 
 # ─── Job 3: Tests (placeholder) ───────────────────────────────────────────────
 # Uncomment and fill in once a test runner is wired up.
@@ -113,4 +113,4 @@ jobs:
 #     - name: Backend — unit tests
 #       run: pnpm --filter vc-screener-backend run test
 #     - name: Frontend — unit tests
-#       run: pnpm --filter rtp-global run test
+#       run: pnpm --filter capscreen run test

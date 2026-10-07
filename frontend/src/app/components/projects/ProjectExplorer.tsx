@@ -11,15 +11,15 @@ import {
     FolderPlus,
     Trash2,
 } from "lucide-react";
-import type { RtpDocument, RtpFolder } from "@/app/components/shared/types";
+import type { AppDocument, AppFolder } from "@/app/components/shared/types";
 import { VersionChip } from "@/app/components/shared/VersionChip";
 
 interface Props {
     projectName?: string | null;
-    documents: RtpDocument[];
-    folders?: RtpFolder[];
+    documents: AppDocument[];
+    folders?: AppFolder[];
     selectedDocId?: string | null;
-    onDocClick: (doc: RtpDocument) => void;
+    onDocClick: (doc: AppDocument) => void;
     onCreateFolder?: (parentFolderId: string | null, name: string) => Promise<void>;
     onRenameFolder?: (folderId: string, name: string) => Promise<void>;
     onDeleteFolder?: (folderId: string) => Promise<void>;
@@ -131,7 +131,7 @@ export function ProjectExplorer({
     }
 
     function wouldCreateCycle(movingId: string, targetId: string): boolean {
-        let cur: RtpFolder | undefined = folders.find((f) => f.id === targetId);
+        let cur: AppFolder | undefined = folders.find((f) => f.id === targetId);
         while (cur) {
             if (cur.id === movingId) return true;
             if (!cur.parent_folder_id) break;
@@ -141,8 +141,8 @@ export function ProjectExplorer({
     }
 
     async function handleDropOnTarget(targetFolderId: string | null, e: React.DragEvent) {
-        const docId = e.dataTransfer.getData("application/rtp-doc");
-        const movingFolderId = e.dataTransfer.getData("application/rtp-folder");
+        const docId = e.dataTransfer.getData("application/capscreen-doc");
+        const movingFolderId = e.dataTransfer.getData("application/capscreen-folder");
 
         if (docId && onMoveDoc) {
             const doc = documents.find((d) => d.id === docId);
@@ -158,8 +158,8 @@ export function ProjectExplorer({
 
     function isInternalDrag(e: React.DragEvent): boolean {
         return (
-            Array.from(e.dataTransfer.types).includes("application/rtp-doc") ||
-            Array.from(e.dataTransfer.types).includes("application/rtp-folder")
+            Array.from(e.dataTransfer.types).includes("application/capscreen-doc") ||
+            Array.from(e.dataTransfer.types).includes("application/capscreen-folder")
         );
     }
 
@@ -206,7 +206,7 @@ export function ProjectExplorer({
                             <div
                                 draggable
                                 onDragStart={(e) => {
-                                    e.dataTransfer.setData("application/rtp-folder", folder.id);
+                                    e.dataTransfer.setData("application/capscreen-folder", folder.id);
                                     e.dataTransfer.effectAllowed = "move";
                                     e.stopPropagation();
                                 }}
@@ -280,7 +280,7 @@ export function ProjectExplorer({
                             key={`d-${doc.id}`}
                             draggable
                             onDragStart={(e) => {
-                                e.dataTransfer.setData("application/rtp-doc", doc.id);
+                                e.dataTransfer.setData("application/capscreen-doc", doc.id);
                                 e.dataTransfer.effectAllowed = "move";
                             }}
                             onDragOver={(e) => e.stopPropagation()} // don't let doc rows affect root drag state

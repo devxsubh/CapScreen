@@ -1,5 +1,5 @@
 import { MODELS, type ModelOption } from "../components/assistant/ModelToggle";
-import type { ApiKeyState } from "@/app/lib/rtpGlobalApi";
+import type { ApiKeyState } from "@/app/lib/capScreenApi";
 
 export type ModelProvider = "claude" | "gemini" | "openai";
 

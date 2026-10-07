@@ -40,7 +40,7 @@ cd backend && npx tsx scripts/seed-demo-startup.ts
 npx tsx scripts/seed-demo-startup.ts --reset
 
 # Seed for a registered user (uses their MongoDB user id as ownerId)
-npx tsx scripts/seed-demo-startup.ts --email compliance@rtpglobal.com --reset
+npx tsx scripts/seed-demo-startup.ts --email compliance@capscreen.local --reset
 
 # Preview without writing
 npx tsx scripts/seed-demo-startup.ts --dry-run

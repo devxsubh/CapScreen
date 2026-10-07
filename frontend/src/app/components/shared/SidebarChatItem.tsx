@@ -11,10 +11,10 @@ import {
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { OwnerOnlyModal } from "@/app/components/shared/OwnerOnlyModal";
-import type { RtpChat } from "@/app/components/shared/types";
+import type { AppChat } from "@/app/components/shared/types";
 
 interface Props {
-    chat: RtpChat;
+    chat: AppChat;
     isActive: boolean;
     onSelect: () => void;
     projectName?: string;

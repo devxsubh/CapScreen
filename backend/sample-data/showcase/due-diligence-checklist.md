@@ -1,6 +1,6 @@
 # NexaFlow AI Inc — Series A Due Diligence Checklist
 
-**Engagement:** RTP Global lead investor, $18M Series A  
+**Engagement:** Fund as lead investor, $18M Series A  
 **Prepared by:** Compliance & Legal  
 **Status:** In progress — sanctions screening complete, KYC outstanding on review-tier entities
 
@@ -43,4 +43,4 @@
 
 ---
 
-*This checklist is for internal RTP Global use. Screening outputs are decision-support only — final determinations rest with the compliance officer.*
+*This checklist is for internal use. Screening outputs are decision-support only — final determinations rest with the compliance officer.*

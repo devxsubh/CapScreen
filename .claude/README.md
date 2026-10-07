@@ -1,6 +1,6 @@
-# Claude Code config — RTP Global
+# Claude Code config — CapScreen
 
-Configuration for the RTP Global VC cap-table compliance screener.
+Configuration for the CapScreen VC cap-table compliance screener.
 
 ## Start here
 

@@ -18,8 +18,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { AppLogo } from "@/components/app-logo";
 import { SidebarChatItem } from "@/app/components/shared/SidebarChatItem";
-import { listProjects } from "@/app/lib/rtpGlobalApi";
-import type { RtpProject } from "@/app/components/shared/types";
+import { listProjects } from "@/app/lib/capScreenApi";
+import type { AppProject } from "@/app/components/shared/types";
 
 const NAV_ITEMS = [
     {
@@ -72,7 +72,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
     const [projectNames, setProjectNames] = useState<Record<string, string>>(
         {},
     );
-    const [recentProjects, setRecentProjects] = useState<RtpProject[] | null>(
+    const [recentProjects, setRecentProjects] = useState<AppProject[] | null>(
         null,
     );
 

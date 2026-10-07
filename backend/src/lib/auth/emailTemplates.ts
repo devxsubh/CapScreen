@@ -22,7 +22,7 @@ function prepareSvgForEmail(raw: string): string {
     .replace(/<path(?![^>]*\bfill=)/g, '<path fill="#000000"')
     .replace(
       /<svg([^>]*)>/,
-      '<svg$1 width="140" height="55" role="img" aria-label="RTP Global" style="display:inline-block;max-width:140px;width:140px;height:auto;border:0;">',
+      '<svg$1 width="140" height="55" role="img" aria-label="CapScreen" style="display:inline-block;max-width:140px;width:140px;height:auto;border:0;">',
     )
     .trim();
 }
@@ -31,9 +31,9 @@ function getInlineLogoSvgMarkup(): string | null {
   if (cachedLogoSvgMarkup) return cachedLogoSvgMarkup;
   try {
     const svgCandidates = [
-      join(__dirname, "../../assets/rtp-email-logo.svg"),
-      join(process.cwd(), "src/assets/rtp-email-logo.svg"),
-      join(process.cwd(), "dist/assets/rtp-email-logo.svg"),
+      join(__dirname, "../../assets/capscreen-email-logo.svg"),
+      join(process.cwd(), "src/assets/capscreen-email-logo.svg"),
+      join(process.cwd(), "dist/assets/capscreen-email-logo.svg"),
       join(__dirname, "../../assets/email-logo.svg"),
       join(process.cwd(), "src/assets/email-logo.svg"),
     ];
@@ -52,7 +52,7 @@ function renderLogoBlock(): string {
   const imgFallback = `
       <img
         src="${remoteLogo}"
-        alt="RTP Global"
+        alt="CapScreen"
         width="140"
         height="55"
         style="display:inline-block;max-width:140px;width:140px;height:auto;border:0;"
@@ -134,7 +134,7 @@ function renderLayout(params: {
           <tr>
             <td style="padding:24px 36px 32px;background:${GRAY_FOOTER_BG};border-top:1px solid ${GRAY_BORDER};">
               <p style="margin:0 0 10px;font-size:11px;line-height:1.55;color:${GRAY_MUTED};letter-spacing:0.01em;">
-                ${escapeHtml(params.footerNote ?? "This message was sent by RTP Global's compliance screening platform.")}
+                ${escapeHtml(params.footerNote ?? "This message was sent by CapScreen's compliance screening platform.")}
               </p>
               <p style="margin:0;font-size:11px;line-height:1.55;color:${GRAY_MUTED};letter-spacing:0.01em;">
                 &copy; ${new Date().getFullYear()} ${escapeHtml(appName)} &middot; Screening aids human review, not a legal determination.
@@ -155,7 +155,7 @@ function renderLayout(params: {
     "",
     params.ctaHref ? `${params.ctaLabel ?? "Open link"}: ${params.ctaHref}` : "",
     "",
-    params.footerNote ?? "This message was sent by RTP Global's compliance screening platform.",
+    params.footerNote ?? "This message was sent by CapScreen's compliance screening platform.",
   ].filter(Boolean);
 
   return { html, text: textParts.join("\n") };

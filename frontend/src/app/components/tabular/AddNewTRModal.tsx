@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Loader2, Upload, X } from "lucide-react";
-import type { RtpDocument, RtpProject, RtpWorkflow } from "../shared/types";
+import type { AppDocument, AppProject, AppWorkflow } from "../shared/types";
 import {
     getProject,
     listProjects,
@@ -11,7 +11,7 @@ import {
     listWorkflows,
     uploadProjectDocument,
     uploadStandaloneDocument,
-} from "@/app/lib/rtpGlobalApi";
+} from "@/app/lib/capScreenApi";
 import { FileDirectory } from "../shared/FileDirectory";
 import { BUILT_IN_WORKFLOWS } from "../workflows/builtinWorkflows";
 
@@ -22,11 +22,11 @@ interface Props {
         title: string,
         projectId?: string,
         documentIds?: string[],
-        columnsConfig?: RtpWorkflow["columns_config"],
+        columnsConfig?: AppWorkflow["columns_config"],
     ) => void;
-    projects?: RtpProject[];
+    projects?: AppProject[];
     /** When provided, skip the project/directory picker and show only these docs */
-    projectDocs?: RtpDocument[];
+    projectDocs?: AppDocument[];
     projectName?: string;
     projectCmNumber?: string | null;
 }
@@ -47,12 +47,12 @@ export function AddNewTRModal({
     const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
 
     // Project-scoped docs (when underProject is true and no fixedProjectDocs)
-    const [projectDocs, setProjectDocs] = useState<RtpDocument[]>([]);
+    const [projectDocs, setProjectDocs] = useState<AppDocument[]>([]);
     const [loadingDocs, setLoadingDocs] = useState(false);
 
     // Full directory (when underProject is false)
-    const [standaloneDocs, setStandaloneDocs] = useState<RtpDocument[]>([]);
-    const [directoryProjects, setDirectoryProjects] = useState<RtpProject[]>(
+    const [standaloneDocs, setStandaloneDocs] = useState<AppDocument[]>([]);
+    const [directoryProjects, setDirectoryProjects] = useState<AppProject[]>(
         [],
     );
     const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -64,7 +64,7 @@ export function AddNewTRModal({
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Workflow templates
-    const [workflows, setWorkflows] = useState<RtpWorkflow[]>([]);
+    const [workflows, setWorkflows] = useState<AppWorkflow[]>([]);
     const [loadingWorkflows, setLoadingWorkflows] = useState(false);
     const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
         null,
@@ -205,7 +205,7 @@ export function AddNewTRModal({
         : underProject
           ? []
           : directoryProjects;
-    const flatProjectDocs: RtpDocument[] =
+    const flatProjectDocs: AppDocument[] =
         !isProjectMode && underProject ? projectDocs : [];
     const directoryLoading = isProjectMode
         ? false

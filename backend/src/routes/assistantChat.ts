@@ -22,7 +22,7 @@ import { Startup } from "../models";
 export const assistantChatRouter = express.Router();
 
 const BASE_SYSTEM =
-  `You are RTP Global's compliance assistant for venture capital teams. ` +
+  `You are CapScreen's compliance assistant for venture capital teams. ` +
   `You help users screen cap-table CSVs against Watchman sanctions lists, interpret results, and follow structured workflows.\n\n` +
   `When a user message includes a workflow selection, immediately call read_workflow with that workflow's id before other tools, then follow the workflow instructions.\n\n` +
   `When the user @-mentions a startup (e.g. @AcmeAI), their saved screening is injected into the system prompt — use list_mentioned_startups and pass startup_id to tools for portfolio questions.\n\n` +

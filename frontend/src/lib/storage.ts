@@ -1,5 +1,5 @@
 /**
- * Cloudflare R2 storage utilities for RTP Global document management.
+ * Cloudflare R2 storage utilities for CapScreen document management.
  * R2 is S3-compatible — uses @aws-sdk/client-s3.
  *
  * Required env vars (either endpoint style):
@@ -7,7 +7,7 @@
  *   R2_ENDPOINT_URL       — https://<account-id>.r2.cloudflarestorage.com
  *   R2_ACCESS_KEY_ID      — R2 API token (Access Key ID)
  *   R2_SECRET_ACCESS_KEY  — R2 API token (Secret Access Key)
- *   R2_BUCKET_NAME        — bucket name (default: "rtp-global-screener")
+ *   R2_BUCKET_NAME        — bucket name (default: "capscreen-screener")
  */
 
 import {
@@ -41,7 +41,7 @@ function getClient(): S3Client {
     });
 }
 
-const BUCKET = process.env.R2_BUCKET_NAME ?? "rtp-global-screener";
+const BUCKET = process.env.R2_BUCKET_NAME ?? "capscreen-screener";
 
 export const storageEnabled = Boolean(
     getEndpointUrl() &&

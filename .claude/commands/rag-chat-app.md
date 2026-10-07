@@ -1,6 +1,6 @@
 # /rag-chat-app — (Legacy alias)
 
-This command targeted a generic RAG scaffold. **For RTP Global, use:**
+This command targeted a generic RAG scaffold. **For CapScreen, use:**
 
 ## → `/compliance-rag-roadmap`
 

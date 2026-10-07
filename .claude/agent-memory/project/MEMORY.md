@@ -1,4 +1,4 @@
-# Memory Index — RTP Global
+# Memory Index — CapScreen
 
 <!-- One line per memory file. Keep under 200 lines — always loaded. -->
 

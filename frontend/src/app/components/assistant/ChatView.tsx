@@ -16,9 +16,9 @@ import {
 } from "@/app/components/screen/ScreeningResultsPanel";
 import { NewStartupModal } from "@/app/components/startups/NewStartupModal";
 import type {
-    RtpCitationAnnotation,
-    RtpEditAnnotation,
-    RtpMessage,
+    AppCitationAnnotation,
+    AppEditAnnotation,
+    AppMessage,
 } from "../shared/types";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import {
@@ -35,9 +35,9 @@ const MIN_CHAT_WIDTH = 380;
 const SIDEBAR_WIDTH = 56;
 
 interface Props {
-    messages: RtpMessage[];
+    messages: AppMessage[];
     isResponseLoading: boolean;
-    handleChat: (message: RtpMessage) => Promise<string | null>;
+    handleChat: (message: AppMessage) => Promise<string | null>;
     cancel: () => void;
     screeningResult?: ScreeningResult | null;
     startupHandoff?: AssistantStartupHandoff | null;
@@ -231,7 +231,7 @@ export function ChatView({
      * AssistantMessage when the user clicks a numbered citation pill.
      */
     const openCitation = useCallback(
-        (citation: RtpCitationAnnotation) => {
+        (citation: AppCitationAnnotation) => {
             upsertTab({
                 kind: "citation",
                 id: citation.document_id,
@@ -250,7 +250,7 @@ export function ChatView({
      * AssistantMessage when the user clicks an EditCard's View button.
      */
     const openEditor = useCallback(
-        (ann: RtpEditAnnotation, filename: string) => {
+        (ann: AppEditAnnotation, filename: string) => {
             upsertTab({
                 kind: "edit",
                 id: ann.document_id,

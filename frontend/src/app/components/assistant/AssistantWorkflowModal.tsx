@@ -5,19 +5,19 @@ import { createPortal } from "react-dom";
 import { ChevronLeft, Search, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { RtpWorkflow } from "../shared/types";
-import { listWorkflows } from "@/app/lib/rtpGlobalApi";
+import type { AppWorkflow } from "../shared/types";
+import { listWorkflows } from "@/app/lib/capScreenApi";
 import { BUILT_IN_WORKFLOWS } from "../workflows/builtinWorkflows";
 
 interface Props {
     open: boolean;
     onClose: () => void;
-    onSelect: (workflow: RtpWorkflow) => void;
+    onSelect: (workflow: AppWorkflow) => void;
     projectName?: string;
     projectCmNumber?: string | null;
     initialWorkflowId?: string;
     /** Optional filter applied after workflows are loaded. */
-    filterWorkflows?: (workflow: RtpWorkflow) => boolean;
+    filterWorkflows?: (workflow: AppWorkflow) => boolean;
 }
 
 export function AssistantWorkflowModal({
@@ -29,9 +29,9 @@ export function AssistantWorkflowModal({
     initialWorkflowId,
     filterWorkflows,
 }: Props) {
-    const [workflows, setWorkflows] = useState<RtpWorkflow[]>([]);
+    const [workflows, setWorkflows] = useState<AppWorkflow[]>([]);
     const [loading, setLoading] = useState(false);
-    const [selected, setSelected] = useState<RtpWorkflow | null>(null);
+    const [selected, setSelected] = useState<AppWorkflow | null>(null);
     const [search, setSearch] = useState("");
     const [rightVisible, setRightVisible] = useState(false);
 
