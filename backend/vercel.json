@@ -1,4 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm install --no-audit --no-fund",
+  "buildCommand": "echo 'auth service: no build step (api/index.ts is compiled by Vercel)'",
+  "outputDirectory": "public",
+  "functions": {
+    "api/index.ts": { "maxDuration": 30 }
+  },
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
 }

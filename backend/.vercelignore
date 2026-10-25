@@ -1,0 +1,16 @@
+# Never upload secrets or local data to Vercel (the CLI ignores .gitignore).
+storage/
+.env
+.env.*
+*.key
+*.pem
+*.db
+*.db-*
+node_modules/
+dist/
+sample-data/
+scripts/
+atlas-indexes/
+docs/
+Dockerfile
+nixpacks.toml
