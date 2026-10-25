@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import express from "express";
-import type Anthropic from "@anthropic-ai/sdk";
+import type { LlmMessage } from "../lib/llm/providers";
 import mongoose from "mongoose";
 import { requireAuth } from "../middleware/requireAuth";
 import { connectDb } from "../lib/infra/db";
@@ -24,7 +24,7 @@ import {
 } from "../lib/chat/startupMentions";
 import { assistantRegistry, type ToolContext } from "../lib/tools";
 import { runAgentStream } from "../lib/llm/streamAgent";
-import { getAnthropicModel } from "../lib/llm/models";
+import { friendlyLlmError } from "../lib/llm/friendlyError";
 import { buildWorkflowStore } from "../lib/workflows/workflowMemory";
 import type { ColumnConfig, TabularRowDoc } from "../types/tabular";
 import { sendEmailSafe, sendReviewInviteEmail } from "../lib/auth/email";
@@ -483,9 +483,9 @@ function parseTabularChatMessages(
   return { ok: true, messages: out };
 }
 
-function toAnthropicMessages(
+function toLlmMessages(
   messages: TabularChatMessage[],
-): Anthropic.MessageParam[] {
+): LlmMessage[] {
   return messages.map((m) => ({ role: m.role, content: m.content }));
 }
 
@@ -617,9 +617,8 @@ tabularReviewRouter.post("/:id/chat", async (req, res) => {
 
   try {
     await runAgentStream({
-      model: getAnthropicModel(),
       systemPrompt: system,
-      messages: toAnthropicMessages(parsed.messages),
+      messages: toLlmMessages(parsed.messages),
       tools: assistantRegistry.getTools(),
       write,
       executeTool: async (name, input) => {
@@ -646,11 +645,7 @@ tabularReviewRouter.post("/:id/chat", async (req, res) => {
     write("data: [DONE]\n\n");
   } catch (err) {
     console.error("[tabularReview/chat] error:", err);
-    let message = err instanceof Error ? err.message : "Stream error";
-    if (message.includes("authentication_error") || message.includes("401")) {
-      message =
-        "Anthropic API key invalid. Set ANTHROPIC_API_KEY in .env, then restart (pnpm dev).";
-    }
+    const message = friendlyLlmError(err);
     write(`data: ${JSON.stringify({ type: "error", message })}\n\n`);
     write("data: [DONE]\n\n");
   } finally {

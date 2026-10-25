@@ -8,6 +8,7 @@ import React, {
   ReactNode,
 } from "react";
 import { PREVIEW_USER, UI_PREVIEW_MODE } from "@/lib/uiPreview";
+import { desktop } from "@/lib/desktop";
 import {
   getCurrentUser,
   signOut as apiSignOut,
@@ -36,7 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     if (UI_PREVIEW_MODE) {
-      setUser(PREVIEW_USER);
+      // Desktop: the signed-in account's email; data stays owned by the local user.
+      const account = desktop()?.user;
+      setUser(account ? { id: PREVIEW_USER.id, email: account.email } : PREVIEW_USER);
       setAuthLoading(false);
       return;
     }
@@ -55,6 +58,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
+    const bridge = desktop();
+    if (bridge) {
+      // The desktop shell revokes the session and shows the sign-in screen.
+      await bridge.signOut();
+      return;
+    }
     if (UI_PREVIEW_MODE) return;
     await apiSignOut();
     setUser(null);

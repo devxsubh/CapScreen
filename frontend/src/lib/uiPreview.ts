@@ -1,15 +1,18 @@
-/** Explicit opt-in only — never enable in production for a compliance deployment. */
-export const UI_PREVIEW_MODE =
-  process.env.NEXT_PUBLIC_ALLOW_PREVIEW_MODE === "true";
+/**
+ * Desktop app: a single local user, no sign-in. The flag keeps its historical
+ * name because the no-auth code paths were first built as "preview mode".
+ */
+export const UI_PREVIEW_MODE = true;
 
 export const PREVIEW_USER = {
-  id: "preview-user",
-  email: "admin@capscreen.local",
+  id: "local-user",
+  email: "you@capscreen.local",
 };
 
 export const PREVIEW_PROFILE = {
-  displayName: "CapScreen Admin",
-  organisation: "CapScreen",
+  displayName: "You",
+  organisation: "This computer",
+  // Model keys live in the AI Control Center; the legacy per-user key UI is unused.
   apiKeys: {
     claude: { configured: true, source: "user" as const },
     gemini: { configured: false, source: null },

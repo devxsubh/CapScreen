@@ -11,5 +11,4 @@ export {
   chatListCache,
   workflowListCache,
   cacheKey,
-  isCacheRedis,
 } from "./cache";

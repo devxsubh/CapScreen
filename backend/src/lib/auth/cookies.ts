@@ -13,7 +13,7 @@ export function setRefreshTokenCookie(
     httpOnly: true,
     secure: isProduction,
     sameSite: "strict",
-    path: "/auth",
+    path: "/api/auth", // auth service mounts its routes here (authService/app.ts)
     expires: expiresAt,
   });
 }
@@ -23,6 +23,6 @@ export function clearRefreshTokenCookie(res: Response): void {
     httpOnly: true,
     secure: isProduction,
     sameSite: "strict",
-    path: "/auth",
+    path: "/api/auth", // auth service mounts its routes here (authService/app.ts)
   });
 }

@@ -34,3 +34,9 @@ next-env.d.ts
 
 # Test coverage
 coverage
+
+# Desktop build artifacts
+desktop/resources/bin/
+desktop/resources/backend/
+desktop/resources/frontend/
+desktop/release/

@@ -1,0 +1,32 @@
+{
+  "name": "capscreen-desktop",
+  "productName": "CapScreen",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CapScreen \u2014 on-device cap-table sanctions screening",
+  "main": "dist/main.js",
+  "scripts": {
+    "build:main": "tsc -p tsconfig.json",
+    "build:backend": "node scripts/bundle-backend.mjs",
+    "build:frontend": "node scripts/build-frontend.mjs",
+    "build": "pnpm run build:main && pnpm run build:backend && pnpm run build:frontend",
+    "dev": "pnpm run build:main && cross-env CAPSCREEN_DEV=1 electron .",
+    "start": "pnpm run build:main && electron .",
+    "dist": "pnpm run build && electron-builder --config electron-builder.yml",
+    "dist:dir": "pnpm run build && electron-builder --config electron-builder.yml --dir",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build:watchman": "bash scripts/build-watchman.sh",
+    "icons": "electron scripts/make-icons.js",
+    "dist:mac": "pnpm run build && electron-builder --config electron-builder.yml --mac"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "cross-env": "7.0.3",
+    "electron": "43.7.9",
+    "electron-builder": "26.17.0",
+    "esbuild": "0.25.4",
+    "typescript": "^5.8.3"
+  },
+  "license": "AGPL-3.0-only",
+  "capscreenAuthUrl": "https://capscreen-auth.vercel.app"
+}

@@ -6,6 +6,8 @@ import { saveScreeningSnapshot } from "../screening/screeningDelta";
 import { syncPortfolioMonitoringReview } from "./portfolioGrid";
 import type { RiskLevel, ScreeningResult } from "../../types/screening";
 import { ownerFilter } from "../../routes/startups/middleware";
+import { LOCAL_USER_ID } from "../../middleware/requireAuth";
+import { readSettings } from "../infra/settings";
 
 function entityRiskMap(
   result: ScreeningResult | null | undefined,
@@ -185,7 +187,7 @@ export async function runPortfolioRescreen(options?: {
   }
 
   await syncPortfolioMonitoringReview({
-    userId: options?.ownerId ?? "preview-user",
+    userId: options?.ownerId ?? LOCAL_USER_ID,
     userEmail: options?.userEmail ?? "admin@capscreen.local",
   });
 
@@ -227,22 +229,37 @@ export async function runPortfolioRescreen(options?: {
   };
 }
 
+const CHECK_EVERY_MS = 15 * 60 * 1000;
+let rescreenRunning = false;
+
+/**
+ * Desktop background re-screening. Rather than a fixed timer from launch, this
+ * checks every 15 minutes whether a run is due (last digest older than the
+ * configured interval), so it catches up after sleep, restarts, or days off.
+ */
 export function startRescreenScheduler(): void {
-  const enabled = process.env.RESCREEN_SCHEDULER_ENABLED === "true";
-  if (!enabled) return;
+  const tick = async () => {
+    const { enabled, intervalHours } = readSettings().backgroundScreening;
+    if (!enabled || rescreenRunning) return;
+    const last = (await ScreeningDigest.findOne().sort({ generatedAt: -1 }).lean()) as { generatedAt?: Date } | null;
+    const dueAt = (last?.generatedAt ? new Date(last.generatedAt).getTime() : 0) + Math.max(1, intervalHours) * 3_600_000;
+    if (Date.now() < dueAt) return;
+    if ((await Startup.countDocuments({ deletedAt: null, latestCsvId: { $ne: null } })) === 0) return;
 
-  const hours = Number.parseInt(process.env.RESCREEN_INTERVAL_HOURS ?? "168", 10);
-  const ms = Math.max(1, hours) * 60 * 60 * 1000;
-
-  const tick = () => {
-    void runPortfolioRescreen().catch((err) => {
+    rescreenRunning = true;
+    try {
+      const r = await runPortfolioRescreen();
+      console.log(`[rescreen-scheduler] re-screened ${r.rescreened}/${r.total} startups`);
+    } catch (err) {
       console.error("[rescreen-scheduler]", err);
-    });
+    } finally {
+      rescreenRunning = false;
+    }
   };
 
-  setTimeout(tick, 30_000);
-  setInterval(tick, ms);
-  console.log(`[rescreen-scheduler] enabled — every ${hours}h`);
+  // First check shortly after boot (Watchman lists need a minute to load).
+  setTimeout(() => void tick(), 2 * 60_000).unref();
+  setInterval(() => void tick(), CHECK_EVERY_MS).unref();
 }
 
 export async function getLatestDigest() {

@@ -4,8 +4,7 @@ import {
   createScreeningAnalysisDocument,
 } from "../documents/icMemoDocument";
 import { buildFactsBlock } from "../documents/generateIcMemo";
-import { completeClaudeText } from "../llm/claude";
-import { getAnthropicModel } from "../llm/models";
+import { completeText } from "../llm/complete";
 import { toToolDocument } from "./_shared";
 import type { ToolContext, ToolDocumentResult, ToolExecutorResult } from "./types";
 import type { ScreeningResult } from "../screening/runScreening";
@@ -66,8 +65,7 @@ async function genericClaudeDocument(
   const facts = buildFactsBlock(startupName, resolved.result);
   const intentLine = contentIntent ? `Intent: ${contentIntent}\n\n` : "";
 
-  const customContent = await completeClaudeText({
-    model: getAnthropicModel(),
+  const customContent = await completeText({
     systemPrompt:
       "You are a VC compliance analyst. Write the requested document using only the provided screening facts. " +
       "Never confirm guilt or sanctions violations. Use Markdown formatting.",

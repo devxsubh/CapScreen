@@ -18,6 +18,7 @@ import {
     updateUserProfile,
 } from "@/app/lib/capScreenApi";
 import { PREVIEW_PROFILE, UI_PREVIEW_MODE } from "@/lib/uiPreview";
+import { desktop } from "@/lib/desktop";
 
 interface UserProfile {
     displayName: string | null;
@@ -91,7 +92,16 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (UI_PREVIEW_MODE && isAuthenticated) {
-            setProfile(PREVIEW_PROFILE);
+            const account = desktop()?.user;
+            setProfile(
+                account
+                    ? {
+                          ...PREVIEW_PROFILE,
+                          displayName: account.displayName ?? account.email.split("@")[0],
+                          organisation: account.organisation ?? PREVIEW_PROFILE.organisation,
+                      }
+                    : PREVIEW_PROFILE,
+            );
             setLoading(false);
             return;
         }

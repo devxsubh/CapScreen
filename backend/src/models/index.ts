@@ -46,3 +46,4 @@ export {
 } from "./sample/hiddenSampleAsset";
 export { RagDocument, type IRagDocument, type RagDocumentStatus } from "./rag/ragDocument";
 export { DocChunk, type IDocChunk } from "./rag/docChunk";
+export { DesktopAuthCode, hashAuthCode } from "./auth/desktopAuthCode";

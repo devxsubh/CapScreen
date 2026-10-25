@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAuthHeaders } from "@/lib/apiAuth";
+import { apiBase } from "@/lib/apiBase";
 
 export interface DocumentVersionRow {
     id: string;
@@ -52,11 +53,9 @@ export function useDocumentVersions(
 
         (async () => {
             try {
-                const apiBase =
-                    process.env.NEXT_PUBLIC_API_BASE_URL ??
-                    "http://localhost:3001";
+                const base = apiBase();
                 const resp = await fetch(
-                    `${apiBase}/single-documents/${documentId}/versions`,
+                    `${base}/single-documents/${documentId}/versions`,
                     { headers: await getAuthHeaders() },
                 );
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

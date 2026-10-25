@@ -1,8 +1,7 @@
-import { Redis } from "@upstash/redis";
 import type { WatchmanMatch } from "../../types/screening";
 
 // ---------------------------------------------------------------------------
-// Shared async interface — implemented by both Redis and in-memory backends.
+// Shared async interface.
 // ---------------------------------------------------------------------------
 
 export interface AsyncCache<T> {
@@ -14,7 +13,7 @@ export interface AsyncCache<T> {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory fallback — used when UPSTASH_REDIS_REST_URL is not set.
+// In-memory cache.
 // ---------------------------------------------------------------------------
 
 interface MemEntry<T> {
@@ -65,62 +64,11 @@ class MemoryCache<T> implements AsyncCache<T> {
 }
 
 // ---------------------------------------------------------------------------
-// Upstash Redis backend.
+// Factory — single desktop process, so an in-memory cache is always correct.
 // ---------------------------------------------------------------------------
-
-class RedisCache<T> implements AsyncCache<T> {
-  constructor(private client: Redis) {}
-
-  async get(key: string): Promise<T | null> {
-    return this.client.get<T>(key);
-  }
-
-  async set(key: string, value: T, ttlMs: number): Promise<void> {
-    const ex = Math.max(1, Math.ceil(ttlMs / 1000));
-    await this.client.set(key, value, { ex });
-  }
-
-  async delete(key: string): Promise<void> {
-    await this.client.del(key);
-  }
-
-  async invalidatePrefix(prefix: string): Promise<void> {
-    let cursor = 0;
-    do {
-      const [next, keys] = await this.client.scan(cursor, {
-        match: `${prefix}*`,
-        count: 100,
-      });
-      cursor = Number(next);
-      if (keys.length > 0) {
-        await this.client.del(...keys);
-      }
-    } while (cursor !== 0);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Factory — picks Redis when Upstash env vars are present, else memory.
-// ---------------------------------------------------------------------------
-
-let sharedRedis: Redis | null = null;
-
-function getRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-  if (!url || !token) return null;
-  if (!sharedRedis) sharedRedis = new Redis({ url, token });
-  return sharedRedis;
-}
 
 function createCache<T>(maxMemorySize = 1_000): AsyncCache<T> {
-  const redis = getRedis();
-  if (redis) return new RedisCache<T>(redis);
   return new MemoryCache<T>(maxMemorySize);
-}
-
-export function isCacheRedis(): boolean {
-  return getRedis() !== null;
 }
 
 // ---------------------------------------------------------------------------

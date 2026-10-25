@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAuthHeaders } from "@/lib/apiAuth";
+import { apiBase } from "@/lib/apiBase";
 
 export interface FetchDocxResult {
     bytes: ArrayBuffer | null;
@@ -63,12 +64,11 @@ export function useFetchDocxBytes(
         }
 
         const key = cacheKey(documentId, versionId, refetchKey);
-        const apiBase =
-            process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+        const base = apiBase();
         const qs = versionId
             ? `?version_id=${encodeURIComponent(versionId)}`
             : "";
-        const url = `${apiBase}/single-documents/${documentId}/docx${qs}`;
+        const url = `${base}/single-documents/${documentId}/docx${qs}`;
 
         // Cache hit: reuse bytes synchronously, no network, no spinner.
         const cached = bytesCache.get(key);

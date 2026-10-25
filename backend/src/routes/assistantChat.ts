@@ -1,10 +1,10 @@
 import { randomUUID } from "crypto";
 import express from "express";
-import type Anthropic from "@anthropic-ai/sdk";
+import type { LlmMessage } from "../lib/llm/providers";
 import { assistantRegistry, type ToolContext } from "../lib/tools";
 import { buildSystemPrompt } from "../lib/chat/buildSystemPrompt";
 import { runAgentStream } from "../lib/llm/streamAgent";
-import { getAnthropicModel } from "../lib/llm/models";
+import { friendlyLlmError } from "../lib/llm/friendlyError";
 import { connectDb } from "../lib/infra/db";
 import { buildWorkflowStore } from "../lib/workflows/workflowMemory";
 import {
@@ -76,7 +76,7 @@ function parseAssistantMessages(
   return { ok: true, messages: out };
 }
 
-function toAnthropicMessages(messages: ChatMessage[]): Anthropic.MessageParam[] {
+function toLlmMessages(messages: ChatMessage[]): LlmMessage[] {
   return messages.map((m) => {
     let content = m.content;
     if (m.role === "user" && m.workflow?.id) {
@@ -238,9 +238,8 @@ assistantChatRouter.post("/", async (req, res) => {
 
   try {
     await runAgentStream({
-      model: getAnthropicModel(),
       systemPrompt: system,
-      messages: toAnthropicMessages(validMessages),
+      messages: toLlmMessages(validMessages),
       tools: assistantRegistry.getTools(),
       write,
       executeTool: async (name, input) => {
@@ -267,11 +266,7 @@ assistantChatRouter.post("/", async (req, res) => {
     write("data: [DONE]\n\n");
   } catch (err) {
     console.error("[assistantChat] error:", err);
-    let message = err instanceof Error ? err.message : "Stream error";
-    if (message.includes("authentication_error") || message.includes("401")) {
-      message =
-        "Anthropic API key invalid. Set ANTHROPIC_API_KEY in backend/.env, then restart (pnpm dev).";
-    }
+    const message = friendlyLlmError(err);
     write(`data: ${JSON.stringify({ type: "error", message })}\n\n`);
     write("data: [DONE]\n\n");
   } finally {

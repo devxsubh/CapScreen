@@ -9,6 +9,7 @@ import {
     highlightDocxQuote,
 } from "./highlightDocxQuote";
 import type { CitationQuote } from "./types";
+import { apiBase } from "@/lib/apiBase";
 
 interface Props {
     documentId: string;
@@ -144,13 +145,12 @@ async function tagWIdsOnRenderedDom(
     versionId: string | null | undefined,
 ): Promise<void> {
     try {
-        const apiBase =
-            process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+        const base = apiBase();
         const qs = versionId
             ? `?version_id=${encodeURIComponent(versionId)}`
             : "";
         const resp = await fetch(
-            `${apiBase}/single-documents/${documentId}/tracked-change-ids${qs}`,
+            `${base}/single-documents/${documentId}/tracked-change-ids${qs}`,
             { headers: await getAuthHeaders() },
         );
         if (!resp.ok) {

@@ -1,2 +1,2 @@
-export { completeClaudeText, chatWithClaude, type ChatMessage } from "./claude";
-export { getAnthropicModel } from "./models";
+export { completeText, chatText, type ChatMessage } from "./complete";
+export { getLlm, describeLlmConfig, type LlmRole } from "./providers";

@@ -19,7 +19,7 @@ const DocChunkSchema = new Schema<IDocChunk>({
   mimeType: { type: String, required: true },
   chunkIndex: { type: Number, required: true },
   chunkText: { type: String, required: true },
-  embedding: { type: [Number], required: true },
+  embedding: { type: [Number], default: [] }, // empty when no embedding model is configured
   pageNumber: { type: Number, default: null },
   createdAt: { type: Date, default: () => new Date() },
 });
@@ -27,7 +27,7 @@ const DocChunkSchema = new Schema<IDocChunk>({
 // Compound index for bulk deletes and ownership queries
 DocChunkSchema.index({ startupId: 1, documentId: 1 });
 
-// Text index as keyword-search fallback when Atlas Vector Search is not enabled
+// Text index (ignored by the SQLite store; keyword fallback scans chunks)
 DocChunkSchema.index({ chunkText: "text" });
 
 export const DocChunk = mongoose.model<IDocChunk>("DocChunk", DocChunkSchema, "doc_chunks");

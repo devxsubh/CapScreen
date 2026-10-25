@@ -14,7 +14,7 @@ export function friendlyLlmError(err: unknown): string {
     msg.includes("invalid x-api-key") ||
     msg.includes("401")
   ) {
-    return "Anthropic API key is invalid. Set ANTHROPIC_API_KEY in root `.env` (or `.env.production` on EC2) and restart the backend.";
+    return "The model provider rejected the API key. Update the key in model settings (or `.env`) and restart the backend.";
   }
 
   if (msg.includes("rate_limit") || msg.includes("429")) {
@@ -25,13 +25,18 @@ export function friendlyLlmError(err: unknown): string {
     return "AI service is temporarily overloaded. Try again shortly.";
   }
 
-  if (msg.includes("ANTHROPIC_API_KEY is not set")) {
-    return "Anthropic API key is not configured on the server.";
+  if (msg.includes("API key for provider")) {
+    return "No API key is configured for the selected model provider.";
   }
 
-  if (msg.includes("ECONNREFUSED") && msg.includes("8084")) {
-    return "Watchman sanctions service is not running. Local dev: docker compose -f docker-compose.dev.yml up";
+  if (msg.includes("does not support tools")) {
+    return "The selected local model does not support tool calling. Pick a tool-capable model or disable tools for it in model settings.";
   }
+
+  if (msg.includes("ECONNREFUSED") && /:(11434|1234|8080)\b/.test(msg)) {
+    return "The local model server is not running. Start Ollama / LM Studio and try again.";
+  }
+
 
   return msg;
 }

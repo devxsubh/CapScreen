@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import { connectDb } from "../lib/infra/db";
-import { requireAuth } from "../middleware/requireAuth";
+import { requireJwt } from "../middleware/requireJwt";
 import {
   generateAuthTokens,
   serializeAuthTokens,
@@ -325,7 +325,7 @@ authRouter.post("/reset-password", emailActionLimiter, async (req, res) => {
   }
 });
 
-authRouter.post("/signout", signoutLimiter, requireAuth, async (req, res) => {
+authRouter.post("/signout", signoutLimiter, requireJwt, async (req, res) => {
   const refreshToken = readRefreshToken(req);
   if (!refreshToken) {
     clearRefreshTokenCookie(res);
@@ -385,7 +385,7 @@ authRouter.post("/refresh-tokens", refreshLimiter, async (req, res) => {
   }
 });
 
-authRouter.get("/me", requireAuth, async (req, res) => {
+authRouter.get("/me", requireJwt, async (req, res) => {
   const userId = res.locals.userId as string | undefined;
   if (!userId) {
     res.status(401).json({ detail: "Authentication required" });

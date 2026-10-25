@@ -9,6 +9,7 @@ import { SidebarContext } from "@/app/contexts/SidebarContext";
 import { OnboardingTourProvider } from "@/app/contexts/OnboardingTourContext";
 import { AppSidebar } from "@/app/components/shared/AppSidebar";
 import { UI_PREVIEW_MODE } from "@/lib/uiPreview";
+import { DesktopShell } from "@/app/components/shared/DesktopShell";
 
 export default function CapScreenLayout({
     children,
@@ -99,12 +100,13 @@ export default function CapScreenLayout({
             <SidebarContext.Provider value={sidebarContext}>
                 <OnboardingTourProvider>
                     <div className="h-dvh bg-white flex flex-col">
+                        <DesktopShell>
                         <div className="flex-1 flex overflow-hidden">
                             <AppSidebar
                                 isOpen={isSidebarOpen}
                                 onToggle={toggleSidebar}
                             />
-                            <div className="flex-1 flex flex-col h-dvh md:overflow-hidden relative w-full">
+                            <div className="flex-1 flex flex-col min-h-0 md:overflow-hidden relative w-full">
                                 {/* Mobile header */}
                                 <div className="flex md:hidden items-center gap-3 px-4 pt-3 pb-1 shrink-0">
                                     <button
@@ -121,6 +123,7 @@ export default function CapScreenLayout({
                                 </main>
                             </div>
                         </div>
+                        </DesktopShell>
                     </div>
                 </OnboardingTourProvider>
             </SidebarContext.Provider>

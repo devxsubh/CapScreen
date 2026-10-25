@@ -11,9 +11,9 @@ import {
   deleteObject,
   detectFileType,
   getObjectDownloadUrl,
-  r2Configured,
+  storageConfigured,
   uploadObject,
-} from "../../lib/infra/r2Storage";
+} from "../../lib/infra/fileStorage";
 import { toAppDocument } from "./serializers";
 
 export const singleDocumentsRouter = Router();
@@ -44,7 +44,7 @@ singleDocumentsRouter.get("/", async (req, res) => {
 });
 
 singleDocumentsRouter.post("/", upload.single("file"), async (req, res) => {
-  if (!r2Configured()) {
+  if (!storageConfigured()) {
     res.status(503).json({ detail: "Object storage is not configured" });
     return;
   }
@@ -153,7 +153,7 @@ projectDocumentsRouter.post(
   "/:projectId/documents",
   upload.single("file"),
   async (req, res) => {
-    if (!r2Configured()) {
+    if (!storageConfigured()) {
       res.status(503).json({ detail: "Object storage is not configured" });
       return;
     }

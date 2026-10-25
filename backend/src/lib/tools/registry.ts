@@ -1,9 +1,9 @@
-import type Anthropic from "@anthropic-ai/sdk";
+import type { LlmToolSchema } from "../llm/providers";
 import type { ToolContext, ToolExecutorResult } from "./types";
 
 export interface ToolDefinition {
   name: string;
-  schema: Anthropic.Tool;
+  schema: LlmToolSchema;
   handler: (input: unknown, ctx: ToolContext) => Promise<ToolExecutorResult>;
   /** Optional routing hint included in the system prompt's "Tool routing" section. */
   routingHint?: string;
@@ -20,7 +20,7 @@ export class ToolRegistry {
     return this;
   }
 
-  getTools(): Anthropic.Tool[] {
+  getTools(): LlmToolSchema[] {
     return [...this._tools.values()].map((d) => d.schema);
   }
 

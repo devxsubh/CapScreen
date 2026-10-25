@@ -11,7 +11,8 @@ import { coalesceStartupId } from "../shared/startupId";
 import { wrapEntityName } from "../shared/promptDelimiters";
 import type { ToolDefinition } from "./registry";
 
-const CORPUS_DIR = join(__dirname, "../../compliance-corpus");
+// Packaged desktop app: the shell points this at the bundled copy.
+const CORPUS_DIR = process.env.CAPSCREEN_CORPUS_DIR ?? join(__dirname, "../../compliance-corpus");
 
 function searchCorpus(query: string): string {
   let files: string[];

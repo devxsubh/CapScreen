@@ -9,7 +9,9 @@
     "dev": "pnpm --parallel --filter vc-screener-backend --filter capscreen run dev",
     "build": "pnpm --filter vc-screener-backend run build && pnpm --filter capscreen run build",
     "typecheck": "pnpm --filter vc-screener-backend run typecheck",
-    "lint": "pnpm --filter capscreen run lint"
+    "lint": "pnpm --filter capscreen run lint",
+    "desktop": "pnpm --filter capscreen-desktop run dev",
+    "desktop:dist": "pnpm --filter capscreen-desktop run dist"
   },
   "devDependencies": {
     "husky": "^9.1.7"
@@ -17,6 +19,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@openrouter/sdk",
+      "electron",
       "esbuild",
       "sharp",
       "unrs-resolver",
