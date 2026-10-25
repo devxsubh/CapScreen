@@ -24,6 +24,8 @@ contextBridge.exposeInMainWorld("capscreenDesktop", {
   printToPdf: (opts: unknown) => ipcRenderer.invoke("capscreen:print-pdf", opts),
   signOut: () => ipcRenderer.invoke("capscreen:sign-out"),
   openAccount: () => ipcRenderer.invoke("capscreen:open-account"),
+  // Buttons on the shell's own pages (sign-in gate, boot error); ignored from the app UI.
+  shellAction: (action: string) => ipcRenderer.send("capscreen:shell-action", action),
   onNavigate: (cb: (route: string) => void) => {
     const listener = (_e: unknown, route: string) => cb(route);
     ipcRenderer.on("capscreen:navigate", listener);

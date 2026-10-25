@@ -101,20 +101,6 @@ function createWindow(): void {
     return { action: "deny" };
   });
   mainWindow.webContents.on("will-navigate", (e, url) => {
-    // Buttons on the sign-in gate.
-    const gateAction = /^about:blank#(signin|signup|reopen|cancel)$/.exec(url)?.[1];
-    if (gateAction) {
-      e.preventDefault();
-      void handleGateAction(gateAction);
-      return;
-    }
-    // Buttons on the boot error page.
-    if (url === "about:blank#retry" || url === "about:blank#logs") {
-      e.preventDefault();
-      if (url.endsWith("#logs")) void shell.openPath(userData("logs"));
-      else void mainWindow?.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml())}`).then(start);
-      return;
-    }
     const allowed = url.startsWith(APP_ORIGIN) || (runtime && url.startsWith(runtime.frontendUrl)) || url.startsWith("data:");
     if (!allowed) {
       e.preventDefault();
@@ -267,6 +253,24 @@ function requireSignIn(): Promise<void> {
   return new Promise<void>((resolve) => (gateResolve = resolve));
 }
 
+/** Buttons on the shell pages (splash.ts), sent over IPC. */
+function handleShellAction(action: string): void {
+  switch (action) {
+    case "signin":
+    case "signup":
+    case "reopen":
+    case "cancel":
+      void handleGateAction(action);
+      break;
+    case "logs":
+      void shell.openPath(userData("logs"));
+      break;
+    case "retry":
+      void showPage(splashHtml()).then(start);
+      break;
+  }
+}
+
 async function handleGateAction(action: string): Promise<void> {
   if (action === "reopen" && pendingSignIn) {
     await shell.openExternal(pendingSignIn.handle.authorizeUrl);
@@ -364,6 +368,7 @@ void app.whenReady().then(() => {
     },
     signOut: signOutAndGate,
     accountUrl: () => AUTH_URL,
+    shellAction: handleShellAction,
   });
   buildMenu();
   buildTray();
