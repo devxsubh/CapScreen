@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 import { DocChunk } from "../../models/rag/docChunk";
 import { embedQuery, isEmbeddingEnabled } from "./embed";
 
-const VECTOR_SEARCH_ENABLED = process.env.MONGO_VECTOR_SEARCH_ENABLED === "true";
 const TOP_K = parseInt(process.env.RAG_TOP_K ?? "6", 10);
 const MIN_SCORE = 0.60;
 
@@ -21,8 +20,11 @@ export async function retrieveRelevantChunks(params: {
 }): Promise<RetrievedChunk[]> {
   const { startupId, query, topK = TOP_K, documentId } = params;
 
-  if (VECTOR_SEARCH_ENABLED && isEmbeddingEnabled()) {
-    return vectorSearch(startupId, query, topK, documentId);
+  if (isEmbeddingEnabled()) {
+    // Chunks embedded with a different model (dimension mismatch) are skipped
+    // by vector search, so fall back to keywords rather than return nothing.
+    const hits = await vectorSearch(startupId, query, topK, documentId);
+    if (hits.length) return hits;
   }
   return keywordFallback(startupId, query, topK, documentId);
 }

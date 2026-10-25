@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     icons: {
         icon: [
             {
-                url: "/VC%20Fund%20Research%20and%20Tool%20Building.svg",
+                url: "/capscreen-mark.svg",
                 type: "image/svg+xml",
             },
             { url: "/favicon.ico" },

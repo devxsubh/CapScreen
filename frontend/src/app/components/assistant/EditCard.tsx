@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { AppEditAnnotation } from "../shared/types";
+import { apiBase } from "@/lib/apiBase";
 
 function normalizeText(s: string) {
     return s.replace(/\s+/g, " ").trim();
@@ -239,10 +240,9 @@ export function EditCard({
             console.error("[EditCard] optimistic update threw", e);
         }
         try {
-            const apiBase =
-                process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+            const base = apiBase();
             const resp = await fetch(
-                `${apiBase}/single-documents/${annotation.document_id}/edits/${annotation.edit_id}/${verb}`,
+                `${base}/single-documents/${annotation.document_id}/edits/${annotation.edit_id}/${verb}`,
                 { method: "POST", headers: {} },
             );
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

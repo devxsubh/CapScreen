@@ -1,5 +1,5 @@
-import { completeClaudeText } from "../llm/claude";
-import { getAnthropicModel } from "../llm/models";
+import { completeText } from "../llm/complete";
+import { describeLlmConfig } from "../llm/providers";
 import type { WatchmanMatch } from "./watchman";
 import type { GraphNode } from "./graph";
 import type { RiskLevel } from "./classify";
@@ -83,7 +83,7 @@ Write exactly 3–4 plain-English sentences for a human compliance reviewer (pla
 
 Do NOT make a legal determination or confirm a sanctions violation. You are narrating a screening signal for human review, not deciding guilt.`;
 
-  screeningLog("Claude narrative (AI explains Watchman match — does not create the match)", {
+  screeningLog("LLM narrative (AI explains Watchman match — does not create the match)", {
     entity: entity.name,
     riskLevel,
     watchmanMatches: matches.slice(0, 3).map((m) => ({
@@ -91,12 +91,11 @@ Do NOT make a legal determination or confirm a sanctions violation. You are narr
       score: `${(m.match * 100).toFixed(0)}%`,
       program: m.programs.join(", ") || "n/a",
     })),
-    source: "anthropic-claude",
+    source: describeLlmConfig().roles.utility?.provider ?? "unconfigured",
   });
 
   try {
-    return await completeClaudeText({
-      model: getAnthropicModel(),
+    return await completeText({
       systemPrompt:
         "You are a cautious compliance analyst. Always recommend human verification. Never conclude guilt.",
       user: prompt,

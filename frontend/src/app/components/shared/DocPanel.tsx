@@ -17,6 +17,7 @@ import type {
     AppCitationAnnotation,
     AppEditAnnotation,
 } from "./types";
+import { apiBase } from "@/lib/apiBase";
 
 function isDocxFilename(name: string): boolean {
     const ext = name.split(".").pop()?.toLowerCase();
@@ -368,11 +369,9 @@ function EditResolveButtons({
                 );
             }
             try {
-                const apiBase =
-                    process.env.NEXT_PUBLIC_API_BASE_URL ??
-                    "http://localhost:3001";
+                const base = apiBase();
                 const resp = await fetch(
-                    `${apiBase}/single-documents/${edit.document_id}/edits/${edit.edit_id}/${verb}`,
+                    `${base}/single-documents/${edit.document_id}/edits/${edit.edit_id}/${verb}`,
                     { method: "POST", headers: {} },
                 );
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -463,8 +462,7 @@ function DownloadButton({
         if (busy || isReloading) return;
         setBusy(true);
         try {
-            const apiBase =
-                process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+            const base = apiBase();
             const path = isStartupDocument
                 ? `/api/documents/${documentId}/download`
                 : `/single-documents/${documentId}/docx${
@@ -472,7 +470,7 @@ function DownloadButton({
                           ? `?version_id=${encodeURIComponent(versionId)}`
                           : ""
                   }`;
-            const resp = await fetch(`${apiBase}${path}`, {
+            const resp = await fetch(`${base}${path}`, {
                 headers: await getAuthHeaders(),
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

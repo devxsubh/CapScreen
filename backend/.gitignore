@@ -13,3 +13,4 @@ logs/
 .DS_Store
 storage/jwtRS256.key
 storage/jwtRS256.key.pub
+.vercel

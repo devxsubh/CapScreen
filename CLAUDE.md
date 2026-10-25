@@ -4,119 +4,109 @@
 
 ## Project Overview
 
-A VC compliance tool that screens startup cap tables for sanctions risk. Users create "startups," upload cap-table CSVs, and get an AI-powered risk report with an ownership graph, entity risk table, and a Claude-generated plain-English narrative. The screener chat carries full context (CSV content + screening results) across all turns in a session.
+A **desktop app** (Electron) that screens startup cap tables for sanctions risk. Users create "startups," upload cap-table CSVs, and get a risk report with an ownership graph, entity risk table, and an AI-written plain-English narrative. **All data stays on the user's computer**: SQLite database, local files, bundled sanctions engine. AI runs on-device (Ollama/LM Studio) or with the user's own cloud API keys, chosen in the in-app **AI Control Center**.
 
 **It never decides guilt.** It narrows the review set for a human compliance officer.
+
+The only cloud piece is a small **auth service** (accounts + sign-in, on Vercel + Atlas); no screening data goes there. No EC2, R2 or Upstash.
 
 ---
 
 ## Architecture
 
-**Canonical doc:** `docs/ARCHITECTURE.md`
+**Canonical doc:** `docs/DESKTOP_PLAN.md`
 
-### Deployment topology
-
-| Layer | Where | How |
-|---|---|---|
-| Frontend | **Vercel** | `frontend/` Next.js app; `NEXT_PUBLIC_API_BASE_URL` → EC2 API |
-| Backend | **AWS EC2** | `docker-compose.yml` → `backend/Dockerfile`, port 3001 |
-| Watchman | **AWS EC2** (same compose stack) | `moov/watchman:static`, internal Docker network only |
-| MongoDB | **Atlas** | `MONGODB_URI` in `.env.production` |
-| Cache | **Upstash Redis** | Watchman result cache (optional) |
-| Storage | **Cloudflare R2** | Document uploads |
-| LLM | **Anthropic** (+ OpenAI for RAG) | API keys on EC2 only |
+### Runtime topology
 
 ```
-Vercel (Next.js)  ──HTTPS/CORS──►  EC2: backend + watchman (Docker)
-                                        ├── Atlas · Upstash · R2 · Resend
+Electron main (desktop/src/main.ts)
+ ├─ Watchman sidecar   127.0.0.1:<free port>   self-built Go binary (no libpostal) — OFAC/EU lists
+ ├─ Backend            127.0.0.1:<free port>   Express, utilityProcess; per-launch token required
+ │    ├─ SQLite        <userData>/capscreen.db  mongoose models via lib/infra/sqliteStore
+ │    └─ Files         <userData>/files/
+ ├─ UI (Next.js)       127.0.0.1:<free port>   standalone server, utilityProcess
+ └─ Window loads capscreen://app  → protocol.ts proxies UI + /__api/* (adds token)
 ```
 
-Local dev: Watchman via `docker compose -f docker-compose.dev.yml up`; backend + frontend on host via `pnpm dev` and root `.env`.
+`<userData>` = `~/Library/Application Support/CapScreen` (macOS), `%APPDATA%/CapScreen` (Windows).
 
-Production EC2: `docker compose --env-file .env.production up -d --build`. Watchman URL is overridden to `http://watchman:8084` inside compose.
+Network egress: public sanctions-list downloads (Watchman, every 12 h) and cloud LLM calls **only** when the user assigns a cloud model. Local-only mode blocks the latter in `getLlm()`.
 
 ### Backend stack
 
-- `express` with `helmet`, `cors`, `express-rate-limit`, JWT auth (RS256 cookies)
-- `@anthropic-ai/sdk` — Claude Haiku (`claude-haiku-4-5`) for analyst notes + agentic chat
-- `mongoose` — MongoDB Atlas (startups, CSVs, chats, RAG vectors)
+- `express` + `helmet`, `cors`, `express-rate-limit`; loopback-only; `middleware/desktopToken.ts` gate; single local user (`middleware/requireAuth.ts`)
+- **SQLite via mongoose**: `lib/infra/sqliteStore/` implements the MongoDB driver surface mongoose calls (`node:sqlite`, no native deps). All mongoose models/queries run unchanged. `$vectorSearch` is in-process cosine.
+- **Pluggable LLMs** (`lib/llm/providers/`): Anthropic, native Ollama, and OpenAI-compatible (OpenAI, Gemini, OpenRouter, Groq, LM Studio, llama.cpp, any custom endpoint). Roles: `agent`, `utility`, `embedding`.
+- **AI Control Center** (`lib/llm/controlCenter/`, `routes/aiControlCenter.ts`): providers, model assignments, local-only policy; API keys AES-256-GCM encrypted with a master key sealed by the OS keychain (Electron `safeStorage`).
 - `graphology` — directed ownership graph (BFS traversal, circular ownership detection)
-- Watchman — OFAC SDN + EU Consolidated via `GET /v2/search`; co-located in Docker on EC2
+- Watchman — `GET /v2/search`; every screening result stores `watchmanListInfo` (list counts + SHA-256 per list)
 
 ### Frontend stack
 
-- Next.js 15 App Router, React 19, TypeScript — **deployed on Vercel**
-- Tailwind CSS + Shadcn/ui components
-- `@xyflow/react` (React Flow) — interactive ownership graph
-- `recharts` — data visualisation
-- JWT auth via httpOnly cookies to EC2 backend (`FRONTEND_URL` must match Vercel origin)
+- Next.js App Router, React 19, TypeScript — built `output: "standalone"` for the desktop bundle
+- Tailwind CSS + Shadcn/ui; `@xyflow/react` ownership graph; `recharts`
+- `lib/apiBase.ts` — backend origin comes from the preload bridge (`window.capscreenDesktop`); never read `NEXT_PUBLIC_API_BASE_URL` directly
+- `lib/desktop.ts` — typed bridge (`useDesktop()` for render-time use; hydration-safe)
+
+---
+
+## Accounts & sign-in (cloud auth service)
+
+Accounts are the **only** cloud component. Sign-in works like Claude Code: the app opens the browser, the user signs in on the hosted portal, the browser hands a one-time code back to a loopback listener, and the app exchanges it (PKCE) for a session sealed in the OS keychain. Cap tables, documents and screenings never leave the machine.
+
+| Piece | Where |
+|---|---|
+| Auth service (Express) | `backend/src/authService/app.ts` — mounts `routes/auth.ts` (signup/signin/verify/reset) + `routes/desktopOAuth.ts` (RFC 8252 + PKCE) + portal |
+| Hosted portal (sign-in UI) | `backend/src/authService/portal.ts` — one self-contained page; serves `/desktop/authorize`, `/verify-email`, `/reset-password` |
+| Vercel entry | `backend/api/index.ts`, `backend/vercel.json` (project root: `backend/`) |
+| Accounts DB | MongoDB Atlas — `CAPSCREEN_DB=mongodb` switches `lib/infra/db.ts` to Atlas (auth service only) |
+| Desktop client | `desktop/src/authFlow.ts` (protocol, Electron-free) + `desktop/src/session.ts` (keychain, restore, 14-day offline grace, refresh every 12 h) |
+| Gate | `desktop/src/main.ts` + `splash.ts` (`signInHtml`) — shown until signed in; sidecars boot in parallel |
+| Attribution | Shell writes `<userData>/identity.json`; `middleware/requireAuth.ts` uses it for `userEmail` (audit, reviews). Data owner stays `local-user`. |
+
+Auth service env (Vercel): `CAPSCREEN_DB=mongodb`, `MONGODB_URI`, `JWT_ACCESS_TOKEN_SECRET_PRIVATE`/`_PUBLIC` (`pnpm --filter vc-screener-backend run generate:jwt-keys`), `FRONTEND_URL` = the service's own URL (email links), `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (email verification; without it signups are auto-confirmed), optional `DESKTOP_REFRESH_TOKEN_EXPIRATION_DAYS` (default 30).
+
+Desktop: production auth URL is `capscreenAuthUrl` in `desktop/package.json` (override with `CAPSCREEN_AUTH_URL`). Dev defaults to `http://127.0.0.1:4100` — run `pnpm --filter vc-screener-backend auth:dev`, or skip sign-in with `CAPSCREEN_SKIP_AUTH=1` (dev only).
 
 ---
 
 ## Key Data Flow
 
 ```
-User uploads CSV
-  → POST /api/startups/:id/csvs  (store raw CSV in MongoDB)
+User uploads CSV (or drops it in a watched folder)
+  → POST /api/startups/:id/csvs  (stored in SQLite)
   → POST /api/chat (send with csvContent)
       → screen_cap_table tool:
           parseCapTable → buildOwnershipGraph → searchWatchman → classifyScore → explainMatch
-      → returns ScreeningResult + Claude narrative
-  → screeningResult saved back to startup in MongoDB (lastScreeningResult)
+      → returns ScreeningResult (+ watchmanListInfo) + LLM narrative
+  → screeningResult saved to the startup (lastScreeningResult)
   → ScreeningResultsPanel opens: OwnershipGraph + RiskTable + RiskCards
 ```
+
+Screening fails **closed**: if Watchman is unavailable, `runScreening` throws instead of returning "clear".
 
 ---
 
 ## Dev Setup
 
-### 1. Watchman (required — sanctions data)
-
 ```bash
-docker compose -f docker-compose.dev.yml up
-# Takes ~30–60 s to load SDN/EU lists. Must be running for any screening to work.
-```
-
-### 2. MongoDB
-
-Use local `mongod` or point `MONGODB_URI` at Atlas in root `.env` (same cluster as production is fine for dev).
-
-### 3. Environment & dev server
-
-```bash
-cp .env.example .env    # monorepo root — backend + frontend on host
 pnpm install
-pnpm dev                # backend :3001 + frontend :3000
+pnpm --filter capscreen-desktop run build:watchman   # once; needs Go 1.24+ (brew install go)
+pnpm desktop                                         # Electron + backend (tsx) + Next dev, all sidecars
 ```
 
-Env vars (root `.env` — see `.env.example`):
+`pnpm desktop` uses `~/Library/Application Support/CapScreen` like the packaged app. Configure models in the app's **AI Control Center** (or install Ollama and click "Use on-device AI"). Dev-only: `CAPSCREEN_REMOTE_DEBUG=9333` exposes CDP on loopback for automation.
 
-| Variable | Local | Production (EC2 / Vercel) |
-|---|---|---|
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:3001` | EC2 public URL (Vercel env) |
-| `FRONTEND_URL` | `http://localhost:3000` | Vercel deployment URL (backend CORS) |
-| `PORT` | `3001` | `3001` (compose maps host port) |
-| `WATCHMAN_URL` | `http://localhost:8084` | `http://watchman:8084` (set by compose) |
-| `MONGODB_URI` | local or Atlas | Atlas |
-| `ANTHROPIC_API_KEY` | — | Required on EC2 |
-| *(model)* | `claude-haiku-4-5` | Locked in `backend/src/lib/llm/models.ts` |
+Browser-only dev without Electron (`pnpm dev`) still works: the backend falls back to root `.env` (`LLM_PROVIDER`/`LLM_MODEL`/keys, see `.env.example`), data in `~/.capscreen`, and Watchman via `docker compose -f docker-compose.dev.yml up`. When launched by Electron (`CAPSCREEN_DESKTOP_TOKEN` set) the backend never reads `.env`.
 
-Production secrets live in `.env.production` on EC2 (from `.env.example`); never commit. Vercel only needs `NEXT_PUBLIC_*` vars.
-
-> `pnpm dev` at the root starts both services on the host. Individual: `pnpm --filter vc-screener-backend dev` or `pnpm --filter capscreen dev`.
-
-**Preview mode:** Set `ALLOW_PREVIEW_MODE=true` and `NEXT_PUBLIC_ALLOW_PREVIEW_MODE=true` in root `.env` for local dev without auth — never in production.
-
-### 4. Production deploy (reference)
+### Packaging
 
 ```bash
-# EC2
-docker compose --env-file .env.production up -d --build
-
-# Vercel — deploy frontend/, set NEXT_PUBLIC_API_BASE_URL to EC2 API URL
+pnpm --filter capscreen-desktop run dist:mac   # → desktop/release/CapScreen-<ver>-arm64.dmg (+ x64)
+pnpm --filter capscreen-desktop run dist       # all targets in electron-builder.yml
 ```
 
-See `docs/ARCHITECTURE.md` for full topology and checklist.
+Build each OS on that OS (Next's traced `sharp` binary is platform-specific). Unsigned unless `CSC_*` signing env is set — sign + notarize before distributing.
 
 ---
 
@@ -138,10 +128,17 @@ backend/src/
     runScreening.ts         — orchestrates parse→graph→watchman→classify→explain → ScreeningResult
     chatTools.ts            — SCREENER_TOOLS (Anthropic Tool[]) + createToolExecutor
     llm/
-      claude.ts             — Claude API wrapper
-      agent.ts              — runAgentWithTools (agentic loop with tool-use)
+      providers/            — neutral types, Anthropic + OpenAI-compatible adapters, registry (roles: agent/utility/embedding)
+      complete.ts           — completeText / chatText (single-shot + multi-turn, provider-neutral)
+      streamAgent.ts        — runAgentStream (SSE agentic loop with tool-use; tool-less fallback)
+      validateLlm.ts        — boot-time ping of the configured agent model
       index.ts              — re-exports
-    db.ts                   — mongoose connect (singleton, lazy)
+    infra/db.ts             — opens SQLite store and attaches it to mongoose (applies pending restore)
+    infra/sqliteStore/      — MongoDB-driver-compatible store on node:sqlite (query, update, store)
+    infra/backup.ts         — encrypted .capscreen-backup create/restore
+    infra/folderWatch.ts    — watched data-room folders → auto-ingest
+    infra/fileStorage.ts    — local file storage + signed download URLs
+    infra/settings.ts       — settings.json (background screening, sanctions lists)
   models/
     startup.ts              — Startup mongoose schema (name, createdAt, lastScreeningResult)
     capTableCsv.ts          — CapTableCsv schema (startupId, filename, content, uploadedAt)
@@ -222,6 +219,8 @@ frontend/src/
 | `/assistant` | CapScreen compliance assistant | Primary chat shell |
 | `/assistant/chat/:id` | Persisted chat view | |
 | `/screen` | Redirects → `/assistant` | Unused |
+| `/ai` | AI Control Center | Providers, BYO keys, local models, model assignments, local-only mode |
+| `/settings/data` | Data & Backup | Sanctions lists/versions, background re-screening, encrypted backup/restore, audit export |
 
 The sidebar shows "Startups" → `/startups` and "Recent Projects" (up to 5).
 
@@ -241,9 +240,12 @@ The sidebar shows "Startups" → `/startups` and "Recent Projects" (up to 5).
 
 | Capability | Status | Command / doc |
 |---|---|---|
-| Agent tool loop | ✅ | `backend/src/lib/llm/agent.ts` |
+| Agent tool loop | ✅ | `backend/src/lib/llm/streamAgent.ts` |
+| Pluggable / local models | ✅ | `backend/src/lib/llm/providers/` |
+| Desktop app (Electron) | ✅ | `desktop/`, `docs/DESKTOP_PLAN.md` |
+| AI Control Center (BYO keys, local models) | ✅ | `/ai`, `backend/src/routes/aiControlCenter.ts` |
 | Persistent agent memory | ✅ seeded | `.claude/agent-memory/project/` |
-| Document RAG | 🔲 planned | `/compliance-rag-roadmap` |
+| Document RAG | ✅ local embeddings | `backend/src/lib/rag/` |
 | Chat-first UI shell | ✅ restored | `frontend/.../assistant/` |
 | Gap audit | — | `/compliance-parity-check` |
 
@@ -265,9 +267,16 @@ See the plan in conversation context for full details. Short version:
 ```bash
 # Root (pnpm workspace)
 pnpm install                        # install all workspaces
-pnpm dev                            # start backend + frontend in parallel
+pnpm desktop                        # run the desktop app (dev)
+pnpm desktop:dist                   # build installers
+pnpm dev                            # browser-only dev: backend + frontend on host
 pnpm -w run typecheck               # backend tsc --noEmit
 pnpm -w run lint                    # frontend eslint
+
+# Desktop only
+pnpm --filter capscreen-desktop run build:watchman   # build Watchman binaries (Go)
+pnpm --filter capscreen-desktop run typecheck
+pnpm --filter capscreen-desktop run dist:mac
 
 # Backend only
 pnpm --filter vc-screener-backend run dev
@@ -279,11 +288,8 @@ pnpm --filter capscreen run dev
 pnpm --filter capscreen run build
 pnpm --filter capscreen run lint
 
-# Watchman (local dev)
+# Watchman for browser-only dev (the desktop app bundles its own)
 docker compose -f docker-compose.dev.yml up
-
-# Production stack (EC2)
-docker compose --env-file .env.production up -d --build
 ```
 
 ## TypeScript / Lint Notes

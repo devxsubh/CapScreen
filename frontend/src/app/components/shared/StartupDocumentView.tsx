@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { getAuthHeaders } from "@/lib/apiAuth";
 import { getStartupGeneratedDocument } from "@/lib/startupsApi";
 import { ChatMarkdown } from "./ChatMarkdown";
+import { apiBase } from "@/lib/apiBase";
 
 interface Props {
     documentId: string;
@@ -22,9 +23,8 @@ async function fetchDocumentContent(
         return doc.content;
     }
 
-    const apiBase =
-        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
-    const resp = await fetch(`${apiBase}/api/documents/${documentId}/view`, {
+    const base = apiBase();
+    const resp = await fetch(`${base}/api/documents/${documentId}/view`, {
         headers: await getAuthHeaders(),
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

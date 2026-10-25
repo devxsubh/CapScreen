@@ -1,7 +1,6 @@
 import express from "express";
-import type Anthropic from "@anthropic-ai/sdk";
+import type { LlmMessage, LlmToolChoice } from "../lib/llm/providers";
 import { runAgentStream } from "../lib/llm/streamAgent";
-import { getAnthropicModel } from "../lib/llm/models";
 import {
   screenerRegistry,
   SCREEN_CAP_TABLE_TOOL_NAME,
@@ -37,9 +36,9 @@ const BASE_SYSTEM =
   `- When you call web_search, you MUST include every source URL from the results as a markdown hyperlink [title](url) in your response. Never summarise web results without citing links.\n\n` +
   `CSV ingest: any CSV format is accepted — the system auto-detects cap tables (entity + owner + ownership %) or flat entity lists.`;
 
-function toAnthropicMessages(
+function toLlmMessages(
   messages: Array<{ role: "user" | "assistant"; content: string }>,
-): Anthropic.MessageParam[] {
+): LlmMessage[] {
   return messages.map((m) => ({
     role: m.role,
     content: m.content,
@@ -136,16 +135,15 @@ chatRouter.post("/", async (req, res) => {
 
   // Force screen_cap_table on the first turn when a CSV is attached and no
   // prior result exists — makes the critical routing case deterministic.
-  const toolChoice: Anthropic.ToolChoiceTool | undefined =
+  const toolChoice: LlmToolChoice | undefined =
     ctx.csvContent && !ctx.screeningResult
       ? { type: "tool", name: SCREEN_CAP_TABLE_TOOL_NAME }
       : undefined;
 
   try {
     const { toolActivity } = await runAgentStream({
-      model: getAnthropicModel(),
       systemPrompt: system,
-      messages: toAnthropicMessages(validMessages),
+      messages: toLlmMessages(validMessages),
       tools: screenerRegistry.getTools(),
       executeTool: wrappedExecute,
       write,

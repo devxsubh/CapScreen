@@ -1,11 +1,11 @@
-import { completeClaudeText } from "../llm/claude";
-import { getAnthropicModel } from "../llm/models";
+import { completeText } from "../llm/complete";
 import type { ColumnMapping, CsvKind } from "../../types/screening";
 import {
   UNTRUSTED_DATA_PROMPT_GUARD,
   wrapCsvData,
 } from "../shared/promptDelimiters";
 import { isExternalLlmBlocked } from "../shared/dataResidency";
+import { hasLlmRole } from "../llm/providers";
 
 export interface InferredCsvSchema {
   csvKind: CsvKind;
@@ -96,10 +96,7 @@ export async function inferCsvSchema(params: {
   headers: string[];
   sampleRows: string[][];
 }): Promise<InferredCsvSchema | null> {
-  if (isExternalLlmBlocked()) return null;
-
-  const key = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!key) return null;
+  if (isExternalLlmBlocked() || !hasLlmRole("utility")) return null;
 
   const sample = params.sampleRows
     .slice(0, 8)
@@ -117,8 +114,7 @@ export async function inferCsvSchema(params: {
     .join("\n");
 
   try {
-    const text = await completeClaudeText({
-      model: getAnthropicModel(),
+    const text = await completeText({
       systemPrompt: SYSTEM,
       user,
       maxTokens: 1024,

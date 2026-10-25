@@ -9,9 +9,9 @@ import { authIdentityOr500 } from "../../middleware/userIdentity";
 import {
   buildRagDocumentKey,
   deleteObject,
-  r2Configured,
+  storageConfigured,
   uploadObject,
-} from "../../lib/infra/r2Storage";
+} from "../../lib/infra/fileStorage";
 
 export const ragDocumentsRouter = Router();
 
@@ -55,7 +55,7 @@ ragDocumentsRouter.post(
       res.status(400).json({ detail: "No file uploaded. Send file as multipart field 'file'." });
       return;
     }
-    if (!r2Configured()) {
+    if (!storageConfigured()) {
       res.status(503).json({ detail: "Object storage is not configured" });
       return;
     }

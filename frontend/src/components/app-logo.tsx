@@ -1,10 +1,12 @@
-/** Logo asset in /public */
-export const APP_LOGO_SRC = "/VC%20Fund%20Research%20and%20Tool%20Building.svg";
+/** CapScreen brand assets in /public (vector outlines, no font dependency). */
+export const APP_LOGO_SRC = "/capscreen-logo.svg";
+export const APP_MARK_SRC = "/capscreen-mark.svg";
 
-const ASPECT = 1000 / 391;
+/** Lockup artboard: 1104 × 391 (circle diameter = height). */
+const ASPECT = 1104 / 391;
 
 type AppLogoProps = {
-  /** Full wordmark vs circular mark (left crop) */
+  /** Full lockup (circle + "screen") vs circular "cap" mark */
   variant?: "full" | "mark";
   height?: number;
   className?: string;
@@ -16,24 +18,16 @@ export function AppLogo({
   className = "",
 }: AppLogoProps) {
   if (variant === "mark") {
-    const size = height;
     return (
-      <span
-        className={`relative inline-block overflow-hidden shrink-0 ${className}`}
-        style={{ width: size, height: size }}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={APP_LOGO_SRC}
-          alt=""
-          className="absolute left-0 top-0 h-full max-w-none"
-          style={{
-            width: Math.round(size * ASPECT),
-            objectFit: "cover",
-            objectPosition: "left center",
-          }}
-        />
-      </span>
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={APP_MARK_SRC}
+        alt="CapScreen"
+        width={height}
+        height={height}
+        className={`shrink-0 ${className}`}
+        style={{ width: height, height }}
+      />
     );
   }
 
@@ -42,7 +36,7 @@ export function AppLogo({
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={APP_LOGO_SRC}
-      alt="VC Fund Research and Tool Building"
+      alt="CapScreen"
       height={height}
       width={width}
       className={`shrink-0 ${className}`}

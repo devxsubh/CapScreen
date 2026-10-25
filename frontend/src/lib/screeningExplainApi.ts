@@ -1,9 +1,8 @@
 import { getAuthHeaders } from "@/lib/apiAuth";
 import type { EntityResult } from "@/lib/screenerTypes";
+import { apiBase } from "@/lib/apiBase";
 
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001"
-).replace(/\/$/, "");
+const API_BASE = apiBase();
 
 export async function fetchEntityExplanation(
   entity: EntityResult,

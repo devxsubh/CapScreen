@@ -22,7 +22,7 @@ let listInfoCache: { data: WatchmanListInfo; at: number } | null = null;
 
 export class WatchmanUnavailableError extends Error {
   constructor(
-    message = "Sanctions data source (Watchman) is unavailable. Start Watchman Docker and retry.",
+    message = "Sanctions screening engine (Watchman) is unavailable. Restart CapScreen; if it persists, check logs/watchman.log.",
   ) {
     super(message);
     this.name = "WatchmanUnavailableError";
@@ -45,7 +45,7 @@ export function getWatchmanBaseUrl(): string {
   return (process.env.WATCHMAN_URL ?? DEFAULT_BASE).replace(/\/$/, "");
 }
 
-/** Ping Watchman at startup — logs whether Docker sanctions data is reachable. */
+/** Ping Watchman at startup — logs whether the local sanctions engine is reachable. */
 export async function checkWatchmanHealth(): Promise<{
   ok: boolean;
   url: string;
@@ -58,10 +58,10 @@ export async function checkWatchmanHealth(): Promise<{
     });
     if (resp.ok) {
       const body = (await resp.text()).trim();
-      screeningLog("Watchman reachable — sanctions lists loaded from Docker", {
+      screeningLog("Watchman reachable — sanctions lists loaded", {
         url,
         ping: body || "ok",
-        source: "watchman-docker",
+        source: "watchman-local",
       });
       return { ok: true, url, detail: body || "ok" };
     }
@@ -73,7 +73,7 @@ export async function checkWatchmanHealth(): Promise<{
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
     screeningWarn(
-      "Watchman unreachable — screening will return all CLEAR (no sanctions data)",
+      "Watchman unreachable — screenings are refused until the sanctions engine is available",
       { url, error: detail },
     );
     return { ok: false, url, detail };
@@ -264,7 +264,7 @@ async function fetchFromWatchman(
       const data = (await resp.json()) as Record<string, unknown>;
       const matches = normalizeResponse(data, minMatch);
       if (matches.length > 0) {
-        screeningLog("Watchman match (deterministic — from Docker sanctions lists)", {
+        screeningLog("Watchman match (deterministic — from local sanctions lists)", {
           entity: name,
           type,
           endpoint: label,
@@ -273,7 +273,7 @@ async function fetchFromWatchman(
           topScore: `${(matches[0].match * 100).toFixed(0)}%`,
           program: matches[0].programs[0] ?? "n/a",
           sourceList: matches[0].sourceList ?? "n/a",
-          source: "watchman-docker",
+          source: "watchman-local",
           requestId: options.requestId,
         });
       } else {
@@ -281,7 +281,7 @@ async function fetchFromWatchman(
           entity: name,
           type,
           endpoint: label,
-          source: "watchman-docker",
+          source: "watchman-local",
           requestId: options.requestId,
         });
       }

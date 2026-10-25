@@ -1,5 +1,4 @@
-import { completeClaudeText } from "../llm/claude";
-import { getAnthropicModel } from "../llm/models";
+import { completeText } from "../llm/complete";
 import type { ScreeningResult } from "../../types/screening";
 import { wrapEntityName } from "../shared/promptDelimiters";
 
@@ -114,8 +113,7 @@ Structure:
 Use professional compliance tone. Be concise.`;
 
   try {
-    return await completeClaudeText({
-      model: getAnthropicModel(),
+    return await completeText({
       systemPrompt:
         "You draft IC compliance memos for VC associates. Use only provided screening facts. Never confirm guilt or sanctions violations.",
       user: prompt,

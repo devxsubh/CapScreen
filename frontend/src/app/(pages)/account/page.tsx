@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
 import { useOnboardingTour } from "@/app/contexts/OnboardingTourContext";
 import { deleteAccount } from "@/app/lib/capScreenApi";
+import { useDesktop } from "@/lib/desktop";
 
 export default function AccountPage() {
     const router = useRouter();
@@ -23,6 +24,7 @@ export default function AccountPage() {
     const [orgSaved, setOrgSaved] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const bridge = useDesktop();
 
     useEffect(() => {
         if (profile?.displayName) {
@@ -78,6 +80,52 @@ export default function AccountPage() {
     };
 
     if (!user) return null;
+
+    if (bridge?.user) {
+        const account = bridge.user;
+        return (
+            <div className="space-y-4">
+                <div className="pb-6">
+                    <h2 className="text-2xl font-medium font-serif mb-4">Account</h2>
+                    <dl className="space-y-3 text-sm">
+                        <div>
+                            <dt className="text-gray-600">Name</dt>
+                            <dd className="text-base">{account.displayName ?? "—"}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-600">Email</dt>
+                            <dd className="text-base">{account.email}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-gray-600">Organisation</dt>
+                            <dd className="text-base">{account.organisation ?? "—"}</dd>
+                        </div>
+                    </dl>
+                    <p className="text-sm text-gray-500 mt-4">
+                        Your CapScreen account controls access to this app. Cap tables, documents and screenings
+                        stay on this computer.
+                        {bridge.offline && " You're working offline; CapScreen will reconnect automatically."}
+                    </p>
+                </div>
+                <div className="py-6">
+                    <h2 className="text-2xl font-medium font-serif mb-4">Actions</h2>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Button variant="outline" onClick={() => void bridge.openAccount()} className="w-full sm:w-auto">
+                            Change password
+                        </Button>
+                        <Button variant="outline" onClick={() => startTour({ force: true })} className="w-full sm:w-auto">
+                            <Compass className="h-4 w-4 mr-2" />
+                            Restart product tour
+                        </Button>
+                        <Button variant="outline" onClick={() => void signOut()} className="w-full sm:w-auto">
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Sign Out
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-4">

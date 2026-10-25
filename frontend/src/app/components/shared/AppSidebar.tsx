@@ -10,6 +10,8 @@ import {
     User,
     ChevronsUpDown,
     ChevronDown,
+    Cpu,
+    Database,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserProfile } from "@/contexts/UserProfileContext";
@@ -45,6 +47,12 @@ const NAV_ITEMS = [
         label: "Workflows",
         icon: Library,
         tourId: "nav-workflows",
+    },
+    {
+        href: "/ai",
+        label: "AI Control Center",
+        icon: Cpu,
+        tourId: "nav-ai",
     },
 ] as const;
 
@@ -155,8 +163,8 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
         <div
             className={`${
                 isOpen
-                    ? "w-64 h-dvh bg-gray-50 border-r"
-                    : "w-14 md:h-dvh md:bg-gray-50 md:border-r h-auto bg-transparent pointer-events-none md:pointer-events-auto"
+                    ? "w-64 h-dvh md:h-full bg-gray-50 border-r"
+                    : "w-14 md:h-full md:bg-gray-50 md:border-r h-auto bg-transparent pointer-events-none md:pointer-events-auto"
             } border-gray-200 flex flex-col transition-all duration-300 absolute md:relative z-[99] overflow-visible`}
         >
             {/* Toggle + Logo */}
@@ -451,6 +459,16 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                                 >
                                     <User className="h-4 w-4" />
                                     Account Settings
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        router.push("/settings/data");
+                                        setIsDropdownOpen(false);
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 rounded-md"
+                                >
+                                    <Database className="h-4 w-4" />
+                                    Data &amp; Backup
                                 </button>
                             </div>
                         )}

@@ -85,6 +85,9 @@ export const screeningResultSchema = new mongoose.Schema(
       default: null,
     },
     csvKind: { type: String, default: null },
+    // Which sanctions-list versions this result was checked against (counts,
+    // SHA-256 per list, load time) — audit evidence for "as of" screening.
+    watchmanListInfo: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { _id: false },
 );

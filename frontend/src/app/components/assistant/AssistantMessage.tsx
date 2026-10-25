@@ -20,6 +20,7 @@ import { getAuthHeaders } from "@/lib/apiAuth";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import { parseMessageOptions } from "@/lib/parseMessageOptions";
 import { MessageOptionChips } from "@/app/components/shared/MessageOptionChips";
+import { apiBase } from "@/lib/apiBase";
 
 function toolCallLabel(name: string): string {
     if (name === "generate_docx") return "Creating document...";
@@ -112,8 +113,7 @@ function BulkEditActions({
         setBusy(verb);
         setProgress({ done: 0, total: pending.length });
         try {
-            const apiBase =
-                process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+            const base = apiBase();
 
             // Sequential so the per-document version counter advances in a
             // predictable order and the viewer doesn't race between bumps.
@@ -137,7 +137,7 @@ function BulkEditActions({
                 }
                 try {
                     const resp = await fetch(
-                        `${apiBase}/single-documents/${annotation.document_id}/edits/${annotation.edit_id}/${verb}`,
+                        `${base}/single-documents/${annotation.document_id}/edits/${annotation.edit_id}/${verb}`,
                         {
                             method: "POST",
                             headers: {},
@@ -641,7 +641,7 @@ function DocDownloadBlock({
     // the user's bearer token, so any absolute URL from tool output is
     // refused to keep the token from leaking off-origin.
     const API_BASE =
-        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+        apiBase();
     const normalizedUrl = (() => {
         const legacy = download_url.match(
             /^\/api\/startups\/[^/]+\/documents\/([^/]+)\/download$/,

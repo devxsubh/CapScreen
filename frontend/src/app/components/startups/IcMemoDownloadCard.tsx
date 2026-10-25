@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Download, FileText, Loader2 } from "lucide-react";
 import { getIcMemoDocument } from "@/lib/startupsApi";
-import { downloadIcMemoAsDoc } from "@/lib/downloadIcMemo";
+import { downloadIcMemoAsDoc, downloadIcMemoAsPdf } from "@/lib/downloadIcMemo";
+import { useDesktop } from "@/lib/desktop";
 
 interface Props {
   startupId: string;
@@ -12,19 +13,21 @@ interface Props {
 }
 
 export function IcMemoDownloadCard({ startupId, documentId, title }: Props) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"doc" | "pdf" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const desktopApp = useDesktop() !== null;
 
-  async function handleDownload() {
-    setLoading(true);
+  async function handleDownload(format: "doc" | "pdf") {
+    setLoading(format);
     setError(null);
     try {
       const doc = await getIcMemoDocument(startupId, documentId);
-      downloadIcMemoAsDoc(doc);
+      if (format === "pdf") await downloadIcMemoAsPdf(doc);
+      else downloadIcMemoAsDoc(doc);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Download failed");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
@@ -38,19 +41,22 @@ export function IcMemoDownloadCard({ startupId, documentId, title }: Props) {
             IC compliance memo ready
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void handleDownload()}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 shrink-0 rounded-md bg-white border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60"
-        >
-          {loading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Download className="h-3.5 w-3.5" />
-          )}
-          Download .doc
-        </button>
+        {(desktopApp ? (["pdf", "doc"] as const) : (["doc"] as const)).map((format) => (
+          <button
+            key={format}
+            type="button"
+            onClick={() => void handleDownload(format)}
+            disabled={loading !== null}
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-md bg-white border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60"
+          >
+            {loading === format ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            {format === "pdf" ? "PDF" : ".doc"}
+          </button>
+        ))}
       </div>
       {error && <p className="text-xs text-red-600 mt-1.5">{error}</p>}
     </div>

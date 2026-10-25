@@ -3,6 +3,7 @@ import type {
   ScreeningProgressEvent,
   ScreeningResult,
 } from "@/lib/screenerTypes";
+import { apiBase } from "@/lib/apiBase";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 
@@ -12,9 +13,7 @@ export type ToolActivity = {
   summary?: string;
 };
 
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001"
-).replace(/\/$/, "");
+const API_BASE = apiBase();
 
 export async function screenCapTable(
   file: File,

@@ -1,0 +1,65 @@
+appId: com.capscreen.desktop
+productName: CapScreen
+copyright: CapScreen
+directories:
+  output: release
+  buildResources: resources/icons
+
+# The main process has no runtime npm dependencies — only Electron built-ins.
+files:
+  - dist/**/*
+  - package.json
+asar: true
+
+# Sidecars live outside the asar so they can be executed/forked directly.
+extraResources:
+  - from: resources/backend
+    to: backend
+  - from: resources/frontend
+    to: frontend
+    # Standalone Next server needs its traced node_modules (excluded by default).
+    filter:
+      - "**/*"
+      - "**/node_modules/**"
+      - "**/.pnpm/**"
+  - from: resources/icons
+    to: icons
+
+mac:
+  category: public.app-category.finance
+  icon: resources/icons/icon.png
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  extraResources:
+    - from: resources/bin/watchman-darwin-${arch}
+      to: bin/watchman-darwin-${arch}
+
+dmg:
+  title: CapScreen ${version}
+
+win:
+  icon: resources/icons/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+  extraResources:
+    - from: resources/bin/watchman-win32-x64.exe
+      to: bin/watchman-win32-x64.exe
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+
+linux:
+  icon: resources/icons/icon.png
+  category: Office
+  target:
+    - target: AppImage
+      arch: [x64]
+  extraResources:
+    - from: resources/bin/watchman-linux-${arch}
+      to: bin/watchman-linux-${arch}

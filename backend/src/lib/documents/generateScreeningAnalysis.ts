@@ -1,5 +1,4 @@
-import { completeClaudeText } from "../llm/claude";
-import { getAnthropicModel } from "../llm/models";
+import { completeText } from "../llm/complete";
 import type { ScreeningResult } from "../../types/screening";
 import { wrapEntityName } from "../shared/promptDelimiters";
 import { buildFactsBlock } from "./generateIcMemo";
@@ -44,8 +43,7 @@ Structure:
 Use clear analyst tone. Do not use "Investment Committee" headings. Be concise.`;
 
   try {
-    return await completeClaudeText({
-      model: getAnthropicModel(),
+    return await completeText({
       systemPrompt:
         "You write sanctions screening analysis documents for VC compliance analysts. Use only provided facts. Never confirm guilt or sanctions violations.",
       user: prompt,

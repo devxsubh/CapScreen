@@ -9,12 +9,14 @@
     "start": "node dist/index.js",
     "generate:jwt-keys": "bash scripts/generate-jwt-keys.sh",
     "seed:demo": "tsx scripts/seed-demo-startup.ts",
-    "db:reset": "tsx scripts/reset-database.ts"
+    "db:reset": "tsx scripts/reset-database.ts",
+    "auth:dev": "tsx watch src/authServer.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.90.0",
     "@aws-sdk/client-s3": "^3.1062.0",
     "@aws-sdk/s3-request-presigner": "^3.1062.0",
+    "@thednp/dommatrix": "3.1.2",
     "@upstash/redis": "^1.38.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
@@ -45,5 +47,8 @@
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   },
-  "license": "AGPL-3.0-only"
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22.12"
+  }
 }

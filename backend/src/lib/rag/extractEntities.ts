@@ -1,5 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
-import { getAnthropicModel } from "../llm/models";
+import { completeText } from "../llm/complete";
 
 export type ExtractedEntity = {
   name: string;
@@ -7,13 +6,12 @@ export type ExtractedEntity = {
   context: string;
 };
 
-const MAX_TEXT_CHARS = 18000; // ~4500 tokens — enough for Haiku
+const MAX_TEXT_CHARS = 18000; // ~4500 tokens — fits small local models too
 
 export async function extractEntitiesFromText(
   text: string,
   filename: string,
 ): Promise<ExtractedEntity[]> {
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const truncated = text.length > MAX_TEXT_CHARS ? text.slice(0, MAX_TEXT_CHARS) + "\n…[truncated]" : text;
 
   const prompt = `Extract all named persons and legal entities (companies, funds, LLCs, trusts, partnerships) from the document below.
@@ -34,16 +32,7 @@ ${truncated}
 
 Respond with JSON only, no prose.`;
 
-  const message = await client.messages.create({
-    model: getAnthropicModel(),
-    max_tokens: 2048,
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const raw = message.content
-    .filter((b) => b.type === "text")
-    .map((b) => (b as { type: "text"; text: string }).text)
-    .join("");
+  const raw = await completeText({ user: prompt, maxTokens: 2048 });
 
   try {
     const jsonMatch = raw.match(/\[[\s\S]*\]/);

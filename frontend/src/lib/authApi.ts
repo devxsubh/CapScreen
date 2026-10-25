@@ -1,5 +1,6 @@
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
+import { apiBase } from "@/lib/apiBase";
+
+const API_BASE = apiBase();
 
 const ACCESS_TOKEN_KEY = "vc_screener_access_token";
 const TOKEN_EXPIRES_KEY = "vc_screener_token_expires";

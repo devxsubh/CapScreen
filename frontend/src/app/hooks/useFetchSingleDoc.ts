@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { getAuthHeaders } from "@/lib/apiAuth";
+import { apiBase } from "@/lib/apiBase";
 
 /**
  * /display returns either PDF bytes (when the active version has a PDF
@@ -39,14 +40,12 @@ export function useFetchSingleDoc(
             try {
                 if (cancelled) return;
 
-                const apiBase =
-                    process.env.NEXT_PUBLIC_API_BASE_URL ??
-                    "http://localhost:3001";
+                const base = apiBase();
                 const qs = versionId
                     ? `?version_id=${encodeURIComponent(versionId)}`
                     : "";
                 const response = await fetch(
-                    `${apiBase}/single-documents/${documentId}/display${qs}`,
+                    `${base}/single-documents/${documentId}/display${qs}`,
                     {
                         headers: await getAuthHeaders(),
                     },

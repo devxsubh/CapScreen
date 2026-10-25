@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const pdfParse = require("pdf-parse") as (buffer: Buffer) => Promise<{ text: string; numpages: number }>;
 import mammoth from "mammoth";
 
 export type ParsedPage = { pageNum: number | null; text: string };
@@ -32,15 +30,37 @@ export async function parseDocumentToText(
   throw new Error(`Unsupported file type: ${mimeType} (${filename})`);
 }
 
+type PdfParseModule = typeof import("pdf-parse");
+let pdfModule: Promise<PdfParseModule> | null = null;
+
+/**
+ * Loaded on first use: pdf.js (inside pdf-parse v2) touches DOMMatrix at import
+ * time, which plain Node lacks. A pure-JS polyfill covers text extraction, and
+ * lazy loading keeps any PDF-stack problem from taking down the whole backend.
+ */
+function loadPdfParse(): Promise<PdfParseModule> {
+  pdfModule ??= (async () => {
+    const g = globalThis as { DOMMatrix?: unknown };
+    if (!g.DOMMatrix) {
+      const { default: CSSMatrix } = await import("@thednp/dommatrix");
+      g.DOMMatrix = CSSMatrix;
+    }
+    return import("pdf-parse");
+  })();
+  return pdfModule;
+}
+
 async function parsePdf(buffer: Buffer): Promise<ParsedPage[]> {
-  const data = await pdfParse(buffer);
-  const raw = data.text ?? "";
-
-  // Split by form-feed character for rough page boundaries
-  const pageSplits = raw.split(/\f/).filter((p: string) => p.trim().length > 0);
-  if (pageSplits.length === 0) return [];
-
-  return pageSplits.map((text: string, i: number) => ({ pageNum: i + 1, text: text.trim() }));
+  const { PDFParse } = await loadPdfParse();
+  const parser = new PDFParse({ data: new Uint8Array(buffer) });
+  try {
+    const result = await parser.getText();
+    return result.pages
+      .map((p) => ({ pageNum: p.num, text: p.text.trim() }))
+      .filter((p) => p.text.length > 0);
+  } finally {
+    await parser.destroy();
+  }
 }
 
 async function parseDocx(buffer: Buffer): Promise<ParsedPage[]> {

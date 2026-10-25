@@ -17,6 +17,7 @@ import { StartupChatPanel } from "@/app/components/startups/StartupChatPanel";
 import { StartupAnalysisDock } from "@/app/components/startups/StartupAnalysisDock";
 import { ScreeningFollowUpActions } from "@/app/components/startups/ScreeningFollowUpActions";
 import { ScreeningDeltaBanner } from "@/app/components/startups/ScreeningDeltaBanner";
+import { WatchFolderButton } from "./WatchFolderButton";
 import { StartupAuditMenu } from "@/app/components/startups/StartupAuditMenu";
 import {
     getStartup,
@@ -591,6 +592,7 @@ export function StartupScreenerPage({ startupId }: Props) {
                         />
                     </div>
 
+                    <WatchFolderButton startupId={startupId} />
                     <StartupAuditMenu startupId={startupId} />
                 </div>
 
