@@ -2,7 +2,6 @@ import express from "express";
 import {
   buildProvider,
   describeLlmConfig,
-  mergeWithPreset,
   isProviderLocal,
   PROVIDER_PRESETS,
   responseText,
@@ -11,7 +10,6 @@ import {
 } from "../lib/llm/providers";
 import {
   deleteProviderKey,
-  getProviderKey,
   providerKeyInfo,
   readAiConfig,
   setProviderKey,
@@ -19,17 +17,34 @@ import {
   type StoredProvider,
 } from "../lib/llm/controlCenter/store";
 import {
+  DISK_HEADROOM_GB,
   deleteOllamaModel,
   detectHardware,
+  findOllamaInstall,
   lmStudioStatus,
   MODEL_CATALOG,
   modelFit,
   ollamaCapabilities,
+  ollamaIsLocal,
   ollamaStatus,
   pullOllamaModel,
   recommendedChatModel,
+  sameOllamaModel,
+  startOllama,
 } from "../lib/llm/controlCenter/localRuntime";
-import { friendlyLlmError } from "../lib/llm/friendlyError";
+import {
+  chatModels,
+  CLOUD_EMBEDDING,
+  keyFormatProblem,
+  normalizeApiKey,
+  providerHasKey,
+  providerNeedsKey,
+  recommendedCloudModel,
+  resolveProvider,
+  storedProviders,
+} from "../lib/llm/controlCenter/providers";
+import { checkAiHealth, invalidateHealthCache } from "../lib/llm/controlCenter/health";
+import { classifyLlmError, friendlyLlmError } from "../lib/llm/friendlyError";
 
 /**
  * AI Control Center — the user's own model providers, keys, and assignments.
@@ -40,26 +55,8 @@ export const aiControlCenterRouter = express.Router();
 const ROLES: LlmRole[] = ["agent", "utility", "embedding"];
 const ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
-/** Providers that need no key (local servers). */
-const KEYLESS = new Set(["ollama", "lmstudio", "llamacpp"]);
-
-function storedProviders(): StoredProvider[] {
-  return readAiConfig()?.providers ?? [];
-}
-
-/** Full provider config for `id`: stored overrides on top of the preset, plus the decrypted key. */
-function resolveProvider(id: string): ProviderConfig | null {
-  const stored = storedProviders().find((p) => p.id === id);
-  const preset = PROVIDER_PRESETS[id];
-  if (!stored && !preset) return null;
-  const merged = mergeWithPreset({ id, ...(preset ?? {}), ...(stored ?? {}) } as ProviderConfig);
-  const key = getProviderKey(id);
-  return key ? { ...merged, apiKey: key } : merged;
-}
-
 function providerView(p: ProviderConfig, enabled: boolean) {
   const key = providerKeyInfo(p.id);
-  const keyless = KEYLESS.has(p.id) || isProviderLocal(p);
   return {
     id: p.id,
     label: p.label ?? p.id,
@@ -68,11 +65,17 @@ function providerView(p: ProviderConfig, enabled: boolean) {
     local: isProviderLocal(p),
     preset: p.id in PROVIDER_PRESETS,
     enabled,
-    needsKey: !keyless,
+    needsKey: providerNeedsKey(p),
     key: { configured: key.configured, hint: key.hint, updatedAt: key.updatedAt },
     // Dev only: an env var can stand in for an in-app key.
     envKey: !key.configured && !!p.apiKeyEnv && !!process.env[p.apiKeyEnv]?.trim(),
   };
+}
+
+/** Roles currently bound to a provider (utility counts when it inherits the agent's). */
+function rolesUsing(providerId: string): LlmRole[] {
+  const roles = readAiConfig()?.roles ?? {};
+  return ROLES.filter((r) => (roles[r] ?? (r === "utility" ? roles.agent : undefined))?.provider === providerId);
 }
 
 aiControlCenterRouter.get("/state", (_req, res) => {
@@ -88,21 +91,32 @@ aiControlCenterRouter.get("/state", (_req, res) => {
   });
 });
 
+/** Live check of every role: runtime up, model present, key accepted. `?fresh=1` skips the 20 s cache. */
+aiControlCenterRouter.get("/health", async (req, res) => {
+  res.json(await checkAiHealth({ fresh: req.query.fresh === "1" }));
+});
+
 aiControlCenterRouter.put("/providers/:id", (req, res) => {
   const id = req.params.id;
   if (!ID_RE.test(id)) {
     res.status(400).json({ detail: "Provider id must be 2–40 lowercase letters, digits or dashes" });
     return;
   }
-  const { label, baseUrl, kind, local } = req.body as Partial<StoredProvider>;
+  const { label, baseUrl: rawUrl, kind, local } = req.body as Partial<StoredProvider>;
+  const baseUrl = typeof rawUrl === "string" ? rawUrl.trim() : undefined;
   const preset = PROVIDER_PRESETS[id];
   if (!preset && !baseUrl) {
     res.status(400).json({ detail: "Custom providers need a base URL" });
     return;
   }
-  if (baseUrl && !/^https?:\/\//.test(baseUrl)) {
-    res.status(400).json({ detail: "Base URL must start with http:// or https://" });
-    return;
+  if (baseUrl) {
+    try {
+      const u = new URL(baseUrl);
+      if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error();
+    } catch {
+      res.status(400).json({ detail: "Enter a full URL starting with http:// or https://, e.g. http://127.0.0.1:8000/v1" });
+      return;
+    }
   }
   updateAiConfig((cfg) => {
     const next: StoredProvider = {
@@ -114,6 +128,7 @@ aiControlCenterRouter.put("/providers/:id", (req, res) => {
     };
     cfg.providers = [...cfg.providers.filter((p) => p.id !== id), next];
   });
+  invalidateHealthCache();
   res.json({ ok: true });
 });
 
@@ -124,20 +139,44 @@ aiControlCenterRouter.delete("/providers/:id", (req, res) => {
     cfg.providers = cfg.providers.filter((p) => p.id !== id);
     for (const role of ROLES) if (cfg.roles[role]?.provider === id) delete cfg.roles[role];
   });
+  invalidateHealthCache();
   res.json({ ok: true });
 });
 
-aiControlCenterRouter.put("/providers/:id/key", (req, res) => {
+/**
+ * Save an API key. The key is checked against the provider first and is only
+ * stored if the provider accepts it; `skipVerify` saves without that check
+ * (offline, or a gateway that has no model listing).
+ */
+aiControlCenterRouter.put("/providers/:id/key", async (req, res) => {
   const id = req.params.id;
-  const apiKey = String((req.body as { apiKey?: unknown }).apiKey ?? "").trim();
-  if (!resolveProvider(id)) {
+  const body = req.body as { apiKey?: unknown; skipVerify?: unknown };
+  const apiKey = normalizeApiKey(String(body.apiKey ?? ""));
+  const pc = resolveProvider(id);
+  if (!pc) {
     res.status(404).json({ detail: "Unknown provider" });
     return;
   }
-  if (apiKey.length < 8 || apiKey.length > 512 || /\s/.test(apiKey)) {
-    res.status(400).json({ detail: "That does not look like an API key" });
+  const problem = keyFormatProblem(id, apiKey);
+  if (problem) {
+    res.status(400).json({ detail: problem, reason: "format" });
     return;
   }
+
+  let modelCount: number | null = null;
+  if (body.skipVerify !== true) {
+    try {
+      const provider = buildProvider({ ...pc, apiKey });
+      modelCount = (await provider.listModels?.())?.length ?? null;
+    } catch (err) {
+      const { kind, message } = classifyLlmError(err);
+      // Rejected keys are never stored; network trouble can be saved anyway.
+      const reason = kind === "auth" || kind === "quota" ? "rejected" : "unverified";
+      res.status(reason === "rejected" ? 422 : 503).json({ detail: message, reason, kind });
+      return;
+    }
+  }
+
   setProviderKey(id, apiKey);
   updateAiConfig((cfg) => {
     if (!cfg.providers.some((p) => p.id === id)) {
@@ -145,12 +184,14 @@ aiControlCenterRouter.put("/providers/:id/key", (req, res) => {
       cfg.providers.push({ id, kind: preset?.kind ?? "openai-compatible" });
     }
   });
-  res.json({ ok: true, key: providerKeyInfo(id) });
+  invalidateHealthCache();
+  res.json({ ok: true, key: providerKeyInfo(id), verified: body.skipVerify !== true, modelCount });
 });
 
 aiControlCenterRouter.delete("/providers/:id/key", (req, res) => {
   deleteProviderKey(req.params.id);
-  res.json({ ok: true });
+  invalidateHealthCache();
+  res.json({ ok: true, affectedRoles: rolesUsing(req.params.id) });
 });
 
 aiControlCenterRouter.get("/providers/:id/models", async (req, res) => {
@@ -161,10 +202,14 @@ aiControlCenterRouter.get("/providers/:id/models", async (req, res) => {
   }
   try {
     const provider = buildProvider(pc);
-    const models = (await provider.listModels?.()) ?? [];
-    res.json({ models: models.sort() });
+    const models = ((await provider.listModels?.()) ?? []).sort();
+    res.json({
+      models,
+      chatModels: pc.kind === "ollama" ? models.filter((m) => !/embed/i.test(m)) : chatModels(pc.id, models),
+      recommended: pc.kind === "ollama" ? null : recommendedCloudModel(pc.id, models),
+    });
   } catch (err) {
-    res.status(502).json({ detail: friendlyLlmError(err) });
+    res.status(502).json({ detail: friendlyLlmError(err), kind: classifyLlmError(err).kind });
   }
 });
 
@@ -240,6 +285,10 @@ aiControlCenterRouter.put("/roles", async (req, res) => {
       res.status(400).json({ detail: `Role "${role}" needs a known provider and a model` });
       return;
     }
+    if (b && role === "embedding" && !buildProvider(resolveProvider(b.provider)!).embed) {
+      res.status(400).json({ detail: `${resolveProvider(b.provider)!.label ?? b.provider} has no embedding models` });
+      return;
+    }
   }
 
   // Fill in tool support for Ollama models when the caller did not say.
@@ -282,14 +331,25 @@ aiControlCenterRouter.put("/policy", (req, res) => {
 aiControlCenterRouter.get("/local", async (_req, res) => {
   const hw = detectHardware();
   const [ollama, lmstudio] = await Promise.all([ollamaStatus(), lmStudioStatus()]);
-  const installed = new Set(ollama.models.map((m) => m.name.replace(/:latest$/, "")));
   res.json({
     hardware: hw,
-    ollama,
+    ollama: { ...ollama, installed: ollama.running || !!findOllamaInstall(), canStart: ollamaIsLocal() && !!findOllamaInstall() },
     lmstudio,
     recommended: recommendedChatModel(hw),
-    catalog: MODEL_CATALOG.map((m) => ({ ...m, fit: modelFit(m, hw), installed: installed.has(m.id) })),
+    catalog: MODEL_CATALOG.map((m) => ({
+      ...m,
+      fit: modelFit(m, hw),
+      installed: ollama.models.some((i) => sameOllamaModel(i.name, m.id)),
+    })),
   });
+});
+
+/** Launch an installed Ollama and wait until it answers. */
+aiControlCenterRouter.post("/local/start", async (_req, res) => {
+  const r = await startOllama();
+  invalidateHealthCache();
+  if (r.started) res.json({ ok: true });
+  else res.status(409).json({ detail: r.detail });
 });
 
 /** SSE: streams `ollama pull` progress as { status, completed, total, percent }. */
@@ -299,6 +359,19 @@ aiControlCenterRouter.post("/local/pull", async (req, res) => {
     res.status(400).json({ detail: "Invalid model name" });
     return;
   }
+  if (!(await ollamaStatus()).running) {
+    res.status(409).json({ detail: "Ollama isn't running. Start it, then download again." });
+    return;
+  }
+  const known = MODEL_CATALOG.find((m) => sameOllamaModel(m.id, model));
+  const disk = detectHardware().freeDiskGB;
+  if (known && disk !== null && disk < known.sizeGB + DISK_HEADROOM_GB) {
+    res.status(507).json({
+      detail: `Not enough disk space: ${model} needs about ${known.sizeGB + DISK_HEADROOM_GB} GB free and this computer has ${disk} GB.`,
+    });
+    return;
+  }
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("X-Accel-Buffering", "no");
@@ -321,12 +394,14 @@ aiControlCenterRouter.post("/local/pull", async (req, res) => {
   } catch (err) {
     if (!abort.signal.aborted) send({ type: "error", detail: friendlyLlmError(err) });
   }
+  invalidateHealthCache();
   res.end();
 });
 
 aiControlCenterRouter.delete("/local/models/:name", async (req, res) => {
   try {
     await deleteOllamaModel(req.params.name);
+    invalidateHealthCache();
     res.json({ ok: true });
   } catch (err) {
     res.status(502).json({ detail: friendlyLlmError(err) });
@@ -334,31 +409,47 @@ aiControlCenterRouter.delete("/local/models/:name", async (req, res) => {
 });
 
 /**
- * One-click on-device setup: Ollama for chat (best installed tool-capable model)
- * and embeddings, Local-only mode on.
+ * One-click on-device setup: Ollama for chat (the given model, or the best
+ * installed tool-capable one) and embeddings, Local-only mode on.
  */
-aiControlCenterRouter.post("/quick-setup/local", async (_req, res) => {
+aiControlCenterRouter.post("/quick-setup/local", async (req, res) => {
+  const requested = String((req.body as { model?: unknown } | undefined)?.model ?? "").trim();
   const ollama = await ollamaStatus();
   if (!ollama.running) {
-    res.status(409).json({ detail: "Ollama is not running. Install it from ollama.com and open it, then try again." });
+    res.status(409).json({ detail: "Ollama isn't running. Start it, then try again." });
     return;
   }
   const names = ollama.models.map((m) => m.name);
-  const withTools: Array<{ name: string; sizeGB: number }> = [];
-  for (const m of ollama.models) {
-    const caps = await ollamaCapabilities(m.name);
-    if (caps?.includes("tools")) withTools.push(m);
-  }
   const hw = detectHardware();
-  // Largest tool-capable model that still fits in memory.
-  const chat = withTools
-    .filter((m) => m.sizeGB + 2.5 <= hw.totalMemGB)
-    .sort((a, b) => b.sizeGB - a.sizeGB)[0]?.name;
-  if (!chat) {
-    res.status(409).json({
-      detail: `No tool-capable chat model is installed. Download ${recommendedChatModel(hw)} from the Local models section first.`,
-    });
-    return;
+
+  let chat: string | undefined;
+  if (requested) {
+    chat = names.find((n) => sameOllamaModel(n, requested));
+    if (!chat) {
+      res.status(409).json({ detail: `${requested} isn't downloaded yet.` });
+      return;
+    }
+    const caps = await ollamaCapabilities(chat);
+    if (caps && !caps.includes("tools")) {
+      res.status(409).json({ detail: `${requested} can't use tools, so the assistant couldn't run screenings. Pick a model marked "tools".` });
+      return;
+    }
+  } else {
+    const withTools: Array<{ name: string; sizeGB: number }> = [];
+    for (const m of ollama.models) {
+      const caps = await ollamaCapabilities(m.name);
+      if (caps?.includes("tools")) withTools.push(m);
+    }
+    // Largest tool-capable model that still fits in memory.
+    chat = withTools
+      .filter((m) => m.sizeGB + 2.5 <= hw.totalMemGB)
+      .sort((a, b) => b.sizeGB - a.sizeGB)[0]?.name;
+    if (!chat) {
+      res.status(409).json({
+        detail: `No tool-capable chat model is downloaded yet. Download ${recommendedChatModel(hw)} first.`,
+      });
+      return;
+    }
   }
   const embed = names.find((n) => /embed/.test(n));
 
@@ -367,7 +458,65 @@ aiControlCenterRouter.post("/quick-setup/local", async (_req, res) => {
     cfg.roles.agent = { provider: "ollama", model: chat, supportsTools: true };
     cfg.roles.utility = { provider: "ollama", model: chat, supportsTools: true };
     if (embed) cfg.roles.embedding = { provider: "ollama", model: embed };
+    else delete cfg.roles.embedding;
     cfg.localOnly = true;
   });
+  invalidateHealthCache();
   res.json({ ok: true, chat, embed: embed ?? null, effective: describeLlmConfig() });
+});
+
+/**
+ * One-click cloud setup: the provider's model for chat and background tasks,
+ * Local-only mode off. Document search uses the provider's embeddings when it
+ * has them, otherwise keyword search — people choosing cloud often can't run
+ * local models, so nothing here depends on Ollama.
+ */
+aiControlCenterRouter.post("/quick-setup/cloud", async (req, res) => {
+  const { provider: id, model: requested } = req.body as { provider?: string; model?: string };
+  const pc = id ? resolveProvider(id) : null;
+  if (!pc || !id) {
+    res.status(404).json({ detail: "Unknown provider" });
+    return;
+  }
+  if (providerNeedsKey(pc) && !providerHasKey(pc)) {
+    res.status(409).json({ detail: `Save your ${pc.label ?? id} API key first.` });
+    return;
+  }
+
+  let listed: string[] = [];
+  try {
+    listed = (await buildProvider(pc).listModels?.()) ?? [];
+  } catch (err) {
+    const { kind, message } = classifyLlmError(err);
+    if (kind === "auth" || kind === "quota") {
+      res.status(422).json({ detail: message });
+      return;
+    }
+    // Offline: still save the choice; the status card shows the connection problem.
+  }
+  const model = requested?.trim() || recommendedCloudModel(id, listed);
+  if (!model) {
+    res.status(409).json({ detail: `${pc.label ?? id} didn't list any chat models. Type a model name under Advanced settings.` });
+    return;
+  }
+  if (listed.length && !listed.includes(model)) {
+    res.status(409).json({ detail: `${pc.label ?? id} doesn't offer "${model}" to your account. Pick one from the list.` });
+    return;
+  }
+
+  const embedding = CLOUD_EMBEDDING[id] ? { provider: id, model: CLOUD_EMBEDDING[id] } : null;
+  const embeddingNote = embedding ? `${pc.label ?? id} (${embedding.model})` : "keyword search";
+
+  updateAiConfig((cfg) => {
+    for (const p of [id, ...(embedding ? [embedding.provider] : [])]) {
+      if (!cfg.providers.some((s) => s.id === p)) cfg.providers.push({ id: p, kind: PROVIDER_PRESETS[p]?.kind ?? "openai-compatible" });
+    }
+    cfg.roles.agent = { provider: id, model, supportsTools: true };
+    cfg.roles.utility = { provider: id, model, supportsTools: true };
+    if (embedding) cfg.roles.embedding = embedding;
+    else delete cfg.roles.embedding;
+    cfg.localOnly = false;
+  });
+  invalidateHealthCache();
+  res.json({ ok: true, chat: model, embedding: embeddingNote, effective: describeLlmConfig() });
 });

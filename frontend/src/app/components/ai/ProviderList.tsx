@@ -5,21 +5,14 @@ import { Check, ExternalLink, KeyRound, Loader2, Plus, Server, Trash2, Zap } fro
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { aiApi, type AiState, type ProviderView } from "@/lib/aiControlCenterApi";
-import { desktop } from "@/lib/desktop";
+import { aiApi, AiApiError, KEY_LINKS, ROLE_INFO, type AiState, type LlmRole, type ProviderView } from "@/lib/aiControlCenterApi";
+import { openExternal } from "./useModelDownload";
 
-const KEY_LINKS: Record<string, string> = {
-    anthropic: "https://console.anthropic.com/settings/keys",
-    openai: "https://platform.openai.com/api-keys",
-    gemini: "https://aistudio.google.com/apikey",
-    openrouter: "https://openrouter.ai/keys",
-    groq: "https://console.groq.com/keys",
-};
-
-function openExternal(url: string) {
-    const bridge = desktop();
-    if (bridge) void bridge.openExternal(url);
-    else window.open(url, "_blank", "noopener,noreferrer");
+/** Tasks bound to a provider (utility counts when it inherits the assistant's binding). */
+function tasksUsing(state: AiState, providerId: string): string[] {
+    return (["agent", "utility", "embedding"] as LlmRole[])
+        .filter((r) => (state.roles[r] ?? (r === "utility" ? state.roles.agent : undefined))?.provider === providerId)
+        .map((r) => ROLE_INFO[r].title.toLowerCase());
 }
 
 function useStatus() {
@@ -27,10 +20,11 @@ function useStatus() {
     return [status, setStatus] as const;
 }
 
-function CloudProviderCard({ p, onChange }: { p: ProviderView; onChange: () => void }) {
+function CloudProviderCard({ p, state, onChange }: { p: ProviderView; state: AiState; onChange: () => void }) {
     const [key, setKey] = useState("");
     const [busy, setBusy] = useState<"save" | "test" | "remove" | null>(null);
     const [status, setStatus] = useStatus();
+    const [unverified, setUnverified] = useState(false);
 
     const run = async (kind: "save" | "test" | "remove", fn: () => Promise<{ ok: boolean; text: string } | void>) => {
         setBusy(kind);
@@ -46,8 +40,27 @@ function CloudProviderCard({ p, onChange }: { p: ProviderView; onChange: () => v
         }
     };
 
+    const saveKey = (skipVerify: boolean) =>
+        run("save", async () => {
+            setUnverified(false);
+            try {
+                const r = await aiApi.saveKey(p.id, key, { skipVerify });
+                setKey("");
+                return r.verified
+                    ? { ok: true, text: `Key checked and saved${r.modelCount ? ` · ${r.modelCount} models available` : ""}` }
+                    : { ok: true, text: "Key saved without checking — the status at the top shows whether it works" };
+            } catch (e) {
+                const err = e as AiApiError;
+                if (err.reason === "unverified") setUnverified(true);
+                return {
+                    ok: false,
+                    text: err.reason === "rejected" ? `${err.message} The key was not saved.` : err.message,
+                };
+            }
+        });
+
     return (
-        <li className="rounded-lg border border-gray-200 p-4">
+        <li id={`provider-${p.id}`} className="scroll-mt-24 rounded-lg border border-gray-200 p-4">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                     <KeyRound className="h-4 w-4 text-gray-400 shrink-0" />
@@ -83,20 +96,11 @@ function CloudProviderCard({ p, onChange }: { p: ProviderView; onChange: () => v
                     />
                 </div>
                 <Button
-                    onClick={() =>
-                        run("save", async () => {
-                            await aiApi.saveKey(p.id, key.trim());
-                            setKey("");
-                            const t = await aiApi.test(p.id);
-                            return t.ok
-                                ? { ok: true, text: `Saved and verified · ${t.modelCount ?? 0} models available` }
-                                : { ok: false, text: `Saved, but the provider rejected it: ${t.error}` };
-                        })
-                    }
+                    onClick={() => saveKey(false)}
                     disabled={!key.trim() || busy !== null}
                     className="bg-black hover:bg-gray-900 text-white"
                 >
-                    {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                    {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check and save"}
                 </Button>
             </div>
 
@@ -124,12 +128,18 @@ function CloudProviderCard({ p, onChange }: { p: ProviderView; onChange: () => v
                         type="button"
                         className="inline-flex items-center gap-1 text-gray-500 hover:text-red-600"
                         disabled={busy !== null}
-                        onClick={() =>
-                            run("remove", async () => {
+                        onClick={() => {
+                            const using = tasksUsing(state, p.id);
+                            if (
+                                using.length &&
+                                !confirm(`Remove the ${p.label} key?\n\n${using.join(" and ")} use${using.length === 1 ? "s" : ""} ${p.label} and will stop working until you add a key or pick another model.`)
+                            )
+                                return;
+                            void run("remove", async () => {
                                 await aiApi.removeKey(p.id);
                                 return { ok: true, text: "Key removed from this computer" };
-                            })
-                        }
+                            });
+                        }}
                     >
                         <Trash2 className="h-3 w-3" /> Remove key
                     </button>
@@ -140,12 +150,17 @@ function CloudProviderCard({ p, onChange }: { p: ProviderView; onChange: () => v
                         {status.text}
                     </span>
                 )}
+                {unverified && key.trim() && (
+                    <button type="button" className="text-gray-600 underline hover:text-gray-900" onClick={() => saveKey(true)} disabled={busy !== null}>
+                        Save without checking
+                    </button>
+                )}
             </div>
         </li>
     );
 }
 
-function ServerRow({ p, onChange }: { p: ProviderView; onChange: () => void }) {
+function ServerRow({ p, state, onChange }: { p: ProviderView; state: AiState; onChange: () => void }) {
     const [baseUrl, setBaseUrl] = useState(p.baseUrl ?? "");
     const [status, setStatus] = useStatus();
     const [busy, setBusy] = useState(false);
@@ -181,6 +196,9 @@ function ServerRow({ p, onChange }: { p: ProviderView; onChange: () => void }) {
                     <button
                         type="button"
                         onClick={async () => {
+                            const using = tasksUsing(state, p.id);
+                            const warning = using.length ? `\n\n${using.join(" and ")} use${using.length === 1 ? "s" : ""} it and will need another model.` : "";
+                            if (!confirm(`Remove ${p.label}?${warning}`)) return;
                             await aiApi.removeProvider(p.id);
                             onChange();
                         }}
@@ -203,7 +221,7 @@ function ServerRow({ p, onChange }: { p: ProviderView; onChange: () => void }) {
     );
 }
 
-function AddCustomProvider({ onChange }: { onChange: () => void }) {
+function AddCustomProvider({ takenIds, onChange }: { takenIds: Set<string>; onChange: () => void }) {
     const [open, setOpen] = useState(false);
     const [label, setLabel] = useState("");
     const [baseUrl, setBaseUrl] = useState("http://127.0.0.1:8000/v1");
@@ -219,19 +237,29 @@ function AddCustomProvider({ onChange }: { onChange: () => void }) {
         );
     }
 
-    const id =
+    // Prefixed so a server named "OpenAI" can't overwrite the built-in provider.
+    const slug =
         label
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/^-+|-+$/g, "")
-            .slice(0, 40) || "custom";
+            .slice(0, 28) || "server";
+    let id = `custom-${slug}`;
+    for (let n = 2; takenIds.has(id); n++) id = `custom-${slug}-${n}`;
 
     const add = async () => {
         setBusy(true);
         setError(null);
         try {
             await aiApi.saveProvider(id, { label: label.trim(), baseUrl: baseUrl.trim() });
-            if (apiKey.trim()) await aiApi.saveKey(id, apiKey.trim());
+            // Custom gateways often have no model listing, so don't block on verifying the key.
+            if (apiKey.trim()) await aiApi.saveKey(id, apiKey.trim(), { skipVerify: true });
+            const t = await aiApi.test(id);
+            if (!t.ok) {
+                setError(`Added, but it isn't answering yet: ${t.error}`);
+                onChange();
+                return;
+            }
             setOpen(false);
             setLabel("");
             setApiKey("");
@@ -266,33 +294,34 @@ function AddCustomProvider({ onChange }: { onChange: () => void }) {
 }
 
 export function ProviderList({ state, onChange }: { state: AiState; onChange: () => void }) {
+    const takenIds = new Set(state.providers.map((p) => p.id));
     const cloud = state.providers.filter((p) => p.needsKey && p.preset);
     const servers = state.providers.filter((p) => !p.preset || (!p.needsKey && p.id !== "ollama"));
 
     return (
         <>
             <section>
-                <h2 className="text-2xl font-medium font-serif">Cloud providers</h2>
+                <h2 className="text-xl font-medium">Cloud API keys</h2>
                 <p className="text-sm text-gray-500">
                     Bring your own API key. Keys are encrypted with your operating system&apos;s keychain and never
                     leave this computer except to authenticate with that provider.
                 </p>
                 <ul className="mt-4 grid gap-3">
                     {cloud.map((p) => (
-                        <CloudProviderCard key={p.id} p={p} onChange={onChange} />
+                        <CloudProviderCard key={p.id} p={p} state={state} onChange={onChange} />
                     ))}
                 </ul>
             </section>
 
             <section>
-                <h2 className="text-2xl font-medium font-serif">Other servers</h2>
+                <h2 className="text-xl font-medium">Other servers</h2>
                 <p className="text-sm text-gray-500">LM Studio, llama.cpp, or your own OpenAI-compatible endpoint.</p>
                 <ul className="mt-2 divide-y divide-gray-100">
                     {servers.map((p) => (
-                        <ServerRow key={p.id} p={p} onChange={onChange} />
+                        <ServerRow key={p.id} p={p} state={state} onChange={onChange} />
                     ))}
                 </ul>
-                <AddCustomProvider onChange={onChange} />
+                <AddCustomProvider takenIds={takenIds} onChange={onChange} />
             </section>
         </>
     );

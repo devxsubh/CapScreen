@@ -5,7 +5,17 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Cpu, X } from "lucide-react";
 import { useDesktop } from "@/lib/desktop";
-import { aiApi } from "@/lib/aiControlCenterApi";
+import { aiApi, ROLE_INFO, type AiHealth } from "@/lib/aiControlCenterApi";
+
+/** What the banner should say, or null when the AI the rest of the app relies on is fine. */
+function aiProblem(h: AiHealth): string | null {
+    if (h.overall === "not-set-up") {
+        return "No AI model is set up yet. Screening works, but the assistant needs a model — run one on this computer or add your own API key.";
+    }
+    // Document search problems only matter on the AI page; it falls back to keyword search.
+    const broken = [h.roles.agent, h.roles.utility].find((r) => r.status === "error");
+    return broken ? `${ROLE_INFO[broken.role].title}: ${broken.title}. ${broken.detail ?? ""}` : null;
+}
 
 /**
  * Desktop chrome: routes menu/tray/notification clicks, provides the macOS
@@ -16,7 +26,7 @@ export function DesktopShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const bridge = useDesktop();
     const isMac = bridge?.platform === "darwin";
-    const [needsModel, setNeedsModel] = useState(false);
+    const [problem, setProblem] = useState<string | null>(null);
     const [dismissed, setDismissed] = useState(false);
 
     useEffect(() => {
@@ -27,9 +37,9 @@ export function DesktopShell({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         let cancelled = false;
         aiApi
-            .state()
-            .then((s) => {
-                if (!cancelled) setNeedsModel(!s.effective.roles.agent || !!s.effective.roles.agent.error);
+            .health()
+            .then((h) => {
+                if (!cancelled) setProblem(aiProblem(h));
             })
             .catch(() => {});
         return () => {
@@ -37,7 +47,7 @@ export function DesktopShell({ children }: { children: React.ReactNode }) {
         };
     }, [pathname]);
 
-    const showBanner = needsModel && !dismissed && !pathname.startsWith("/ai");
+    const showBanner = !!problem && !dismissed && !pathname.startsWith("/ai");
 
     return (
         <>
@@ -50,12 +60,9 @@ export function DesktopShell({ children }: { children: React.ReactNode }) {
             {showBanner && (
                 <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
                     <Cpu className="h-4 w-4 shrink-0" />
-                    <span className="flex-1">
-                        No AI model is set up yet. Screening works, but the assistant needs a model — run one on this
-                        computer or add your own API key.
-                    </span>
-                    <Link href="/ai" className="rounded-md bg-amber-900 px-3 py-1 text-xs font-medium text-white hover:bg-amber-800">
-                        Open AI Control Center
+                    <span className="flex-1">{problem}</span>
+                    <Link href="/ai" className="shrink-0 rounded-md bg-amber-900 px-3 py-1 text-xs font-medium text-white hover:bg-amber-800">
+                        Fix in AI Control Center
                     </Link>
                     <button type="button" onClick={() => setDismissed(true)} aria-label="Dismiss" className="text-amber-700 hover:text-amber-900">
                         <X className="h-4 w-4" />
