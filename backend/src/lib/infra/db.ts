@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { dataFile } from "./dataDir";
-import { SqliteClient, SqliteDb } from "./sqliteStore/store";
+import type { SqliteDb } from "./sqliteStore/store";
 import { applyPendingRestore } from "./backup";
 
 /**
@@ -38,8 +38,11 @@ export async function connectDb(): Promise<void> {
   }
   if (sqlite) return;
 
+  // Loaded lazily so the cloud auth service never touches node:sqlite.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SqliteClient, SqliteDb: SqliteDbImpl } = require("./sqliteStore/store") as typeof import("./sqliteStore/store");
   applyPendingRestore(databaseFile());
-  sqlite = new SqliteDb(databaseFile());
+  sqlite = new SqliteDbImpl(databaseFile());
   const client = new SqliteClient(sqlite);
 
   // Mirror what mongoose's native driver does in _setClient(), then open.
