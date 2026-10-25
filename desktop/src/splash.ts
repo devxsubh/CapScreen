@@ -36,6 +36,20 @@ const BASE_CSS = `
   a.btn.primary { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 `;
 
+/**
+ * Buttons carry data-action; clicks go to main.ts over the preload bridge.
+ * (Navigating to about:blank#… doesn't work: Chromium commits it without
+ * emitting will-navigate, so the window just went blank.)
+ */
+const ACTIONS_SCRIPT = `<script>
+  document.addEventListener("click", (e) => {
+    const el = e.target instanceof Element ? e.target.closest("[data-action]") : null;
+    if (!el) return;
+    e.preventDefault();
+    window.capscreenDesktop?.shellAction(el.getAttribute("data-action"));
+  });
+</script>`;
+
 export function splashHtml(): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>CapScreen</title><style>${BASE_CSS}</style></head>
   <body><div class="card">${markSvg()}<h1>CapScreen</h1><div class="spinner"></div>
@@ -53,15 +67,15 @@ export function errorHtml(message: string, logsDir: string): string {
   <p>One of the local services failed to launch.</p>
   <pre>${escapeHtml(message)}</pre>
   <p style="font-size:12px">Logs: ${escapeHtml(logsDir)}</p>
-  <div class="row"><a class="btn" href="about:blank#logs">Open logs</a><a class="btn primary" href="about:blank#retry">Retry</a></div>
-  </div></body></html>`;
+  <div class="row"><a class="btn" href="#" data-action="logs">Open logs</a><a class="btn primary" href="#" data-action="retry">Retry</a></div>
+  </div>${ACTIONS_SCRIPT}</body></html>`;
 }
 
 export type SignInView = { state: "idle" } | { state: "waiting" } | { state: "error"; message: string };
 
 /**
- * Gate shown until the user signs in. Buttons navigate to about:blank#… and
- * main.ts intercepts them (the page itself has no privileges).
+ * Gate shown until the user signs in. Buttons send their data-action to
+ * main.ts (the page itself has no privileges).
  */
 export function signInHtml(view: SignInView): string {
   const body =
@@ -69,13 +83,13 @@ export function signInHtml(view: SignInView): string {
       ? `<div class="spinner"></div>
          <p>Finish signing in in your browser.</p>
          <p style="font-size:12px">Didn't see a browser window?</p>
-         <div class="row"><a class="btn" href="about:blank#reopen">Open sign-in page again</a><a class="btn" href="about:blank#cancel">Cancel</a></div>`
+         <div class="row"><a class="btn" href="#" data-action="reopen">Open sign-in page again</a><a class="btn" href="#" data-action="cancel">Cancel</a></div>`
       : `<p>Sign in with your CapScreen account to continue.</p>
          <p style="font-size:12px">Your account controls access only. Cap tables, documents and screenings stay on this computer.</p>
          ${view.state === "error" ? `<pre>${escapeHtml(view.message)}</pre>` : ""}
-         <div class="row"><a class="btn primary" href="about:blank#signin">Sign in with browser</a><a class="btn" href="about:blank#signup">Create account</a></div>`;
+         <div class="row"><a class="btn primary" href="#" data-action="signin">Sign in with browser</a><a class="btn" href="#" data-action="signup">Create account</a></div>`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>CapScreen</title><style>${BASE_CSS}</style></head>
-  <body><div class="card">${markSvg()}<h1>Welcome to CapScreen</h1>${body}</div></body></html>`;
+  <body><div class="card">${markSvg()}<h1>Welcome to CapScreen</h1>${body}</div>${ACTIONS_SCRIPT}</body></html>`;
 }
 
 /** Shown in the browser tab after it hands the sign-in back to the app. */

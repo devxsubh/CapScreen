@@ -23,6 +23,7 @@ export function registerIpc(opts: {
   session: () => SessionInfo;
   signOut: () => Promise<void>;
   accountUrl: () => string;
+  shellAction: (action: string) => void;
 }): void {
   const navigate = opts.navigate;
   ipcMain.on("capscreen:bootstrap", (e) => {
@@ -40,6 +41,12 @@ export function registerIpc(opts: {
   // Fire-and-forget: the window navigates to the sign-in gate.
   ipcMain.handle("capscreen:sign-out", () => {
     void opts.signOut();
+  });
+
+  // Only the shell's data: pages (gate, boot error) may trigger these.
+  ipcMain.on("capscreen:shell-action", (e, action: unknown) => {
+    if (typeof action !== "string" || !e.senderFrame?.url.startsWith("data:")) return;
+    opts.shellAction(action);
   });
 
   ipcMain.handle("capscreen:open-account", async () => {
