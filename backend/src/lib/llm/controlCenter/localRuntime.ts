@@ -1,4 +1,8 @@
+import { spawn } from "child_process";
+import fs from "fs";
 import os from "os";
+import path from "path";
+import { isLoopbackUrl } from "../providers/registry";
 
 /**
  * On-device model runtimes (Ollama, LM Studio) — detection, hardware fit, and
@@ -17,11 +21,29 @@ export type Hardware = {
   freeMemGB: number;
   /** Apple Silicon shares RAM with the GPU, so most of it is usable for models. */
   unifiedMemory: boolean;
+  /** Free space where Ollama stores models; null when it can't be read. */
+  freeDiskGB: number | null;
 };
+
+const gb = (n: number) => Math.round((n / 1024 ** 3) * 10) / 10;
+
+function freeDiskGB(): number | null {
+  // Ollama keeps models under ~/.ollama/models unless OLLAMA_MODELS moves them.
+  const candidates = [process.env.OLLAMA_MODELS?.trim(), path.join(os.homedir(), ".ollama"), os.homedir()];
+  for (const dir of candidates) {
+    if (!dir) continue;
+    try {
+      const s = fs.statfsSync(dir);
+      return gb(s.bavail * s.bsize);
+    } catch {
+      // try the next one
+    }
+  }
+  return null;
+}
 
 export function detectHardware(): Hardware {
   const cpus = os.cpus();
-  const gb = (n: number) => Math.round((n / 1024 ** 3) * 10) / 10;
   return {
     platform: process.platform,
     arch: process.arch,
@@ -30,8 +52,12 @@ export function detectHardware(): Hardware {
     totalMemGB: gb(os.totalmem()),
     freeMemGB: gb(os.freemem()),
     unifiedMemory: process.platform === "darwin" && process.arch === "arm64",
+    freeDiskGB: freeDiskGB(),
   };
 }
+
+/** Disk headroom kept free beyond the model itself. */
+export const DISK_HEADROOM_GB = 2;
 
 export type CatalogModel = {
   id: string;
@@ -103,6 +129,71 @@ export async function ollamaStatus(): Promise<{ running: boolean; version: strin
       modifiedAt: m.modified_at,
     })),
   };
+}
+
+type OllamaInstall = { kind: "app" | "binary"; path: string };
+
+/** Where Ollama is installed on this computer, if anywhere. */
+export function findOllamaInstall(): OllamaInstall | null {
+  const home = os.homedir();
+  const apps: string[] = [];
+  const bins: string[] = [];
+  if (process.platform === "darwin") {
+    apps.push("/Applications/Ollama.app", path.join(home, "Applications", "Ollama.app"));
+    bins.push("/opt/homebrew/bin/ollama", "/usr/local/bin/ollama");
+  } else if (process.platform === "win32") {
+    const local = process.env.LOCALAPPDATA ?? path.join(home, "AppData", "Local");
+    apps.push(path.join(local, "Programs", "Ollama", "ollama app.exe"));
+    bins.push(path.join(local, "Programs", "Ollama", "ollama.exe"));
+  } else {
+    bins.push("/usr/local/bin/ollama", "/usr/bin/ollama", path.join(home, ".local", "bin", "ollama"));
+  }
+  for (const p of apps) if (fs.existsSync(p)) return { kind: "app", path: p };
+  for (const p of bins) if (fs.existsSync(p)) return { kind: "binary", path: p };
+  return null;
+}
+
+/** Ollama is only ours to start when it is meant to run on this machine. */
+export function ollamaIsLocal(): boolean {
+  return isLoopbackUrl(OLLAMA_URL);
+}
+
+/**
+ * Launch the installed Ollama and wait for its API. The desktop app (macOS,
+ * Windows) also starts its menu-bar helper; a bare binary runs `ollama serve`.
+ */
+export async function startOllama(timeoutMs = 20_000): Promise<{ started: boolean; detail?: string }> {
+  if ((await ollamaStatus()).running) return { started: true };
+  if (!ollamaIsLocal()) return { started: false, detail: `Ollama is configured at ${OLLAMA_URL}, which isn't this computer.` };
+  const install = findOllamaInstall();
+  if (!install) return { started: false, detail: "Ollama isn't installed. Download it from ollama.com, then try again." };
+
+  const [cmd, args] =
+    install.kind === "app"
+      ? process.platform === "darwin"
+        ? ["open", ["-g", "-a", install.path]]
+        : [install.path, []]
+      : [install.path, ["serve"]];
+  try {
+    const child = spawn(cmd, args as string[], { detached: true, stdio: "ignore", windowsHide: true });
+    child.on("error", () => {});
+    child.unref();
+  } catch (err) {
+    return { started: false, detail: `Couldn't launch Ollama: ${err instanceof Error ? err.message : String(err)}` };
+  }
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 700));
+    if ((await ollamaStatus()).running) return { started: true };
+  }
+  return { started: false, detail: "Ollama was launched but didn't respond yet. Give it a few seconds, then check again." };
+}
+
+/** Ollama treats "qwen3:4b" and "nomic-embed-text" (= ":latest") as tags of one name. */
+export function sameOllamaModel(a: string, b: string): boolean {
+  const tag = (s: string) => (s.includes(":") ? s : `${s}:latest`);
+  return tag(a) === tag(b);
 }
 
 export async function lmStudioStatus(): Promise<{ running: boolean; models: string[] }> {

@@ -1,20 +1,29 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Cloud, HardDrive, Loader2, Wrench, Zap } from "lucide-react";
+import { Check, Loader2, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { aiApi, ROLE_INFO, type AiState, type LlmRole, type ProviderView } from "@/lib/aiControlCenterApi";
+import { aiApi, ROLE_INFO, type AiHealth, type AiState, type LlmRole, type ProviderView } from "@/lib/aiControlCenterApi";
+
+/** Providers without embedding models. */
+const NO_EMBEDDINGS = new Set(["anthropic", "groq", "openrouter"]);
 
 /** Providers a role can use: local servers, plus cloud ones that have a key. */
-function usableProviders(state: AiState): ProviderView[] {
-    return state.providers.filter((p) => !p.needsKey || p.key.configured || p.envKey);
+function usableProviders(state: AiState, role: LlmRole): ProviderView[] {
+    return state.providers.filter(
+        (p) => (!p.needsKey || p.key.configured || p.envKey) && !(role === "embedding" && (p.kind === "anthropic" || NO_EMBEDDINGS.has(p.id))),
+    );
 }
 
-function RoleRow({ role, state, onSaved }: { role: LlmRole; state: AiState; onSaved: () => void }) {
+function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state: AiState; health: AiHealth; onSaved: () => void }) {
+    const inherits = role === "utility" && !state.roles.utility && !!state.roles.agent;
     const current = state.roles[role] ?? (role === "utility" ? state.roles.agent : undefined);
-    const effective = state.effective.roles[role];
-    const providers = usableProviders(state);
+    const roleHealth = health.roles[role];
+    // Keep the saved provider selectable even when it's no longer usable (key removed), so the row reflects reality.
+    const providers = state.providers.filter(
+        (p) => usableProviders(state, role).includes(p) || p.id === current?.provider,
+    );
 
     const [provider, setProvider] = useState(current?.provider ?? "");
     const [model, setModel] = useState(current?.model ?? "");
@@ -63,6 +72,19 @@ function RoleRow({ role, state, onSaved }: { role: LlmRole; state: AiState; onSa
         supportsTools !== current?.supportsTools;
 
     const save = async () => {
+        if (!provider && role === "agent" && !confirm("Remove the assistant's model? The assistant and AI explanations will stop working until you choose one.")) {
+            return;
+        }
+        const target = providers.find((p) => p.id === provider);
+        if (target && !target.local && state.localOnly) {
+            if (
+                !confirm(
+                    `${target.label} is a cloud provider and Local-only mode is on.\n\nTurn off Local-only mode so ${ROLE_INFO[role].title.toLowerCase()} can use it? Cap-table details it works with will be sent to ${target.label}.`,
+                )
+            )
+                return;
+            await aiApi.setLocalOnly(false);
+        }
         setBusy("save");
         setResult(null);
         try {
@@ -104,26 +126,13 @@ function RoleRow({ role, state, onSaved }: { role: LlmRole; state: AiState; onSa
     const listId = `models-${role}`;
 
     return (
-        <div className="py-5 border-b border-gray-100 last:border-0">
-            <div className="flex items-start justify-between gap-4">
-                <div>
-                    <h3 className="font-medium text-gray-900">{ROLE_INFO[role].title}</h3>
-                    <p className="text-sm text-gray-500">{ROLE_INFO[role].description}</p>
-                </div>
-                {effective && (
-                    <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
-                            effective.error
-                                ? "bg-red-50 text-red-700"
-                                : effective.local
-                                  ? "bg-emerald-50 text-emerald-700"
-                                  : "bg-amber-50 text-amber-700"
-                        }`}
-                    >
-                        {effective.local ? <HardDrive className="h-3 w-3" /> : <Cloud className="h-3 w-3" />}
-                        {effective.error ? "Blocked" : effective.local ? "On-device" : "Cloud"}
-                    </span>
-                )}
+        <div id={`role-${role}`} className="scroll-mt-24 py-5 border-b border-gray-100 last:border-0">
+            <div>
+                <h3 className="font-medium text-gray-900">{ROLE_INFO[role].title}</h3>
+                <p className="text-sm text-gray-500">
+                    {ROLE_INFO[role].description}
+                    {inherits && " Uses the assistant's model unless you choose another here."}
+                </p>
             </div>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-[200px_1fr_auto]">
@@ -141,7 +150,7 @@ function RoleRow({ role, state, onSaved }: { role: LlmRole; state: AiState; onSa
                     {providers.map((p) => (
                         <option key={p.id} value={p.id}>
                             {p.label}
-                            {p.local ? " · local" : ""}
+                            {p.local ? (/local/i.test(p.label) ? "" : " · on this computer") : " · cloud"}
                         </option>
                     ))}
                 </select>
@@ -196,24 +205,33 @@ function RoleRow({ role, state, onSaved }: { role: LlmRole; state: AiState; onSa
                 {selected && !selected.local && (
                     <span className="text-amber-700">Requests to this model leave your computer.</span>
                 )}
-                {modelsError && <span className="text-red-600">Couldn&apos;t list models: {modelsError}</span>}
+                {modelsError && <span className="text-red-600">Couldn&apos;t load the model list: {modelsError} You can still type a model name.</span>}
+                {role === "embedding" && dirty && !!current && (
+                    <span className="text-gray-500">
+                        Documents you already uploaded fall back to keyword search until you upload them again.
+                    </span>
+                )}
                 {result && (
                     <span className={result.ok ? "text-emerald-700 inline-flex items-center gap-1" : "text-red-600"}>
                         {result.ok && <Check className="h-3 w-3" />}
                         {result.text}
                     </span>
                 )}
-                {effective?.error && !result && <span className="text-red-600">{effective.error}</span>}
+                {!result && !dirty && (roleHealth.status === "error" || roleHealth.status === "warning") && (
+                    <span className={roleHealth.status === "error" ? "text-red-600" : "text-amber-700"}>
+                        {roleHealth.title}. {roleHealth.detail}
+                    </span>
+                )}
             </div>
         </div>
     );
 }
 
-export function RoleAssignments({ state, onChange }: { state: AiState; onChange: () => void }) {
+export function RoleAssignments({ state, health, onChange }: { state: AiState; health: AiHealth; onChange: () => void }) {
     return (
         <section>
-            <h2 className="text-2xl font-medium font-serif">Model assignments</h2>
-            <p className="text-sm text-gray-500 mb-1">Choose which model handles each kind of work.</p>
+            <h2 className="text-xl font-medium">Model for each task</h2>
+            <p className="text-sm text-gray-500 mb-1">Guided setup picks these for you. Change them here to mix models — e.g. a cloud model for chat, an on-device one for document search.</p>
             <div>
                 {(["agent", "utility", "embedding"] as LlmRole[]).map((role) => {
                     const b = state.roles[role];
@@ -223,6 +241,7 @@ export function RoleAssignments({ state, onChange }: { state: AiState; onChange:
                             key={`${role}:${b?.provider}:${b?.model}:${b?.supportsTools}`}
                             role={role}
                             state={state}
+                            health={health}
                             onSaved={onChange}
                         />
                     );
