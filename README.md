@@ -1,108 +1,93 @@
 # CapScreen — VC Sanctions & Cap-Table Screener
 
-A decision-support tool for venture firms. Upload a startup cap table (CSV), screen every owner (including UBOs behind shell-company layers) against OFAC/EU sanctions lists, and get a plain-English risk report with ownership graph, entity table, and Claude-generated analyst notes.
+A **desktop app** (Electron) for venture firms. Upload a startup cap table (CSV), screen every owner, including UBOs behind shell-company layers, against OFAC/EU sanctions lists, and get a plain-English risk report with an ownership graph, entity table and AI-written analyst notes.
 
 **It never decides guilt.** It narrows the review set for a human compliance officer.
+
+**Your data stays on your computer.** Cap tables, documents and screening results live in a local SQLite database and local files. AI runs on-device (Ollama / LM Studio) or with your own cloud API keys, chosen in the in-app **AI Control Center**. The only cloud piece is a small auth service for accounts.
+
+---
+
+## Download
+
+**[CapScreen v0.1 for macOS (Apple Silicon)](https://github.com/devxsubh/CapScreen/releases/tag/v0.1)** — grab the `.dmg` from the release assets. The build is unsigned: right-click the app and choose **Open** on first launch.
 
 ---
 
 ## Features
 
-- **Cap-table screening** — upload a CSV (strict format, column aliases, or AI-inferred schema) and screen every owner, including UBOs behind shell-company layers
+- **Cap-table screening** — CSV upload (strict format, column aliases, or AI-inferred schema) for cap tables and flat entity rosters
 - **Ownership graph** — interactive React Flow graph with flagged / review highlighting and circular-ownership detection
-- **AI analyst notes** — Claude explains who matched, why, how confident, and the suggested next step
-- **Agentic chat** — follow-up questions against stored screening results via tool-use
-- **Startups & projects** — per-startup CSV history, documents, and persisted screening results
-- **Tabular review & workflows** — grid-based document analysis and reusable assistant workflows
-- **Auth & audit** — JWT (RS256) cookie auth, email verification, audit logs
+- **AI analyst notes** — who matched, why, how confident, and the suggested next step
+- **Agentic chat** — follow-up questions against stored results via tool-use, plus local document RAG
+- **AI Control Center** — pluggable providers (Anthropic, Ollama, OpenAI-compatible), model roles, local-only policy, keys encrypted with the OS keychain
+- **Data & backup** — sanctions-list versions, background re-screening, folder watch, encrypted backup/restore, audit export
+- **Sign-in like Claude Code** — browser + PKCE, session sealed in the OS keychain
 
 ---
 
 ## Architecture
 
-Production stack: **Vercel** hosts the Next.js UI; **AWS EC2** runs the Express API and Watchman in Docker; managed services handle data, cache, storage, and LLMs.
+![CapScreen desktop architecture](docs/architecture-diagram.svg)
 
-![CapScreen system architecture](docs/architecture-diagram.svg)
+| Piece | Where | Role |
+|---|---|---|
+| **Electron main** | `desktop/src/main.ts` | Starts sidecars on free loopback ports, sign-in gate, `capscreen://` protocol that proxies the UI and `/__api/*` (adds the per-launch token) |
+| **UI** | `frontend/` | Next.js (App Router, React 19, Tailwind, shadcn/ui, React Flow), built `output: "standalone"` |
+| **Backend** | `backend/` | Express in a `utilityProcess`, loopback-only, token-gated; screening, chat, RAG, AI Control Center |
+| **Database** | `<userData>/capscreen.db` | SQLite through a MongoDB-driver-compatible store (`node:sqlite`) under mongoose; vector search is in-process cosine |
+| **Watchman** | bundled Go binary | OFAC SDN + EU Consolidated matching (`GET /v2/search`) |
+| **Secrets** | OS keychain | Electron `safeStorage` seals the master key and session |
+| **Auth service** | Vercel + MongoDB Atlas | Accounts only: signup, sign-in, verify, reset, desktop OAuth (RFC 8252 + PKCE). No screening data |
 
-| Layer | Where | Role |
-|-------|--------|------|
-| **Frontend** | [Vercel](https://vercel.com) | Next.js 15, React 19, Tailwind, React Flow — cap-table upload, screening UI, assistant chat |
-| **Backend API** | AWS EC2 (Docker) | Express + TypeScript (`:3001`) — auth, screening orchestration, agentic chat |
-| **Watchman** | AWS EC2 (Docker, internal) | OFAC SDN + EU Consolidated sanctions matching |
-| **MongoDB** | Atlas | Startups, CSVs, chats, screening results, tabular reviews |
-| **Cache** | Upstash Redis | Optional Watchman result cache |
-| **Storage** | Cloudflare R2 | Document uploads |
-| **LLM** | Anthropic (Haiku) | Analyst narratives + tool-use chat |
+`<userData>` is `~/Library/Application Support/CapScreen` (macOS) or `%APPDATA%/CapScreen` (Windows).
 
-**Browser → API:** HTTPS from Vercel to EC2; JWT auth via httpOnly cookies; CORS locked to `FRONTEND_URL`.
+**Network egress** is limited to public sanctions-list downloads (every 12 h), auth sign-in, and cloud LLM calls, which happen only if you assign a cloud model. Local-only mode blocks the latter.
 
-**Screening path:** CSV → ownership graph → Watchman search → risk classification → Claude narrative → graph + risk table in the UI.
-
-Full topology, request flows, env split, and deploy checklist: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** · editable SVG: **[docs/architecture-diagram.svg](docs/architecture-diagram.svg)**
-
----
-
-## Local development
-
-### 1. Watchman (sanctions lists)
-
-```bash
-docker compose -f docker-compose.dev.yml up
-# Wait ~30–60 s for SDN/EU lists to load
-```
-
-### 2. Environment & dev server
-
-```bash
-cp .env.example .env
-# Edit .env: ANTHROPIC_API_KEY, MONGODB_URI, JWT keys, etc.
-pnpm install
-pnpm dev    # backend :3001 + frontend :3000
-```
-
-| Variable | Local default |
-|----------|---------------|
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:3001` |
-| `FRONTEND_URL` | `http://localhost:3000` |
-| `WATCHMAN_URL` | `http://localhost:8084` |
-| `MONGODB_URI` | `mongodb://localhost:27017/vc-screener` or Atlas |
-
-**Preview mode** (no auth): set `ALLOW_PREVIEW_MODE=true` and `NEXT_PUBLIC_ALLOW_PREVIEW_MODE=true` in `.env` — local only.
-
-### 3. Individual services
-
-```bash
-pnpm --filter vc-screener-backend dev
-pnpm --filter capscreen dev
-```
-
----
-
-## Production deploy
-
-**EC2** — backend + Watchman:
-
-```bash
-cp .env.example .env.production   # fill all secrets; never commit
-docker compose --env-file .env.production up -d --build
-```
-
-**Vercel** — frontend: deploy `frontend/`, set `NEXT_PUBLIC_API_BASE_URL` to your EC2 (or ALB) URL. Set `FRONTEND_URL` on the backend to your Vercel URL for CORS.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full checklist.
+Deeper docs: **[docs/DESKTOP_PLAN.md](docs/DESKTOP_PLAN.md)** · **[AGENTS.md](AGENTS.md)**
 
 ---
 
 ## Screening flow
 
-1. Parse CSV → ownership records (strict format, column aliases, or Claude schema inference)
-2. Build directed ownership graph ([graphology](https://graphology.github.io/))
-3. Traverse chains (BFS) to surface ultimate beneficial owners
-4. Screen each node via [Watchman](https://github.com/moov-io/watchman) — `GET /v2/search`
-5. Classify: **clear** (&lt;0.80) / **review** (0.80–0.95) / **flagged** (≥0.95)
-6. Claude Haiku writes who/why/confidence/next-step narratives for review + flagged entities
+![CapScreen screening flow](docs/screening-flow.svg)
 
-Agentic chat (`POST /api/chat`) wraps screening in tool-use so users can ask follow-ups against stored results.
+1. Parse CSV into ownership records (strict, column aliases, or LLM schema inference)
+2. Build a directed ownership graph ([graphology](https://graphology.github.io/)) and traverse chains (BFS) to surface UBOs
+3. Screen each node via [Watchman](https://github.com/moov-io/watchman)
+4. Classify: **clear** (< 0.80) / **review** (0.80–0.95) / **flagged** (≥ 0.95)
+5. The LLM writes who/why/confidence/next-step narratives for review and flagged entities
+
+Watchman matching is deterministic; AI only maps columns and explains matches. Screening **fails closed**: if Watchman is unavailable, it throws instead of returning "clear".
+
+---
+
+## Getting started
+
+```bash
+pnpm install
+pnpm --filter capscreen-desktop run build:watchman   # once; needs Go 1.24+ (brew install go)
+pnpm desktop                                         # Electron + backend + Next dev, all sidecars
+```
+
+Configure models in the app's **AI Control Center**, or install Ollama and click "Use on-device AI".
+
+Sign-in in dev defaults to `http://127.0.0.1:4100`. Run `pnpm --filter vc-screener-backend auth:dev`, or skip it with `CAPSCREEN_SKIP_AUTH=1` (dev only).
+
+**Browser-only dev** (no Electron): `pnpm dev` runs backend + frontend on the host, reads root `.env` (see `.env.example`), stores data in `~/.capscreen`, and needs Watchman via `docker compose -f docker-compose.dev.yml up`.
+
+### Packaging
+
+```bash
+pnpm --filter capscreen-desktop run dist:mac   # desktop/release/CapScreen-<ver>-arm64.dmg (+ x64)
+pnpm --filter capscreen-desktop run dist       # all targets in electron-builder.yml
+```
+
+Build each OS on that OS. Builds are unsigned unless `CSC_*` signing env is set; sign and notarize before distributing.
+
+### Auth service (Vercel)
+
+Project root `backend/`, entry `backend/api/index.ts`. Env: `CAPSCREEN_DB=mongodb`, `MONGODB_URI`, `JWT_ACCESS_TOKEN_SECRET_PRIVATE`/`_PUBLIC` (`pnpm --filter vc-screener-backend run generate:jwt-keys`), `FRONTEND_URL`, and `RESEND_API_KEY` + `RESEND_FROM_EMAIL` for email verification. The desktop app points at it via `capscreenAuthUrl` in `desktop/package.json`.
 
 ---
 
@@ -115,23 +100,18 @@ Cascade Series A SPV LLC,company,Meridian Offshore Holdings Ltd,company,100
 Ashford Family Trust,company,Ivan Petrovich Kozlov,person,100
 ```
 
-**Demo dataset:** `backend/sample-data/sample-cap-table.csv` — Series A due-diligence scenario with clean, review, flagged, deep-chain UBO, and circular-ownership cases. See `backend/sample-data/DEMO.md` for the full walkthrough.
+Cap tables need `entity`, `owner`, `ownership_pct`; rosters need `name`. **Demo dataset:** `backend/sample-data/sample-cap-table.csv` (clean, review, flagged, deep-chain UBO and circular-ownership cases). Walkthrough: `backend/sample-data/DEMO.md`.
 
 ---
 
 ## Commands
 
 ```bash
-pnpm install
-pnpm dev
-pnpm -w run typecheck
-pnpm -w run lint
-
-# Production Docker (on EC2)
-docker compose --env-file .env.production up -d --build
-
-# Local Watchman only
-docker compose -f docker-compose.dev.yml up
+pnpm desktop                  # run the desktop app (dev)
+pnpm desktop:dist             # build installers
+pnpm dev                      # browser-only dev
+pnpm -w run typecheck         # backend tsc --noEmit
+pnpm -w run lint              # frontend eslint
 ```
 
 ---
@@ -140,19 +120,12 @@ docker compose -f docker-compose.dev.yml up
 
 ```
 capscreen/
-├── frontend/   Next.js 15 app (package: capscreen) — deployed to Vercel
-├── backend/    Express API (package: vc-screener-backend) — Docker on EC2
-│   ├── src/            routes, screening pipeline, LLM agent, auth
+├── desktop/    Electron shell: main, preload, sidecars, auth flow, packaging
+├── frontend/   Next.js UI (package: capscreen)
+├── backend/    Express API (package: vc-screener-backend) + auth service
+│   ├── src/            routes, screening pipeline, LLM providers, RAG
 │   ├── sample-data/    demo cap tables and walkthrough
 │   └── compliance-corpus/  reference policy docs
-├── docs/       architecture doc + diagram
-└── docker-compose*.yml   production stack / local Watchman
+├── docs/       DESKTOP_PLAN.md + architecture diagrams
+└── docker-compose*.yml   local Watchman for browser-only dev
 ```
-
----
-
-## Docs for contributors
-
-- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — deployment topology, Docker, env split
-- **[CLAUDE.md](CLAUDE.md)** — source map, routes, AI assistant conventions
-- **[.claude/PROJECT.md](.claude/PROJECT.md)** — platform capabilities and custom agents

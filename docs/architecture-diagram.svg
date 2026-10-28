@@ -1,241 +1,117 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 920" role="img" aria-labelledby="title desc">
-  <title id="title">CapScreen - System Architecture</title>
-  <desc id="desc">Production deployment: Vercel frontend, AWS EC2 Docker backend with Watchman, and managed external services.</desc>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 740" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">CapScreen - Desktop Architecture</title>
+  <desc id="d">Electron desktop app running a Next.js UI, Express backend, SQLite, and Watchman sidecar locally, with optional cloud auth, sanctions list downloads, and cloud LLMs.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f8fafc"/>
-      <stop offset="100%" stop-color="#eef2ff"/>
-    </linearGradient>
-    <linearGradient id="vercelBg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#171717"/>
-      <stop offset="100%" stop-color="#000"/>
-    </linearGradient>
-    <linearGradient id="awsBg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fff7ed"/>
-      <stop offset="100%" stop-color="#ffedd5"/>
-    </linearGradient>
-    <linearGradient id="dockerBg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#eff6ff"/>
-      <stop offset="100%" stop-color="#dbeafe"/>
-    </linearGradient>
-    <filter id="sh" x="-5%" y="-5%" width="110%" height="110%">
-      <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.1"/>
-    </filter>
-    <marker id="aGray" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6 Z" fill="#64748b"/>
-    </marker>
-    <marker id="aBlue" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6 Z" fill="#2563eb"/>
-    </marker>
-    <marker id="aGreen" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6 Z" fill="#059669"/>
-    </marker>
-    <marker id="aOrange" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto">
-      <path d="M0,0 L10,3 L0,6 Z" fill="#ea580c"/>
-    </marker>
+    <marker id="a" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#475569"/></marker>
+    <marker id="o" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#d97706"/></marker>
     <style>
-      text { font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
-      .h1 { font-size: 24px; font-weight: 700; fill: #0f172a; }
-      .h2 { font-size: 13px; fill: #64748b; }
-      .zone { font-size: 11px; font-weight: 700; fill: #334155; letter-spacing: 0.05em; }
-      .t { font-size: 13px; font-weight: 700; fill: #0f172a; }
-      .s { font-size: 11px; fill: #475569; }
-      .d { font-size: 10px; fill: #64748b; }
-      .lw { font-size: 10px; font-weight: 600; fill: #334155; }
-      .t-light { font-size: 13px; font-weight: 700; fill: #ffffff; }
-      .s-light { font-size: 11px; fill: #e2e8f0; }
-      .d-light { font-size: 10px; fill: #cbd5e1; }
+      .box{fill:#fff;stroke:#94a3b8;stroke-width:1.5}
+      .h{font-size:14px;font-weight:700;fill:#0f172a}
+      .s{font-size:11.5px;fill:#475569}
+      .lbl{font-size:11px;fill:#64748b;font-style:italic}
     </style>
   </defs>
+  <rect width="1200" height="740" fill="#f8fafc"/>
+  <text x="30" y="38" font-size="20" font-weight="700" fill="#0f172a">CapScreen — desktop architecture</text>
+  <text x="30" y="58" class="s">Everything inside the green box runs on the user's machine. Only dashed arrows leave it.</text>
 
-  <rect width="1200" height="920" fill="url(#bg)"/>
+  <!-- desktop boundary -->
+  <rect x="30" y="75" width="800" height="620" rx="14" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+  <text x="50" y="98" font-size="13" font-weight="700" fill="#15803d">YOUR MACHINE  ·  data in &lt;userData&gt; (never uploaded)</text>
 
-  <!-- Title -->
-  <text x="600" y="38" text-anchor="middle" class="h1">CapScreen - Architecture</text>
-  <text x="600" y="58" text-anchor="middle" class="h2">Production | Vercel frontend | AWS EC2 Docker | Managed services</text>
+  <!-- Electron main -->
+  <rect x="60" y="115" width="740" height="70" rx="8" class="box"/>
+  <text x="75" y="140" class="h">Electron main process</text>
+  <text x="75" y="160" class="s">Boots sidecars on free loopback ports · sign-in gate · capscreen:// protocol adds the per-launch token</text>
 
-  <!-- User -->
-  <g filter="url(#sh)">
-    <rect x="520" y="78" width="160" height="48" rx="24" fill="#fff" stroke="#cbd5e1"/>
-    <circle cx="552" cy="102" r="12" fill="#e2e8f0"/>
-    <path d="M544 112c0-4 3.5-7 8-7s8 2.5 8 7" fill="none" stroke="#64748b" stroke-width="1.5"/>
-    <text x="574" y="98" class="t">Compliance Analyst</text>
-    <text x="574" y="114" class="d">Browser</text>
+  <!-- window + UI -->
+  <rect x="60" y="225" width="360" height="70" rx="8" class="box"/>
+  <text x="75" y="250" class="h">BrowserWindow</text>
+  <text x="75" y="270" class="s">loads capscreen://app · preload bridge</text>
+  <rect x="440" y="225" width="360" height="70" rx="8" class="box"/>
+  <text x="455" y="250" class="h">UI — Next.js (standalone)</text>
+  <text x="455" y="270" class="s">React 19 · Tailwind · React Flow ownership graph</text>
+
+  <!-- backend -->
+  <rect x="60" y="345" width="740" height="150" rx="8" class="box"/>
+  <text x="75" y="370" class="h">Backend — Express (utilityProcess, 127.0.0.1)</text>
+  <g class="s">
+    <rect x="75" y="390" width="170" height="85" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="85" y="412" class="h" font-size="12.5">Screening pipeline</text>
+    <text x="85" y="432">parse CSV → graph →</text><text x="85" y="448">Watchman → classify →</text><text x="85" y="464">narrative</text>
+    <rect x="260" y="390" width="170" height="85" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="270" y="412" class="h" font-size="12.5">Agent chat + RAG</text>
+    <text x="270" y="432">tool-use loop (SSE)</text><text x="270" y="448">local embeddings,</text><text x="270" y="464">in-process cosine</text>
+    <rect x="445" y="390" width="170" height="85" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="455" y="412" class="h" font-size="12.5">AI Control Center</text>
+    <text x="455" y="432">providers · model roles</text><text x="455" y="448">local-only policy</text><text x="455" y="464">AES-256-GCM keys</text>
+    <rect x="630" y="390" width="155" height="85" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
+    <text x="640" y="412" class="h" font-size="12.5">Data services</text>
+    <text x="640" y="432">backup / restore</text><text x="640" y="448">folder watch</text><text x="640" y="464">audit export</text>
   </g>
 
-  <!-- Arrows from user -->
-  <path d="M560 126 L560 148 L280 148 L280 168" fill="none" stroke="#64748b" stroke-width="1.8" marker-end="url(#aGray)"/>
-  <rect x="360" y="130" width="88" height="16" rx="3" fill="#f1f5f9"/>
-  <text x="404" y="142" text-anchor="middle" class="lw">Page load HTTPS</text>
-
-  <path d="M640 126 L640 148 L860 148 L860 218" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#aBlue)"/>
-  <rect x="680" y="124" width="110" height="28" rx="3" fill="#eff6ff" stroke="#bfdbfe"/>
-  <text x="735" y="137" text-anchor="middle" class="lw">API REST /api/*</text>
-  <text x="735" y="148" text-anchor="middle" class="d">JWT cookies + CORS</text>
-
-  <!-- ===== LEFT: VERCEL ===== -->
-  <rect x="40" y="168" width="440" height="400" rx="12" fill="#fafafa" stroke="#e2e8f0" stroke-dasharray="5 4"/>
-  <text x="56" y="190" class="zone">VERCEL | EDGE CDN</text>
-
-  <g filter="url(#sh)">
-    <rect x="60" y="204" width="400" height="108" rx="8" fill="url(#vercelBg)"/>
-    <circle cx="88" cy="258" r="16" fill="#fff"/>
-    <path d="M88 244 L96 258 L88 272 L80 258 Z" fill="#000"/>
-    <text x="112" y="242" class="t-light">Next.js 15 Frontend</text>
-    <text x="112" y="260" class="s-light">React 19, App Router, Tailwind, React Flow</text>
-    <text x="112" y="276" class="d-light">Screener chat, ownership graph, startups</text>
-    <text x="112" y="292" class="d-light">NEXT_PUBLIC_API_BASE_URL to EC2 API</text>
+  <!-- bottom row -->
+  <g>
+    <rect x="60" y="560" width="140" height="90" rx="8" class="box"/>
+    <text x="72" y="585" class="h">SQLite</text><text x="72" y="605" class="s">capscreen.db</text><text x="72" y="621" class="s">mongoose via</text><text x="72" y="637" class="s">node:sqlite</text>
+    <rect x="210" y="560" width="140" height="90" rx="8" class="box"/>
+    <text x="222" y="585" class="h">Local files</text><text x="222" y="605" class="s">&lt;userData&gt;/files</text><text x="222" y="621" class="s">CSVs, documents</text>
+    <rect x="360" y="560" width="140" height="90" rx="8" class="box"/>
+    <text x="372" y="585" class="h">OS keychain</text><text x="372" y="605" class="s">safeStorage master</text><text x="372" y="621" class="s">key + session</text>
+    <rect x="510" y="560" width="140" height="90" rx="8" class="box"/>
+    <text x="522" y="585" class="h">Local LLM</text><text x="522" y="605" class="s">Ollama /</text><text x="522" y="621" class="s">LM Studio /</text><text x="522" y="637" class="s">llama.cpp</text>
+    <rect x="660" y="560" width="140" height="90" rx="8" class="box"/>
+    <text x="672" y="585" class="h">Watchman</text><text x="672" y="605" class="s">Go sidecar, no</text><text x="672" y="621" class="s">libpostal · OFAC</text><text x="672" y="637" class="s">+ EU lists</text>
   </g>
 
-  <rect x="60" y="328" width="400" height="88" rx="8" fill="#fff" stroke="#e2e8f0" stroke-dasharray="4 3"/>
-  <text x="76" y="348" class="t" font-size="11">Local dev</text>
-  <text x="76" y="364" class="d">pnpm dev on host (:3000 / :3001)</text>
-  <text x="76" y="378" class="d">Watchman: docker compose -f docker-compose.dev.yml up</text>
-  <text x="76" y="392" class="d">Optional: same Atlas / Upstash / R2 from root .env</text>
-
-  <!-- ===== RIGHT: EC2 ===== -->
-  <rect x="500" y="168" width="660" height="400" rx="12" fill="url(#awsBg)" stroke="#fb923c" stroke-width="1.5"/>
-  <text x="516" y="190" class="zone" fill="#9a3412">AWS EC2</text>
-  <text x="516" y="206" class="d">TLS at reverse proxy | TRUST_PROXY_HOPS=1</text>
-
-  <!-- Reverse proxy -->
-  <g filter="url(#sh)">
-    <rect x="730" y="218" width="200" height="44" rx="6" fill="#fff" stroke="#fed7aa"/>
-    <text x="830" y="236" text-anchor="middle" class="t">Reverse Proxy</text>
-    <text x="830" y="252" text-anchor="middle" class="s">ALB / nginx to :3001</text>
+  <!-- internal arrows -->
+  <g stroke="#475569" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M240,185 V225"/>
+    <path d="M420,260 H440"/>
+    <path d="M620,295 V345"/>
+    <path d="M130,495 V560"/>
+    <path d="M280,495 V560"/>
+    <path d="M430,495 V560"/>
+    <path d="M580,495 V560"/>
+    <path d="M730,495 V560"/>
   </g>
-  <path d="M830 262 L830 278" stroke="#ea580c" stroke-width="1.8" marker-end="url(#aOrange)"/>
+  <text x="628" y="325" class="lbl">/__api/* + token</text>
 
-  <!-- Docker -->
-  <rect x="516" y="284" width="628" height="268" rx="10" fill="url(#dockerBg)" stroke="#93c5fd"/>
-  <text x="532" y="304" class="zone" fill="#1d4ed8">DOCKER COMPOSE | INTERNAL NETWORK</text>
-  <text x="1128" y="304" text-anchor="end" class="d">docker-compose.yml</text>
+  <!-- cloud column -->
+  <text x="880" y="98" font-size="13" font-weight="700" fill="#b45309">OUTSIDE (optional / minimal)</text>
+  <rect x="880" y="115" width="290" height="125" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <text x="895" y="140" class="h">Auth service</text>
+  <text x="895" y="160" class="s">Vercel + MongoDB Atlas</text>
+  <text x="895" y="180" class="s">signup · sign-in · verify · reset</text>
+  <text x="895" y="196" class="s">hosted portal, RFC 8252 + PKCE</text>
+  <text x="895" y="218" class="s" font-weight="700">Accounts only — no screening data</text>
 
-  <!-- Backend -->
-  <g filter="url(#sh)">
-    <rect x="536" y="320" width="250" height="212" rx="8" fill="#fff" stroke="#3b82f6" stroke-width="1.5"/>
-    <rect x="536" y="320" width="250" height="28" rx="8" fill="#2563eb"/>
-    <rect x="536" y="336" width="250" height="12" fill="#2563eb"/>
-    <text x="661" y="339" text-anchor="middle" class="t-light">Express Backend :3001</text>
-    <text x="552" y="364" class="s">Node 22, TypeScript, pnpm deploy</text>
-    <text x="552" y="380" class="d">JWT RS256, rate limits, Helmet</text>
-    <text x="552" y="396" class="d">/api/chat, /api/screen, /api/startups</text>
-    <text x="552" y="412" class="d">Claude Haiku agent loop + RAG</text>
-    <text x="552" y="428" class="d">Portfolio re-screen, audit logs</text>
-    <text x="552" y="448" class="d">Secrets: .env.production</text>
-    <text x="552" y="464" class="d">Health: GET /health</text>
-    <text x="552" y="512" class="s">Outbound to all managed services</text>
+  <rect x="880" y="290" width="290" height="110" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <text x="895" y="315" class="h">Cloud LLMs (BYO key)</text>
+  <text x="895" y="335" class="s">Anthropic · OpenAI · Gemini ·</text>
+  <text x="895" y="351" class="s">OpenRouter · Groq · custom</text>
+  <text x="895" y="375" class="s" font-weight="700">Only if the user assigns a cloud model</text>
+
+  <rect x="880" y="450" width="290" height="110" rx="10" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+  <text x="895" y="475" class="h">Public sanctions lists</text>
+  <text x="895" y="495" class="s">OFAC SDN · EU Consolidated</text>
+  <text x="895" y="511" class="s">downloaded every 12 h (or imported offline)</text>
+  <text x="895" y="535" class="s" font-weight="700">Inbound only — nothing uploaded</text>
+
+  <!-- external arrows (dashed) -->
+  <g stroke="#d97706" stroke-width="1.6" fill="none" stroke-dasharray="6 4" marker-end="url(#o)">
+    <path d="M800,150 H880"/>
+    <path d="M800,415 H840 V345 H880"/>
+    <path d="M800,605 H840 V505 H880"/>
   </g>
+  <text x="808" y="143" class="lbl" fill="#b45309" style="fill:#b45309">sign-in</text>
 
-  <!-- Watchman -->
-  <g filter="url(#sh)">
-    <rect x="878" y="320" width="250" height="212" rx="8" fill="#fff" stroke="#94a3b8" stroke-dasharray="4 3"/>
-    <rect x="878" y="320" width="250" height="28" rx="8" fill="#334155"/>
-    <rect x="878" y="336" width="250" height="12" fill="#334155"/>
-    <text x="1003" y="339" text-anchor="middle" class="t-light">Watchman :8084</text>
-    <text x="894" y="364" class="s">moov/watchman:static</text>
-    <text x="894" y="380" class="d">OFAC SDN + EU Consolidated</text>
-    <text x="894" y="396" class="d">GET /v2/search, GET /ping</text>
-    <text x="894" y="412" class="d">Internal only - no public port</text>
-    <text x="894" y="428" class="d">30-60s startup (list load)</text>
-    <text x="894" y="444" class="d">Healthy before backend starts</text>
-  </g>
-
-  <path d="M786 426 L878 426" stroke="#059669" stroke-width="2" marker-end="url(#aGreen)"/>
-  <text x="832" y="418" text-anchor="middle" class="lw" fill="#059669">HTTP</text>
-  <text x="832" y="442" text-anchor="middle" class="d">watchman:8084</text>
-
-  <!-- Backend down to services -->
-  <path d="M661 532 L661 586" stroke="#64748b" stroke-width="1.8" marker-end="url(#aGray)"/>
-
-  <!-- ===== EXTERNAL SERVICES ===== -->
-  <rect x="40" y="588" width="1120" height="248" rx="12" fill="#fff" stroke="#e2e8f0"/>
-
-  <text x="56" y="610" class="zone">MANAGED AND EXTERNAL SERVICES</text>
-  <text x="1144" y="610" text-anchor="end" class="d">Backend to each service over HTTPS / TLS</text>
-
-  <!-- bus to service cards (centers: 130, 288, 446, 604, 762, 920, 1078) -->
-  <path d="M661 586 L661 622" stroke="#64748b" stroke-width="1.5" fill="none"/>
-  <path d="M661 622 L130 622 L130 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-  <path d="M661 622 L288 622 L288 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-  <path d="M661 622 L446 622 L446 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-  <path d="M661 622 L604 622 L604 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-  <path d="M661 622 L762 622 L762 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-  <path d="M661 622 L920 622 L920 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-  <path d="M661 622 L1078 622 L1078 634" stroke="#64748b" stroke-width="1.5" stroke-dasharray="4 3" fill="none" marker-end="url(#aGray)"/>
-
-  <!-- 7 cards: w=148 gap=10 start x=56 -->
-  <g filter="url(#sh)">
-    <rect x="56" y="634" width="148" height="82" rx="6" fill="#f0fdf4" stroke="#86efac"/>
-    <circle cx="76" cy="648" r="8" fill="#16a34a"/>
-    <text x="90" y="648" class="t" font-size="12">MongoDB Atlas</text>
-    <text x="68" y="666" class="d">Startups, CSVs, chats</text>
-    <text x="68" y="680" class="d">Screening results</text>
-    <text x="68" y="694" class="d">RAG vectors, audit logs</text>
-  </g>
-  <g filter="url(#sh)">
-    <rect x="214" y="634" width="148" height="82" rx="6" fill="#fef2f2" stroke="#fca5a5"/>
-    <circle cx="234" cy="648" r="8" fill="#dc2626"/>
-    <text x="248" y="648" class="t" font-size="12">Upstash Redis</text>
-    <text x="226" y="666" class="d">Watchman cache</text>
-    <text x="226" y="680" class="d">REST (optional)</text>
-    <text x="226" y="694" class="d">In-memory fallback</text>
-  </g>
-  <g filter="url(#sh)">
-    <rect x="372" y="634" width="148" height="82" rx="6" fill="#faf5ff" stroke="#d8b4fe"/>
-    <circle cx="392" cy="648" r="8" fill="#9333ea"/>
-    <text x="406" y="648" class="t" font-size="12">Anthropic API</text>
-    <text x="384" y="666" class="d">Claude Haiku 4.5</text>
-    <text x="384" y="680" class="d">Chat, tool-use</text>
-    <text x="384" y="694" class="d">Analyst narratives</text>
-  </g>
-  <g filter="url(#sh)">
-    <rect x="530" y="634" width="148" height="82" rx="6" fill="#f0fdfa" stroke="#5eead4"/>
-    <circle cx="550" cy="648" r="8" fill="#0d9488"/>
-    <text x="564" y="648" class="t" font-size="12">OpenAI API</text>
-    <text x="542" y="666" class="d">RAG embeddings</text>
-    <text x="542" y="680" class="d">Document vectorize</text>
-    <text x="542" y="694" class="d">Atlas vector search</text>
-  </g>
-  <g filter="url(#sh)">
-    <rect x="688" y="634" width="148" height="82" rx="6" fill="#fffbeb" stroke="#fcd34d"/>
-    <circle cx="708" cy="648" r="8" fill="#d97706"/>
-    <text x="722" y="648" class="t" font-size="12">Cloudflare R2</text>
-    <text x="700" y="666" class="d">Document uploads</text>
-    <text x="700" y="680" class="d">S3-compatible API</text>
-    <text x="700" y="694" class="d">Compliance corpus</text>
-  </g>
-  <g filter="url(#sh)">
-    <rect x="846" y="634" width="148" height="82" rx="6" fill="#eff6ff" stroke="#93c5fd"/>
-    <circle cx="866" cy="648" r="8" fill="#2563eb"/>
-    <text x="880" y="648" class="t" font-size="12">Resend</text>
-    <text x="858" y="666" class="d">Transactional email</text>
-    <text x="858" y="680" class="d">Verify, reset</text>
-    <text x="858" y="694" class="d">Invites</text>
-  </g>
-  <g filter="url(#sh)">
-    <rect x="1004" y="634" width="148" height="82" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
-    <circle cx="1024" cy="648" r="8" fill="#64748b"/>
-    <text x="1038" y="648" class="t" font-size="12">Tavily</text>
-    <text x="1016" y="666" class="d">Web search agent</text>
-    <text x="1016" y="680" class="d">Optional (F17)</text>
-  </g>
-
-  <!-- Screening flow -->
-  <rect x="56" y="728" width="1088" height="58" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>
-  <text x="72" y="748" class="t" font-size="11">Screening flow (POST /api/chat, tool: screen_cap_table)</text>
-  <text x="72" y="766" class="d">1. CSV parse + graph  2. Watchman (Upstash cache)  3. classify  4. Claude narrative  5. Atlas persist  6. UI graph + risk panel</text>
-  <text x="72" y="782" class="d">Secrets on EC2 (.env.production) only | Vercel: NEXT_PUBLIC_* | Watchman not public</text>
-
-  <!-- Legend -->
-  <line x1="56" y1="878" x2="88" y2="878" stroke="#2563eb" stroke-width="3"/>
-  <text x="96" y="882" class="d">Browser to API (HTTPS + cookies)</text>
-
-  <line x1="280" y1="878" x2="312" y2="878" stroke="#059669" stroke-width="3"/>
-  <text x="320" y="882" class="d">Docker internal</text>
-
-  <line x1="440" y1="878" x2="472" y2="878" stroke="#64748b" stroke-width="2" stroke-dasharray="4 3"/>
-  <text x="480" y="882" class="d">Backend to external (TLS)</text>
+  <!-- legend -->
+  <rect x="880" y="610" width="290" height="85" rx="8" fill="#fff" stroke="#cbd5e1"/>
+  <line x1="895" y1="634" x2="935" y2="634" stroke="#475569" stroke-width="1.5" marker-end="url(#a)"/>
+  <text x="945" y="638" class="s">local, loopback only</text>
+  <line x1="895" y1="658" x2="935" y2="658" stroke="#d97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#o)"/>
+  <text x="945" y="662" class="s">leaves the machine</text>
+  <text x="895" y="684" class="s">Screening fails closed if Watchman is down.</text>
 </svg>

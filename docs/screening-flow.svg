@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">CapScreen - Screening Flow</title>
+  <desc id="d">Cap-table CSV is parsed, built into an ownership graph, screened against Watchman, classified clear/review/flagged, and explained by an LLM narrative.</desc>
+  <defs>
+    <marker id="a" viewBox="0 0 10 6" refX="9" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#475569"/></marker>
+    <style>.h{font-size:14px;font-weight:700;fill:#0f172a}.s{font-size:11.5px;fill:#475569}</style>
+  </defs>
+  <rect width="1200" height="300" fill="#f8fafc"/>
+  <text x="30" y="36" font-size="20" font-weight="700" fill="#0f172a">Screening flow</text>
+  <g fill="#fff" stroke="#94a3b8" stroke-width="1.5">
+    <rect x="30" y="70" width="170" height="110" rx="8"/><rect x="225" y="70" width="170" height="110" rx="8"/>
+    <rect x="420" y="70" width="170" height="110" rx="8"/><rect x="615" y="70" width="170" height="110" rx="8"/>
+    <rect x="810" y="70" width="170" height="110" rx="8"/><rect x="1005" y="70" width="165" height="110" rx="8"/>
+  </g>
+  <g class="h"><text x="42" y="97">1 · Upload CSV</text><text x="237" y="97">2 · Parse</text><text x="432" y="97">3 · Ownership graph</text><text x="627" y="97">4 · Watchman</text><text x="822" y="97">5 · Classify</text><text x="1017" y="97">6 · Narrative</text></g>
+  <g class="s">
+    <text x="42" y="120">cap table or roster,</text><text x="42" y="136">or drop in a watched</text><text x="42" y="152">folder</text>
+    <text x="237" y="120">strict → aliases →</text><text x="237" y="136">LLM column mapping</text><text x="237" y="152">(never decides hits)</text>
+    <text x="432" y="120">graphology, BFS to</text><text x="432" y="136">find UBOs, detects</text><text x="432" y="152">circular ownership</text>
+    <text x="627" y="120">GET /v2/search per</text><text x="627" y="136">node; fails closed</text><text x="627" y="152">if unavailable</text>
+    <text x="822" y="120">clear &lt; 0.80</text><text x="822" y="136">review 0.80–0.95</text><text x="822" y="152">flagged ≥ 0.95</text>
+    <text x="1017" y="120">who / why / confidence</text><text x="1017" y="136">/ next step for review</text><text x="1017" y="152">+ flagged entities</text>
+  </g>
+  <g stroke="#475569" stroke-width="1.5" marker-end="url(#a)">
+    <path d="M200,125 H225"/><path d="M395,125 H420"/><path d="M590,125 H615"/><path d="M785,125 H810"/><path d="M980,125 H1005"/>
+  </g>
+  <rect x="30" y="215" width="1140" height="50" rx="8" fill="#ecfdf5" stroke="#16a34a"/>
+  <text x="46" y="237" class="h">Result</text>
+  <text x="46" y="255" class="s">ScreeningResult + watchmanListInfo (list counts + SHA-256) saved to the startup → graph, risk table and risk cards open in the side panel.</text>
+</svg>
