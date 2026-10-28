@@ -10,7 +10,7 @@ A **desktop app** (Electron) for venture firms. Upload a startup cap table (CSV)
 
 ## Download
 
-**[CapScreen v0.1 for macOS (Apple Silicon)](https://github.com/devxsubh/CapScreen/releases/tag/v0.1)** — grab the `.dmg` from the release assets. The build is unsigned: right-click the app and choose **Open** on first launch.
+**[CapScreen v1.0 for macOS (Apple Silicon)](https://github.com/devxsubh/CapScreen/releases/tag/v1.0)** — grab the `.dmg` from the release assets. The build is unsigned: right-click the app and choose **Open** on first launch.
 
 ---
 
