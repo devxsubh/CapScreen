@@ -14,7 +14,7 @@ metadata:
 - **R2:** Cloudflare object storage for documents
 - **LLM:** Anthropic Haiku on EC2; OpenAI for RAG embeddings when enabled
 
-Full diagram and env split: `docs/ARCHITECTURE.md`.
+Full diagram: `docs/architecture-diagram.svg`; plan: `docs/DESKTOP_PLAN.md`.
 
 ## Local vs production
 

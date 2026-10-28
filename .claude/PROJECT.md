@@ -2,7 +2,7 @@
 
 > Chat-first legal/compliance platform for VC firms: screen startup cap tables against sanctions lists (Watchman / OFAC / EU), with agentic tool-calling, persistent memory, and document RAG on the roadmap.
 
-**Read first:** root `CLAUDE.md` for stack, routes, and source map. **Deployment:** `docs/ARCHITECTURE.md` (Vercel frontend, EC2 Docker backend + Watchman, Atlas/Upstash/R2).
+**Read first:** root `CLAUDE.md` for stack, routes, and source map. **Deployment:** `docs/DESKTOP_PLAN.md` (Electron desktop app; auth service on Vercel + Atlas).
 
 ---
 
