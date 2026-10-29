@@ -107,7 +107,7 @@ export function CsvIngestReview({
   return (
     <div className="rounded-lg border border-gray-100 bg-gray-50/80 px-3 py-3 space-y-2">
       <div className="flex items-start gap-2">
-        <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
         <div className="min-w-0 flex-1 space-y-1">
           <p className="text-sm font-medium text-gray-800">
             {KIND_LABELS[analysis.csvKind] ?? "CSV"} detected

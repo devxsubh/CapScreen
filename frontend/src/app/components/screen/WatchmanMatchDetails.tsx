@@ -75,8 +75,8 @@ function formatListLabel(source?: string): string {
 
 function MatchScoreBreakdown({ pieces }: { pieces: WatchmanScorePiece[] }) {
   return (
-    <div className="rounded-md border border-indigo-100 bg-indigo-50/40 px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700 mb-2">
+    <div className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
         Field-level match breakdown
       </p>
       <div className="space-y-1.5">
@@ -88,12 +88,12 @@ function MatchScoreBreakdown({ pieces }: { pieces: WatchmanScorePiece[] }) {
             <span className="text-gray-700 capitalize">
               {p.pieceType.replace(/_/g, " ")}
               {p.exact && (
-                <span className="ml-1 text-indigo-600 font-medium">exact</span>
+                <span className="ml-1 text-emerald-700 font-medium">exact</span>
               )}
             </span>
             <span
               className={`tabular-nums font-semibold ${
-                p.matched ? "text-indigo-800" : "text-gray-400"
+                p.matched ? "text-gray-900" : "text-gray-400"
               }`}
             >
               {(p.score * 100).toFixed(0)}%
@@ -189,7 +189,7 @@ export function WatchmanMatchDetails({
             {(match.match * 100).toFixed(1)}%
           </span>
           {match.secondarySanctions && (
-            <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-orange-800">
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">
               Secondary sanctions
             </span>
           )}
@@ -228,8 +228,8 @@ function ScreeningQueryPanel({ entity }: { entity: EntityResult }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-lg border border-blue-100 bg-blue-50/40 px-4 py-3 mb-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-blue-700 mb-2">
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 mb-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
         Query sent to Watchman
       </p>
       <FieldTable rows={rows} />
@@ -241,40 +241,40 @@ export function WatchmanClearPanel({ entity }: { entity: EntityResult }) {
   const watchmanType = entity.type === "person" ? "person" : "business";
 
   return (
-    <div className="rounded-lg border border-green-200 bg-green-50/40 overflow-hidden">
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 overflow-hidden">
       <ScreeningQueryPanel entity={entity} />
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-green-100">
-        <ShieldCheck className="h-5 w-5 text-green-600 shrink-0" />
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-emerald-100">
+        <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-green-900">No sanctions match</p>
-          <p className="text-xs text-green-700/80 mt-0.5">
+          <p className="text-sm font-semibold text-emerald-900">No sanctions match</p>
+          <p className="text-xs text-emerald-700/80 mt-0.5">
             Watchman returned no entries at or above the match threshold
           </p>
         </div>
       </div>
       <table className="w-full text-xs px-4">
         <tbody>
-          <tr className="border-t border-green-100">
+          <tr className="border-t border-emerald-100">
             <td className="py-2.5 pl-4 pr-4 font-medium text-gray-500 w-[130px]">
               Queried name
             </td>
             <td className="py-2.5 pr-4 font-medium text-gray-900">{entity.name}</td>
           </tr>
-          <tr className="border-t border-green-100">
+          <tr className="border-t border-emerald-100">
             <td className="py-2.5 pl-4 pr-4 font-medium text-gray-500">Query type</td>
             <td className="py-2.5 pr-4 text-gray-900 capitalize">
               {watchmanType}{" "}
               <span className="text-gray-400">({entity.type})</span>
             </td>
           </tr>
-          <tr className="border-t border-green-100">
+          <tr className="border-t border-emerald-100">
             <td className="py-2.5 pl-4 pr-4 font-medium text-gray-500">Hits returned</td>
             <td className="py-2.5 pr-4 text-gray-900">0 above threshold</td>
           </tr>
-          <tr className="border-t border-green-100">
+          <tr className="border-t border-emerald-100">
             <td className="py-2.5 pl-4 pr-4 font-medium text-gray-500">Risk bucket</td>
             <td className="py-2.5 pr-4">
-              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-800">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
                 <CheckCircle2 className="h-3 w-3" />
                 Clear
               </span>

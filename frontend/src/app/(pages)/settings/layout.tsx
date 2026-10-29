@@ -2,57 +2,109 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Archive, Info, ShieldCheck, SlidersHorizontal, Sparkles, User } from "lucide-react";
+import { Archive, Info, Link2, ShieldCheck, SlidersHorizontal, Cpu, User, type LucideIcon } from "lucide-react";
 
-const NAV = [
-    { href: "/settings/account", label: "Account", icon: User },
-    { href: "/settings/screening", label: "Screening", icon: SlidersHorizontal },
-    { href: "/settings/sanctions", label: "Sanctions data", icon: ShieldCheck },
-    { href: "/settings/data", label: "Backup & audit", icon: Archive },
-    { href: "/settings/about", label: "About", icon: Info },
+type NavItem = { href: string; label: string; hint: string; icon: LucideIcon };
+
+const NAV: Array<{ group: string; items: NavItem[] }> = [
+    {
+        group: "Account",
+        items: [{ href: "/settings/account", label: "Profile", hint: "Sign-in, tour, sign out", icon: User }],
+    },
+    {
+        group: "Screening",
+        items: [
+            { href: "/settings/ai", label: "AI Control", hint: "Models, API keys, local AI", icon: Cpu },
+            { href: "/settings/screening", label: "Screening", hint: "Match scores, ownership rules", icon: SlidersHorizontal },
+            { href: "/settings/sanctions", label: "Sanctions data", hint: "Lists, versions, re-screening", icon: ShieldCheck },
+        ],
+    },
+    {
+        group: "Data",
+        items: [
+            { href: "/settings/connectors", label: "Connectors", hint: "Carta, Google Drive, registries", icon: Link2 },
+            { href: "/settings/data", label: "Backup & audit", hint: "Backups, restore, audit log", icon: Archive },
+            { href: "/settings/about", label: "About", hint: "Version, engines, diagnostics", icon: Info },
+        ],
+    },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-
-    const linkClass = (active: boolean) =>
-        `flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-            active ? "bg-gray-100 font-medium text-gray-900" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-        }`;
+    const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
 
     return (
-        <div className="flex h-full flex-col overflow-y-auto">
-            <header className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-10 pb-4 sm:px-6">
-                <h1 className="text-4xl font-medium font-eb-garamond">Settings</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                    Everything here is stored on this computer, except your account sign-in.
-                </p>
-            </header>
-            <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-16 sm:px-6 md:flex-row md:gap-10">
-                <nav aria-label="Settings" className="md:w-52 md:shrink-0">
-                    <ul className="-mx-1 flex gap-1 overflow-x-auto px-1 md:sticky md:top-4 md:flex-col md:overflow-visible">
-                        {NAV.map(({ href, label, icon: Icon }) => {
-                            const active = pathname === href || pathname.startsWith(href + "/");
-                            return (
-                                <li key={href}>
-                                    <Link href={href} aria-current={active ? "page" : undefined} className={linkClass(active)}>
-                                        <Icon className="h-4 w-4" />
-                                        {label}
-                                    </Link>
-                                </li>
-                            );
-                        })}
-                        <li className="md:mt-2 md:border-t md:border-gray-100 md:pt-2">
-                            <Link href="/ai" className={linkClass(false)}>
-                                <Sparkles className="h-4 w-4" />
-                                AI models
-                                <ArrowUpRight className="h-3.5 w-3.5 text-gray-400" />
-                            </Link>
-                        </li>
-                    </ul>
+        <div className="flex h-full min-h-0 flex-col bg-white md:flex-row">
+            <aside className="shrink-0 border-b border-gray-200 bg-white md:w-64 md:overflow-y-auto md:border-b-0 md:border-r md:border-black/[0.06]">
+                <div className="px-5 pb-3 pt-5 md:pb-4 md:pt-8">
+                    <h1 className="font-eb-garamond text-2xl font-medium text-gray-950">Settings</h1>
+                    <p className="mt-0.5 hidden text-xs leading-relaxed text-gray-500 md:block">
+                        Everything here stays on this computer, except your sign-in.
+                    </p>
+                </div>
+
+                {/* Narrow windows: one scrollable row of tabs */}
+                <nav aria-label="Settings" className="flex gap-1 overflow-x-auto px-3 pb-3 md:hidden">
+                    {NAV.flatMap((g) => g.items).map(({ href, label, icon: Icon }) => (
+                        <Link
+                            key={href}
+                            href={href}
+                            aria-current={isActive(href) ? "page" : undefined}
+                            className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                                isActive(href) ? "bg-gray-900 text-white" : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                        >
+                            <Icon className="h-4 w-4" />
+                            {label}
+                        </Link>
+                    ))}
                 </nav>
-                <main className="min-w-0 flex-1 md:max-w-3xl">{children}</main>
-            </div>
+
+                {/* Wide windows: grouped list with a one-line hint per page */}
+                <nav aria-label="Settings" className="hidden space-y-5 px-3 pb-8 md:block">
+                    {NAV.map(({ group, items }) => (
+                        <div key={group}>
+                            <p className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-gray-400">{group}</p>
+                            <ul className="space-y-0.5">
+                                {items.map(({ href, label, hint, icon: Icon }) => {
+                                    const active = isActive(href);
+                                    return (
+                                        <li key={href}>
+                                            <Link
+                                                href={href}
+                                                aria-current={active ? "page" : undefined}
+                                                className={`group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors ${
+                                                    active ? "bg-gray-100" : "hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                <span
+                                                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                                                        active
+                                                            ? "bg-gray-900 text-white"
+                                                            : "border border-gray-200 bg-white text-gray-500 group-hover:text-gray-800"
+                                                    }`}
+                                                >
+                                                    <Icon className="h-4 w-4" />
+                                                </span>
+                                                <span className="min-w-0">
+                                                    <span className={`block text-sm ${active ? "font-medium text-gray-950" : "text-gray-700"}`}>
+                                                        {label}
+                                                    </span>
+                                                    <span className="block truncate text-xs text-gray-400">{hint}</span>
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    ))}
+                </nav>
+            </aside>
+
+            <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+                <div className="w-full max-w-[72rem] px-5 py-8 sm:px-8 lg:px-12 lg:py-10">{children}</div>
+            </main>
         </div>
     );
 }

@@ -76,7 +76,7 @@ function ScoreBand({ s }: { s: ScreeningSettings }) {
 
 function DefaultHint({ value, def, format }: { value: number; def: number; format: (n: number) => string }) {
     if (value === def) return <span className="text-xs text-gray-400">default</span>;
-    return <span className="text-xs text-blue-600">default {format(def)}</span>;
+    return <span className="text-xs text-gray-500">default {format(def)}</span>;
 }
 
 /** Slider + number box for a 0–1 score shown as a percentage. */
@@ -194,7 +194,12 @@ export default function ScreeningSettingsPage() {
         desktopDataApi
             .settings()
             .then((r) => {
-                setSaved(r.settings.screening);
+                // A backend older than this page doesn't send defaults; say so rather than spin forever.
+                if (!r.screeningDefaults) {
+                    setStatus({ ok: false, text: "The backend is out of date. Restart CapScreen to load screening settings." });
+                    return;
+                }
+                setSaved(r.settings.screening ?? null);
                 setDefaults(r.screeningDefaults);
                 setDraft(r.settings.screening ?? r.screeningDefaults);
             })
@@ -257,7 +262,7 @@ export default function ScreeningSettingsPage() {
     const outcome = classify(tryScore / 100, draft);
 
     return (
-        <div className="space-y-4 pb-20">
+        <div className="space-y-5 pb-20">
             <SettingsHeader
                 title="Screening"
                 description="How strict sanctions matching and ownership rules are. Changes apply to new screenings; every result records the thresholds it was made with."
@@ -328,52 +333,53 @@ export default function ScreeningSettingsPage() {
                 </div>
             </SettingsCard>
 
-            <SettingsCard
-                title="Ownership rules"
-                icon={<GitBranch className="h-4 w-4 text-gray-400" />}
-                description="Applied to indirect stakes traced through the ownership graph. You can be stricter than the regulation, but not looser."
-            >
-                <div className="space-y-4">
-                    <NumberField
-                        id="ofacOwnershipRulePct"
-                        label="OFAC ownership rule"
-                        help="Treat an entity as blocked when sanctioned parties together own at least this much (OFAC 50% rule; max 50%)."
-                        value={draft.ofacOwnershipRulePct}
-                        def={defaults.ofacOwnershipRulePct}
-                        min={1}
-                        max={50}
-                        suffix="%"
-                        onChange={(v) => set("ofacOwnershipRulePct", v)}
-                    />
-                    <NumberField
-                        id="beneficialOwnerPct"
-                        label="Beneficial-owner review"
-                        help="Send owners with at least this indirect stake for review (FinCEN uses 25%; max 25%)."
-                        value={draft.beneficialOwnerPct}
-                        def={defaults.beneficialOwnerPct}
-                        min={1}
-                        max={25}
-                        suffix="%"
-                        onChange={(v) => set("beneficialOwnerPct", v)}
-                    />
-                </div>
-            </SettingsCard>
+            <div className="grid gap-5 xl:grid-cols-2">
+                <SettingsCard
+                    title="Ownership rules"
+                    icon={<GitBranch className="h-4 w-4 text-gray-400" />}
+                    description="Applied to indirect stakes traced through the ownership graph. You can be stricter than the regulation, but not looser."
+                >
+                    <div className="space-y-4">
+                        <NumberField
+                            id="ofacOwnershipRulePct"
+                            label="OFAC ownership rule"
+                            help="Treat an entity as blocked when sanctioned parties together own at least this much (OFAC 50% rule; max 50%)."
+                            value={draft.ofacOwnershipRulePct}
+                            def={defaults.ofacOwnershipRulePct}
+                            min={1}
+                            max={50}
+                            suffix="%"
+                            onChange={(v) => set("ofacOwnershipRulePct", v)}
+                        />
+                        <NumberField
+                            id="beneficialOwnerPct"
+                            label="Beneficial-owner review"
+                            help="Send owners with at least this indirect stake for review (FinCEN uses 25%; max 25%)."
+                            value={draft.beneficialOwnerPct}
+                            def={defaults.beneficialOwnerPct}
+                            min={1}
+                            max={25}
+                            suffix="%"
+                            onChange={(v) => set("beneficialOwnerPct", v)}
+                        />
+                    </div>
+                </SettingsCard>
 
-            <SettingsCard title="Search depth" icon={<Search className="h-4 w-4 text-gray-400" />}>
-                <NumberField
-                    id="watchmanResultLimit"
-                    label="Matches per entity"
-                    help="How many candidate sanctions entries to keep for each name. More gives analysts more context but slows screening."
-                    value={draft.watchmanResultLimit}
-                    def={defaults.watchmanResultLimit}
-                    min={1}
-                    max={100}
-                    onChange={(v) => set("watchmanResultLimit", Math.round(v))}
-                />
-            </SettingsCard>
+                <SettingsCard title="Search depth" icon={<Search className="h-4 w-4 text-gray-400" />}>
+                    <NumberField
+                        id="watchmanResultLimit"
+                        label="Matches per entity"
+                        help="How many candidate sanctions entries to keep for each name. More gives analysts more context but slows screening."
+                        value={draft.watchmanResultLimit}
+                        def={defaults.watchmanResultLimit}
+                        min={1}
+                        max={100}
+                        onChange={(v) => set("watchmanResultLimit", Math.round(v))}
+                    />
+                </SettingsCard>
+            </div>
 
             {!dirty && <StatusLine status={status} />}
-
             {dirty && (
                 <div className="sticky bottom-4 z-10 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-lg sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-sm">
@@ -392,7 +398,7 @@ export default function ScreeningSettingsPage() {
                         <Button
                             onClick={() => void save()}
                             disabled={busy !== null || !!error}
-                            className="bg-black text-white hover:bg-gray-900"
+                            className="bg-gray-950 text-white hover:bg-gray-800"
                         >
                             {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
                         </Button>

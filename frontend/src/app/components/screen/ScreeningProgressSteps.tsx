@@ -77,7 +77,7 @@ export function ScreeningProgressSteps({ events, isStreaming = false }: Props) {
             );
           } else if (isActive) {
             icon = (
-              <Loader2 className="h-3.5 w-3.5 text-blue-500 animate-spin shrink-0" />
+              <Loader2 className="h-3.5 w-3.5 text-gray-500 animate-spin shrink-0" />
             );
           }
 

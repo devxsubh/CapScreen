@@ -1,5 +1,7 @@
 // Minimal chat types for the screener (subset of the CapScreen assistant)
 
+import type { ChatFocus } from "@/lib/chatFocus";
+
 import type { ScreeningProgressEvent } from "@/lib/screenerTypes";
 
 export type AssistantEvent =
@@ -36,6 +38,8 @@ export interface ScreenerMessage {
   role: "user" | "assistant";
   content: string;
   files?: { filename: string }[];
+  focus?: ChatFocus;
+  workflow?: { id: string; title: string };
   events?: AssistantEvent[];
   error?: string;
 }

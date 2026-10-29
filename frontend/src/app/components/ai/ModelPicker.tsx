@@ -3,18 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import {
-    Check,
-    ChevronDown,
-    Cloud,
-    ExternalLink,
-    HardDrive,
-    KeyRound,
-    Loader2,
-    Plug,
-    Server,
-    X,
-} from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ExternalLink, Loader2, Plug, Settings2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -22,7 +11,6 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -37,18 +25,13 @@ import {
     type RoleSummary,
 } from "@/lib/aiControlCenterApi";
 import { openExternal } from "./useModelDownload";
+import { ModelLogo, ProviderLogo } from "./ProviderLogo";
+import { modelDisplayName, modelHint, providerDisplayName } from "@/lib/modelDisplay";
 
 /** `connected` is null while a server is still being checked. */
 type Module = ProviderView & { cloud: boolean; connected: boolean | null };
 
-type ProviderModels = { loading: boolean; models: string[]; error: string | null };
-
-/** Short display name for long model ids (e.g. `claude-sonnet-4-20250514` → last meaningful segment). */
-function shortModel(model: string): string {
-    const base = model.split("/").pop() ?? model;
-    if (base.length <= 28) return base;
-    return `${base.slice(0, 25)}…`;
-}
+type ProviderModels = { loading: boolean; models: string[]; recommended: string | null; error: string | null };
 
 async function checkServer(p: ProviderView, local: LocalState | null): Promise<boolean> {
     if (p.id === "ollama" && local) return local.ollama.running;
@@ -94,18 +77,34 @@ function usePickerState() {
             if (prev[providerId]?.loading || (prev[providerId]?.models.length && !prev[providerId]?.error)) {
                 return prev;
             }
-            return { ...prev, [providerId]: { loading: true, models: prev[providerId]?.models ?? [], error: null } };
+            return {
+                ...prev,
+                [providerId]: {
+                    loading: true,
+                    models: prev[providerId]?.models ?? [],
+                    recommended: prev[providerId]?.recommended ?? null,
+                    error: null,
+                },
+            };
         });
         void aiApi
             .models(providerId)
             .then((r) => {
                 const chat = (r.chatModels?.length ? r.chatModels : r.models).filter((m) => !/embed/i.test(m));
-                setModelLists((prev) => ({ ...prev, [providerId]: { loading: false, models: chat, error: null } }));
+                setModelLists((prev) => ({
+                    ...prev,
+                    [providerId]: { loading: false, models: chat, recommended: r.recommended, error: null },
+                }));
             })
             .catch((e: Error) => {
                 setModelLists((prev) => ({
                     ...prev,
-                    [providerId]: { loading: false, models: prev[providerId]?.models ?? [], error: e.message },
+                    [providerId]: {
+                        loading: false,
+                        models: prev[providerId]?.models ?? [],
+                        recommended: prev[providerId]?.recommended ?? null,
+                        error: e.message,
+                    },
                 }));
             });
     }, []);
@@ -180,14 +179,16 @@ function ConnectDialog({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/10 backdrop-blur-xs"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-xs"
             onMouseDown={(e) => e.target === e.currentTarget && onClose()}
         >
-            <div role="dialog" aria-modal="true" aria-label={`Connect ${m.label}`} className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div role="dialog" aria-modal="true" aria-label={`Connect ${m.label}`} className="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-black/5">
                 <div className="flex items-center justify-between border-b border-gray-100 px-4 py-4">
-                    <div className="flex items-center gap-2">
-                        {m.cloud ? <KeyRound className="h-4 w-4 text-gray-400" /> : <Server className="h-4 w-4 text-gray-400" />}
-                        <span className="text-sm font-medium">{m.connected ? m.label : `Connect ${m.label}`}</span>
+                    <div className="flex items-center gap-2.5">
+                        <ProviderLogo id={m.id} local={!m.cloud} size={18} tile />
+                        <span className="text-sm font-medium">
+                            {m.connected ? providerDisplayName(m.label) : `Connect ${providerDisplayName(m.label)}`}
+                        </span>
                         {m.connected && (
                             <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
                                 Connected{m.key.hint ? ` · ${m.key.hint}` : ""}
@@ -288,7 +289,7 @@ function ConnectDialog({
 
                 <div className="flex justify-end gap-2 border-t border-gray-100 px-4 py-3">
                     {done ? (
-                        <Button onClick={onClose} className="bg-black text-white hover:bg-gray-900">
+                        <Button onClick={onClose} className="bg-gray-950 text-white hover:bg-gray-800">
                             Done
                         </Button>
                     ) : (
@@ -304,7 +305,7 @@ function ConnectDialog({
                             <Button
                                 onClick={() => void (m.cloud ? saveKey(false) : testServer())}
                                 disabled={busy !== null || (m.cloud ? !key.trim() : !baseUrl.trim())}
-                                className="bg-black text-white hover:bg-gray-900"
+                                className="bg-gray-950 text-white hover:bg-gray-800"
                             >
                                 {busy === "connect" ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -330,33 +331,33 @@ function ConnectProviderList({
     modules: Module[];
     onSelect: (m: Module) => void;
 }) {
-    const cloud = modules.filter((m) => m.cloud);
-    const servers = modules.filter((m) => !m.cloud);
+    const groups = [
+        { title: "Cloud", items: modules.filter((m) => m.cloud) },
+        { title: "On this computer", items: modules.filter((m) => !m.cloud) },
+    ].filter((g) => g.items.length > 0);
     return (
         <>
-            <DropdownMenuLabel className="text-xs font-normal text-gray-500">Connect a provider</DropdownMenuLabel>
-            {cloud.map((m) => (
-                <DropdownMenuItem key={m.id} onSelect={() => onSelect(m)} className="justify-between gap-4">
-                    <span className="truncate">{m.label}</span>
-                    {m.connected ? (
-                        <span className="text-[11px] text-emerald-700">Connected</span>
-                    ) : (
-                        <span className="text-[11px] text-gray-400">Add key</span>
-                    )}
-                </DropdownMenuItem>
-            ))}
-            {servers.length > 0 && <DropdownMenuSeparator />}
-            {servers.map((m) => (
-                <DropdownMenuItem key={m.id} onSelect={() => onSelect(m)} className="justify-between gap-4">
-                    <span className="truncate">{m.label}</span>
-                    {m.connected === null ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
-                    ) : m.connected ? (
-                        <span className="text-[11px] text-emerald-700">Connected</span>
-                    ) : (
-                        <span className="text-[11px] text-gray-400">Connect</span>
-                    )}
-                </DropdownMenuItem>
+            <div className="px-3 pb-1 pt-2.5">
+                <p className="text-sm font-medium text-gray-900">Connect a provider</p>
+                <p className="mt-0.5 text-xs text-gray-500">Use your own API key, or a model running on this computer.</p>
+            </div>
+            {groups.map((g) => (
+                <div key={g.title}>
+                    <p className="px-3 pb-1 pt-2.5 text-[11px] uppercase tracking-wide text-gray-400">{g.title}</p>
+                    {g.items.map((m) => (
+                        <DropdownMenuItem key={m.id} onSelect={() => onSelect(m)} className="cursor-pointer gap-3 rounded-lg px-3 py-2">
+                            <ProviderLogo id={m.id} local={!m.cloud} size={16} tile />
+                            <span className="flex-1 truncate text-sm">{providerDisplayName(m.label)}</span>
+                            {m.connected === null ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />
+                            ) : m.connected ? (
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">Connected</span>
+                            ) : (
+                                <span className="text-[11px] text-gray-400">{m.cloud ? "Add key" : "Connect"}</span>
+                            )}
+                        </DropdownMenuItem>
+                    ))}
+                </div>
             ))}
         </>
     );
@@ -459,8 +460,7 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
         }
     };
 
-    const triggerLabel = agent ? shortModel(agent.model) : "Choose model";
-    const TriggerIcon = agent ? (agent.local ? HardDrive : Cloud) : Plug;
+    const triggerLabel = agent ? modelDisplayName(agent.model) : "Choose model";
 
     return (
         <>
@@ -476,11 +476,15 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
                     ) : (
                         <button
                             type="button"
-                            aria-label={agent ? `Chat model: ${agent.model}` : "Choose chat model"}
+                            aria-label={agent ? `Chat model: ${triggerLabel}` : "Choose chat model"}
                             title={agent ? `${agent.model} · ${agent.label}` : "Choose which model the assistant uses"}
-                            className="flex max-w-[11rem] items-center gap-1.5 rounded-lg px-2 h-8 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+                            className="flex h-8 max-w-[13rem] items-center gap-1.5 rounded-lg px-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-200/70 hover:text-gray-900 data-[state=open]:bg-gray-200/70"
                         >
-                            <TriggerIcon className="h-3.5 w-3.5 shrink-0" />
+                            {agent ? (
+                                <ProviderLogo id={agent.provider} local={agent.local} size={14} />
+                            ) : (
+                                <Plug className="h-3.5 w-3.5 shrink-0" />
+                            )}
                             <span className="hidden truncate sm:inline">{triggerLabel}</span>
                             <ChevronDown className="h-3 w-3 shrink-0 text-gray-400" />
                         </button>
@@ -488,7 +492,7 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                     align="end"
-                    className="max-h-[min(24rem,70vh)] w-80 overflow-y-auto bg-white"
+                    className="max-h-[min(30rem,75vh)] w-[22rem] overflow-y-auto rounded-xl bg-white p-1.5"
                     onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                     {error ? (
@@ -500,72 +504,82 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
                     ) : connectMode ? (
                         <ConnectProviderList modules={modules} onSelect={(m) => setSelected(m)} />
                     ) : usable.length === 0 ? (
-                        <div className="space-y-2 px-3 py-3">
-                            <p className="text-xs text-gray-600">
-                                No AI providers are connected yet. Connect a cloud key or a local server, then pick a
-                                model.
+                        <div className="px-3 py-3">
+                            <p className="text-sm font-medium text-gray-900">No AI connected yet</p>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Add an API key for Claude, Gemini or OpenAI, or connect a model running on this computer.
                             </p>
-                            <DropdownMenuItem
-                                onSelect={() => setConnectMode(true)}
-                                className="justify-start gap-2 text-sm"
+                            <Button
+                                size="sm"
+                                className="mt-3 w-full bg-gray-950 text-white hover:bg-gray-800"
+                                onClick={() => setConnectMode(true)}
                             >
-                                <Plug className="h-3.5 w-3.5" /> Connect provider…
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href="/ai" className="text-xs text-gray-600">
-                                    Open AI Control Center
-                                </Link>
-                            </DropdownMenuItem>
+                                <Plug className="h-3.5 w-3.5" /> Connect a provider
+                            </Button>
                         </div>
                     ) : (
                         <>
-                            <DropdownMenuLabel className="text-xs font-normal text-gray-500">
-                                Assistant model
-                            </DropdownMenuLabel>
+                            <div className="px-3 pb-1 pt-2.5">
+                                <p className="text-sm font-medium text-gray-900">Model</p>
+                                <p className="mt-0.5 text-xs text-gray-500">The assistant uses this everywhere in CapScreen.</p>
+                            </div>
                             {usable.map((m) => {
                                 const list = modelLists[m.id];
                                 const blocked = !m.local && localOnly;
                                 return (
-                                    <div key={m.id}>
-                                        <DropdownMenuLabel className="flex items-center gap-1.5 pt-2 text-[11px] font-medium text-gray-700">
-                                            {m.local ? (
-                                                <HardDrive className="h-3 w-3 text-gray-400" />
-                                            ) : (
-                                                <Cloud className="h-3 w-3 text-gray-400" />
-                                            )}
-                                            {m.label}
-                                            {blocked && (
-                                                <span className="font-normal text-amber-700">· local-only</span>
-                                            )}
-                                        </DropdownMenuLabel>
+                                    <div key={m.id} className="mt-1.5 border-t border-gray-100 pt-1.5">
+                                        <div className="flex items-center gap-2 px-3 py-1.5">
+                                            <ProviderLogo id={m.id} local={m.local} size={14} />
+                                            <span className="text-xs font-medium text-gray-700">{providerDisplayName(m.label)}</span>
+                                            <span
+                                                className={`rounded-full px-1.5 py-px text-[10px] ${
+                                                    "bg-gray-100 text-gray-600"
+                                                }`}
+                                            >
+                                                {m.local ? "This computer" : "Cloud"}
+                                            </span>
+                                            {blocked && <span className="text-[10px] text-amber-700">Local-only is on</span>}
+                                        </div>
                                         {!list || list.loading ? (
-                                            <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400">
+                                            <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400">
                                                 <Loader2 className="h-3 w-3 animate-spin" /> Loading models…
                                             </div>
                                         ) : list.error ? (
-                                            <p className="px-3 py-1.5 text-xs text-red-600">{list.error}</p>
+                                            <p className="px-3 py-2 text-xs text-red-600">{list.error}</p>
                                         ) : list.models.length === 0 ? (
-                                            <p className="px-3 py-1.5 text-xs text-gray-500">No chat models found.</p>
+                                            <p className="px-3 py-2 text-xs text-gray-500">No chat models found.</p>
                                         ) : (
                                             list.models.map((model) => {
-                                                const active =
-                                                    agent?.provider === m.id && agent?.model === model;
+                                                const active = agent?.provider === m.id && agent?.model === model;
                                                 const busy = saving === `${m.id}:${model}`;
+                                                const hint = modelHint(model);
                                                 return (
                                                     <DropdownMenuItem
                                                         key={model}
+                                                        title={model}
                                                         disabled={busy || saving !== null}
                                                         onSelect={(e) => {
                                                             e.preventDefault();
                                                             void selectModel(m, model);
                                                         }}
-                                                        className="justify-between gap-3"
+                                                        className={`cursor-pointer items-center gap-3 rounded-lg px-3 py-2 ${active ? "bg-gray-50" : ""}`}
                                                     >
-                                                        <span className="truncate font-mono text-xs">{model}</span>
+                                                        <ModelLogo model={model} provider={m.id} local={m.local} size={16} />
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className="truncate text-sm text-gray-900">{modelDisplayName(model)}</span>
+                                                                {list.recommended === model && (
+                                                                    <span className="shrink-0 rounded-full bg-gray-900 px-1.5 py-px text-[10px] text-white">
+                                                                        Recommended
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                            {hint && <span className="block truncate text-xs text-gray-500">{hint}</span>}
+                                                        </span>
                                                         {busy ? (
-                                                            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-gray-400" />
+                                                            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400" />
                                                         ) : active ? (
-                                                            <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                                                            <Check className="h-4 w-4 shrink-0 text-gray-900" />
                                                         ) : null}
                                                     </DropdownMenuItem>
                                                 );
@@ -582,15 +596,15 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
                             )}
                         </>
                     )}
-                    {!connectMode && modules && (
+                    {!connectMode && modules && usable.length > 0 && (
                         <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => setConnectMode(true)} className="gap-2 text-xs text-gray-600">
-                                <Plug className="h-3.5 w-3.5" /> Connect provider…
+                            <DropdownMenuItem onSelect={() => setConnectMode(true)} className="cursor-pointer gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                <Plug className="h-4 w-4 text-gray-500" /> Connect another provider
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href="/ai" className="text-xs text-gray-600">
-                                    Manage in AI Control Center
+                            <DropdownMenuItem asChild className="cursor-pointer gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-700">
+                                <Link href="/settings/ai">
+                                    <Settings2 className="h-4 w-4 text-gray-500" /> AI Control Center
                                 </Link>
                             </DropdownMenuItem>
                         </>
@@ -598,8 +612,14 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
                     {connectMode && (
                         <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => setConnectMode(false)} className="text-xs text-gray-600">
-                                Back to models
+                            <DropdownMenuItem
+                                onSelect={(e) => {
+                                    e.preventDefault();
+                                    setConnectMode(false);
+                                }}
+                                className="cursor-pointer gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-700"
+                            >
+                                <ChevronLeft className="h-4 w-4 text-gray-500" /> Back to models
                             </DropdownMenuItem>
                         </>
                     )}

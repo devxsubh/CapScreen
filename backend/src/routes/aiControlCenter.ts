@@ -205,8 +205,8 @@ aiControlCenterRouter.get("/providers/:id/models", async (req, res) => {
     const models = ((await provider.listModels?.()) ?? []).sort();
     res.json({
       models,
-      chatModels: pc.kind === "ollama" ? models.filter((m) => !/embed/i.test(m)) : chatModels(pc.id, models),
-      recommended: pc.kind === "ollama" ? null : recommendedCloudModel(pc.id, models),
+      chatModels: pc.kind === "ollama" ? models.filter((m) => !/embed/i.test(m)) : chatModels(pc.id, models, !isProviderLocal(pc)),
+      recommended: pc.kind === "ollama" ? null : recommendedCloudModel(pc.id, models, !isProviderLocal(pc)),
     });
   } catch (err) {
     res.status(502).json({ detail: friendlyLlmError(err), kind: classifyLlmError(err).kind });

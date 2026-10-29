@@ -25,7 +25,7 @@ export function PortfolioMonitoringCard({ compact = false }: Props) {
       <button
         type="button"
         onClick={() => void openPortfolioGrid()}
-        className="inline-flex items-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
+        className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
       >
         <LayoutGrid className="h-3.5 w-3.5" />
         Portfolio grid
@@ -34,7 +34,7 @@ export function PortfolioMonitoringCard({ compact = false }: Props) {
   }
 
   return (
-    <div className="mx-4 md:mx-10 mb-4 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="mx-4 md:mx-10 mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div>
         <p className="text-sm font-medium text-gray-900">
           Portfolio sanctions monitoring

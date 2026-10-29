@@ -1,5 +1,8 @@
 "use client";
 
+import { EmptyState } from "@/app/components/shared/EmptyState";
+import { PageHeader } from "@/app/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -356,24 +359,22 @@ export function WorkflowList() {
     return (
         <div className="flex flex-col flex-1 overflow-hidden bg-white">
             {/* Page header */}
-            <div className="mb-1 flex items-center justify-between px-4 py-3 md:px-10 shrink-0">
-                <h1 className="text-2xl font-medium font-serif text-gray-900">
-                    Workflows
-                </h1>
-                <div className="flex items-center gap-2">
-                    <HeaderSearchBtn
-                        value={search}
-                        onChange={setSearch}
-                        placeholder="Search workflows…"
-                    />
-                    <button
-                        onClick={() => setNewModalOpen(true)}
-                        className="flex items-center justify-center p-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-                    >
-                        <Plus className="h-4 w-4" />
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+                title="Workflows"
+                description="Reusable instructions for the assistant and column sets for tabular reviews."
+                actions={
+                    <>
+                        <HeaderSearchBtn
+                            value={search}
+                            onChange={setSearch}
+                            placeholder="Search workflows…"
+                        />
+                        <Button size="sm" onClick={() => setNewModalOpen(true)}>
+                            <Plus className="h-4 w-4" /> New workflow
+                        </Button>
+                    </>
+                }
+            />
 
             <ToolbarTabs
                 tabs={TABS}
@@ -434,48 +435,32 @@ export function WorkflowList() {
                             ))}
                         </div>
                     ) : filtered.length === 0 ? (
-                        <div className="flex flex-col items-start py-24 w-full max-w-xs mx-auto">
+                        <div>
                             {activeTab === "custom" ? (
-                                <>
-                                    <Library className="h-8 w-8 text-gray-300 mb-4" />
-                                    <p className="text-2xl font-medium font-serif text-gray-900">
-                                        Custom Workflows
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-400 text-left">
-                                        Build reusable prompts and tabular
-                                        review templates tailored to your
-                                        practice.
-                                    </p>
-                                    <button
-                                        onClick={() => setNewModalOpen(true)}
-                                        className="mt-4 inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700 transition-colors shadow-md"
-                                    >
-                                        + Create New
-                                    </button>
-                                </>
+                                <EmptyState
+                                    icon={Library}
+                                    title="No custom workflows yet"
+                                    description="A workflow is a saved set of instructions for the assistant, or a column template for tabular reviews. The built-in ones are under All."
+                                    steps={[
+                                        "Write the steps you want the assistant to follow, in plain language.",
+                                        "Pick it from Workflows in the chat to run it on a startup.",
+                                    ]}
+                                    action={
+                                        <Button onClick={() => setNewModalOpen(true)}>
+                                            <Plus className="h-4 w-4" /> New workflow
+                                        </Button>
+                                    }
+                                />
                             ) : activeTab === "hidden" ? (
-                                <>
-                                    <Library className="h-8 w-8 text-gray-300 mb-4" />
-                                    <p className="text-2xl font-medium font-serif text-gray-900">
-                                        Hidden Workflows
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-400 text-left">
-                                        Built-in workflows you&apos;ve hidden will
-                                        appear here. You can unhide them at any
-                                        time.
-                                    </p>
-                                </>
+                                <EmptyState
+                                    icon={Library}
+                                    title="Nothing hidden"
+                                    description="Built-in workflows you hide appear here, and you can unhide them at any time."
+                                />
                             ) : (
-                                <>
-                                    <Library className="h-8 w-8 text-gray-300 mb-4" />
-                                    <p className="text-2xl font-medium font-serif text-gray-900">
-                                        Workflows
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-400 text-left">
-                                        Automate document analysis with reusable
-                                        prompts and tabular review templates.
-                                    </p>
-                                </>
+                                <p className="px-6 py-16 text-center text-sm text-gray-500 md:px-10">
+                                    No workflows match this view.
+                                </p>
                             )}
                         </div>
                     ) : (

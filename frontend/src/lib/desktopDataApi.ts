@@ -66,6 +66,9 @@ export const desktopDataApi = {
   saveSettings: (patch: Partial<AppSettings>) =>
     request<{ settings: AppSettings }>("/settings", { method: "PUT", body: JSON.stringify(patch) }),
   sanctions: () => request<SanctionsInfo>("/sanctions"),
+  /** Start fresh: erase everything the user added. `confirm` must be "ERASE". */
+  erase: (confirm: string) =>
+    request<{ deleted: number; safetyCopy: string }>("/erase", { method: "POST", body: JSON.stringify({ confirm }) }),
 
   backup: (password: string) =>
     download("/backup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) }),

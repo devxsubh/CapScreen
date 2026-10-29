@@ -34,11 +34,11 @@ export function AgentPlan({ steps }: { steps: AgentPlanStep[] }) {
 
 function StepIcon({ status }: { status: AgentPlanStep["status"] }) {
     if (status === "done") {
-        return <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" />;
+        return <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />;
     }
     if (status === "in_progress") {
         return (
-            <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-blue-500" />
+            <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-gray-500" />
         );
     }
     return <Circle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-300" />;

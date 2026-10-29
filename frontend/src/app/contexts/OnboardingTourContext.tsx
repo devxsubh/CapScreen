@@ -8,6 +8,7 @@ import {
     useRef,
     type ReactNode,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSidebar } from "@/app/contexts/SidebarContext";
 import {
     createTourDriver,
@@ -26,6 +27,8 @@ const OnboardingTourContext =
 
 export function OnboardingTourProvider({ children }: { children: ReactNode }) {
     const { setSidebarOpen } = useSidebar();
+    const router = useRouter();
+    const pathname = usePathname();
     const driverRef = useRef<Driver | null>(null);
     const startedRef = useRef(false);
 
@@ -33,6 +36,9 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
         (opts?: { force?: boolean }) => {
             if (!opts?.force && hasCompletedTour()) return;
 
+            // The tour points at the sidebar and the chat box, so run it on the assistant home.
+            const onHome = pathname === "/assistant";
+            if (!onHome) router.push("/assistant");
             setSidebarOpen(true);
 
             window.setTimeout(() => {
@@ -42,16 +48,18 @@ export function OnboardingTourProvider({ children }: { children: ReactNode }) {
                 });
                 driverRef.current = tour;
                 tour.drive();
-            }, 450);
+            }, onHome ? 450 : 1200);
         },
-        [setSidebarOpen],
+        [setSidebarOpen, router, pathname],
     );
 
     useEffect(() => {
         if (startedRef.current || hasCompletedTour()) return;
-        startedRef.current = true;
-
-        const timer = window.setTimeout(() => startTour(), 900);
+        // Set inside the timer: a navigation in the meantime re-schedules instead of losing the first run.
+        const timer = window.setTimeout(() => {
+            startedRef.current = true;
+            startTour();
+        }, 900);
         return () => window.clearTimeout(timer);
     }, [startTour]);
 

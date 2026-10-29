@@ -634,7 +634,7 @@ export function TRView({ reviewId, projectId }: Props) {
                                 <div className="h-7 w-64 max-w-full rounded bg-gray-100 animate-pulse" />
                             ) : (
                                 <h1
-                                    className="text-xl md:text-2xl font-medium font-serif text-gray-900 truncate"
+                                    className="truncate font-eb-garamond text-3xl font-medium tracking-tight text-gray-950"
                                     title={review?.title || "Untitled Review"}
                                 >
                                     <RenameableTitle

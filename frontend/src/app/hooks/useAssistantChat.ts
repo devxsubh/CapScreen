@@ -703,6 +703,7 @@ export function useAssistantChat({
                 content: currentMessage.content,
                 files: currentMessage.files,
                 workflow: currentMessage.workflow,
+                focus: currentMessage.focus,
             }));
 
             const displayedDoc = opts?.displayedDoc ?? null;

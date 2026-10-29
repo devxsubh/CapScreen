@@ -31,9 +31,9 @@ const RISK_THEME: Record<
     accent: "bg-amber-500",
   },
   clear: {
-    badge: "bg-green-100 text-green-800 ring-green-200",
-    border: "border-green-300",
-    accent: "bg-green-500",
+    badge: "bg-emerald-100 text-emerald-800 ring-emerald-200",
+    border: "border-emerald-300",
+    accent: "bg-emerald-500",
   },
 };
 
@@ -189,7 +189,7 @@ export function EntityDetailModal({ entity, onClose, startupName }: Props) {
                   {entity.type}
                 </span>
                 {entity.isUltimateOwner && (
-                  <span className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-indigo-100">
+                  <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-700 ring-1 ring-gray-200">
                     Ultimate beneficial owner
                   </span>
                 )}

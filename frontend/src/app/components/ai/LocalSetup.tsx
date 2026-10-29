@@ -5,6 +5,7 @@ import { Check, Download, ExternalLink, Loader2, Play, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { aiApi, OLLAMA_DOWNLOAD_URL, type CatalogModel, type LocalState } from "@/lib/aiControlCenterApi";
 import { openExternal, type ModelDownloader } from "./useModelDownload";
+import { BrandMark, ModelLogo, systemBrands } from "./ProviderLogo";
 
 const EMBED_MODEL = "nomic-embed-text";
 const DISK_HEADROOM_GB = 2;
@@ -21,7 +22,7 @@ function Step({ n, title, done, active, children }: { n: number; title: string; 
         <li className="flex gap-3">
             <span
                 className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-                    done ? "bg-emerald-600 text-white" : active ? "bg-black text-white" : "bg-gray-100 text-gray-500"
+                    done ? "bg-emerald-600 text-white" : active ? "bg-gray-950 text-white" : "bg-gray-100 text-gray-500"
                 }`}
             >
                 {done ? <Check className="h-3.5 w-3.5" /> : n}
@@ -63,6 +64,7 @@ export function LocalSetup({
     }
 
     const { ollama, hardware: hw } = local;
+    const { chip } = systemBrands(hw.platform, hw.cpu);
     const candidates = local.catalog.filter((m) => m.kind === "chat" && m.tools && m.fit !== "too-large");
     const fallback =
         candidates.find((m) => m.installed && m.id === local.recommended) ??
@@ -118,7 +120,7 @@ export function LocalSetup({
                 This computer has {hw.totalMemGB} GB of memory, which isn&apos;t enough to run a model that can use CapScreen&apos;s
                 screening tools. Use a cloud provider instead.
                 <div className="mt-3">
-                    <Button size="sm" onClick={onUseCloud} className="bg-black text-white hover:bg-gray-900">
+                    <Button size="sm" onClick={onUseCloud} className="bg-gray-950 text-white hover:bg-gray-800">
                         Use a cloud provider
                     </Button>
                 </div>
@@ -134,7 +136,7 @@ export function LocalSetup({
                 </p>
                 {ollama.installed && ollama.canStart ? (
                     <div className="mt-3 flex flex-wrap items-center gap-3">
-                        <Button onClick={start} disabled={starting} className="bg-black text-white hover:bg-gray-900">
+                        <Button onClick={start} disabled={starting} className="bg-gray-950 text-white hover:bg-gray-800">
                             {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                             {starting ? "Starting Ollama…" : "Start Ollama"}
                         </Button>
@@ -142,7 +144,7 @@ export function LocalSetup({
                     </div>
                 ) : (
                     <div className="mt-3 space-y-2">
-                        <Button onClick={() => openExternal(OLLAMA_DOWNLOAD_URL)} className="bg-black text-white hover:bg-gray-900">
+                        <Button onClick={() => openExternal(OLLAMA_DOWNLOAD_URL)} className="bg-gray-950 text-white hover:bg-gray-800">
                             <ExternalLink className="h-4 w-4" /> Download Ollama
                         </Button>
                         <p className="flex items-center gap-2 text-xs text-gray-500">
@@ -156,7 +158,13 @@ export function LocalSetup({
 
             <Step n={2} title="Choose a model" done={false} active={ollama.running}>
                 <p className="text-sm text-gray-600">
-                    Picked for your {hw.cpu} with {hw.totalMemGB} GB {hw.unifiedMemory ? "unified memory" : "RAM"}. Bigger models give
+                    Picked for your{" "}
+                    {chip && (
+                        <span className="mx-0.5 inline-flex translate-y-0.5">
+                            <BrandMark src={chip.logo} size={13} />
+                        </span>
+                    )}
+                    {hw.cpu} with {hw.totalMemGB} GB {hw.unifiedMemory ? "unified memory" : "RAM"}. Bigger models give
                     better answers but respond slower.
                 </p>
                 <ul className="mt-3 grid gap-2" role="radiogroup" aria-label="Chat model">
@@ -171,15 +179,16 @@ export function LocalSetup({
                                     disabled={busy}
                                     onClick={() => setPicked(m.id)}
                                     className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors ${
-                                        selected ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-300"
+                                        selected ? "border-gray-950 bg-gray-50" : "border-gray-200 hover:border-gray-300"
                                     }`}
                                 >
-                                    <span className={`mt-1 h-3.5 w-3.5 shrink-0 rounded-full border ${selected ? "border-[5px] border-black" : "border-gray-300"}`} />
+                                    <span className={`mt-1 h-3.5 w-3.5 shrink-0 rounded-full border ${selected ? "border-[5px] border-gray-950" : "border-gray-300"}`} />
+                                    <ModelLogo model={m.id} size={16} tile />
                                     <span className="min-w-0 flex-1">
                                         <span className="flex flex-wrap items-center gap-2 text-sm font-medium">
                                             {m.label}
                                             {m.id === local.recommended && (
-                                                <span className="rounded-full bg-black px-1.5 py-0.5 text-[10px] font-medium text-white">Recommended</span>
+                                                <span className="rounded-full bg-gray-950 px-1.5 py-0.5 text-[10px] font-medium text-white">Recommended</span>
                                             )}
                                             {m.installed && <span className="text-[11px] font-normal text-emerald-700">Downloaded</span>}
                                         </span>
@@ -225,7 +234,7 @@ export function LocalSetup({
                             </button>
                         </div>
                         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                            <div className="h-full bg-black transition-[width] duration-300" style={{ width: `${download.current.percent ?? 2}%` }} />
+                            <div className="h-full bg-gray-950 transition-[width] duration-300" style={{ width: `${download.current.percent ?? 2}%` }} />
                         </div>
                         <p className="mt-1 text-[11px] text-gray-500">Keep this page open until the download finishes.</p>
                     </div>
@@ -241,7 +250,7 @@ export function LocalSetup({
                 {error && <p className="mt-3 text-xs text-red-600">{error}</p>}
 
                 <div className="mt-4">
-                    <Button onClick={finish} disabled={busy || diskShort || !model} className="bg-black text-white hover:bg-gray-900">
+                    <Button onClick={finish} disabled={busy || diskShort || !model} className="bg-gray-950 text-white hover:bg-gray-800">
                         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : neededGB > 0 ? <Download className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         {neededGB > 0 ? `Download ${neededGB.toFixed(1)} GB and finish` : "Finish setup"}
                     </Button>

@@ -27,8 +27,13 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/ai",
+        destination: "/settings/ai",
+        permanent: false,
+      },
+      {
         source: "/account/models",
-        destination: "/account",
+        destination: "/settings/ai",
         permanent: false,
       },
     ];

@@ -120,7 +120,7 @@ function DocCreatedBlock({
             {isStreaming ? (
                 <div className="mt-2 w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
             ) : (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                <div className="mt-2 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
             )}
             <div className="ml-2 min-w-0 flex-1 whitespace-normal break-words">
                 <span className="font-medium">
@@ -226,7 +226,7 @@ function DocDownloadBlock({
                         </span>
                     )}
                 </div>
-                <p className="text-xs text-blue-500 mt-0.5">{ext}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{ext}</p>
             </div>
         </div>
     );
@@ -335,7 +335,7 @@ function ScreeningResultsBlock({
                 <p className="text-base font-serif text-gray-900 text-wrap">
                     {title}
                 </p>
-                <p className="text-xs text-blue-500 mt-0.5">{summary}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{summary}</p>
             </div>
         </div>
     );
@@ -386,7 +386,7 @@ function WorkflowAppliedBlock({
             {showConnector && (
                 <div className="absolute bottom-0 w-[1px] bg-gray-300 top-[13px] left-[2.5px] h-[calc(100%+11px)]" />
             )}
-            <div className="mt-2 w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+            <div className="mt-2 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
             <div className="ml-2 min-w-0 flex-1 whitespace-normal break-words">
                 <span className="font-medium">Applied Workflow</span>{" "}
                 {onClick ? (
@@ -586,7 +586,7 @@ function MarkdownContent({
                     a: ({ node, href, children, ...props }) => (
                         <a
                             href={href}
-                            className="text-blue-600 hover:text-blue-700 underline"
+                            className="text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900"
                             target="_blank"
                             rel="noopener noreferrer"
                             {...props}
@@ -826,7 +826,7 @@ export function AssistantMessage({
                     {toolStreaming ? (
                         <div className="w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
                     ) : (
-                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                     )}
                     <span className="font-medium ml-2">
                         {toolStreaming
@@ -1092,7 +1092,7 @@ export function AssistantMessage({
                             onClick={handleCopy}
                         >
                             {isCopied ? (
-                                <Check className="h-3.5 w-3.5 text-green-600" />
+                                <Check className="h-3.5 w-3.5 text-emerald-600" />
                             ) : (
                                 <Copy className="h-3.5 w-3.5" />
                             )}

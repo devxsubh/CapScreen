@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ClipboardCopy, FolderOpen, Info, Sparkles } from "lucide-react";
+import { Check, ClipboardCopy, Cpu, FolderOpen, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { aiApi, ROLE_INFO, type AiHealth, type LlmRole } from "@/lib/aiControlCenterApi";
 import { desktopDataApi, type SanctionsInfo, type ScreeningSettings } from "@/lib/desktopDataApi";
 import { useDesktop } from "@/lib/desktop";
 import { DetailRow, SettingsCard, SettingsHeader } from "@/app/components/settings/SettingsParts";
+import { ProviderLogo } from "@/app/components/ai/ProviderLogo";
+import { modelDisplayName } from "@/lib/modelDisplay";
 
 const STATUS_STYLE: Record<string, string> = {
     ok: "text-emerald-700",
@@ -65,57 +67,59 @@ export default function AboutSettingsPage() {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             <SettingsHeader title="About" description="Version, where your data lives, and the state of each engine." />
 
-            <SettingsCard title="CapScreen" icon={<Info className="h-4 w-4 text-gray-400" />}>
-                <dl className="divide-y divide-gray-100">
-                    <DetailRow label="Version">{bridge?.appVersion ?? "Development (browser)"}</DetailRow>
-                    <DetailRow label="Platform">{bridge?.platform ?? "Browser"}</DetailRow>
-                    {bridge?.dataDir && (
-                        <DetailRow label="Data folder">
-                            <span className="inline-flex max-w-full items-center gap-2">
-                                <span className="truncate font-mono text-xs">{bridge.dataDir}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => void bridge.revealInFolder(bridge.dataDir)}
-                                    className="shrink-0 text-gray-400 hover:text-gray-900"
-                                    aria-label="Show data folder"
-                                >
-                                    <FolderOpen className="h-3.5 w-3.5" />
-                                </button>
-                            </span>
+            <div className="grid gap-5 xl:grid-cols-2">
+                <SettingsCard title="CapScreen" icon={<Info className="h-4 w-4 text-gray-400" />}>
+                    <dl className="divide-y divide-gray-100">
+                        <DetailRow label="Version">{bridge?.appVersion ?? "Development (browser)"}</DetailRow>
+                        <DetailRow label="Platform">{bridge?.platform ?? "Browser"}</DetailRow>
+                        {bridge?.dataDir && (
+                            <DetailRow label="Data folder">
+                                <span className="inline-flex max-w-full items-center gap-2">
+                                    <span className="truncate font-mono text-xs">{bridge.dataDir}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => void bridge.revealInFolder(bridge.dataDir)}
+                                        className="shrink-0 text-gray-400 hover:text-gray-900"
+                                        aria-label="Show data folder"
+                                    >
+                                        <FolderOpen className="h-3.5 w-3.5" />
+                                    </button>
+                                </span>
+                            </DetailRow>
+                        )}
+                        <DetailRow label="Sanctions engine">
+                            {sanctions ? (
+                                <span className={sanctions.available ? "text-emerald-700" : "text-amber-700"}>
+                                    {sanctions.available ? "Ready" : "Loading"}
+                                    {sanctions.mode === "offline" && " · offline copy"}
+                                    {sanctions.info?.version && <span className="text-gray-500"> · Watchman {sanctions.info.version}</span>}
+                                </span>
+                            ) : (
+                                "…"
+                            )}
                         </DetailRow>
-                    )}
-                    <DetailRow label="Sanctions engine">
-                        {sanctions ? (
-                            <span className={sanctions.available ? "text-emerald-700" : "text-amber-700"}>
-                                {sanctions.available ? "Ready" : "Loading"}
-                                {sanctions.mode === "offline" && " · offline copy"}
-                                {sanctions.info?.version && <span className="text-gray-500"> · Watchman {sanctions.info.version}</span>}
-                            </span>
-                        ) : (
-                            "…"
-                        )}
-                    </DetailRow>
-                    <DetailRow label="Screening thresholds">
-                        {screening ? (
-                            <Link href="/settings/screening" className="underline decoration-gray-300 hover:decoration-gray-900">
-                                {screening.custom ? "Custom" : "Firm defaults"}
-                            </Link>
-                        ) : (
-                            "…"
-                        )}
-                    </DetailRow>
-                </dl>
-            </SettingsCard>
+                        <DetailRow label="Screening thresholds">
+                            {screening ? (
+                                <Link href="/settings/screening" className="underline decoration-gray-300 hover:decoration-gray-900">
+                                    {screening.custom ? "Custom" : "Firm defaults"}
+                                </Link>
+                            ) : (
+                                "…"
+                            )}
+                        </DetailRow>
+                    </dl>
+                </SettingsCard>
+            </div>
 
             <SettingsCard
                 title="AI"
-                icon={<Sparkles className="h-4 w-4 text-gray-400" />}
+                icon={<Cpu className="h-4 w-4 text-gray-400" />}
                 aside={
-                    <Link href="/ai" className="text-xs text-gray-500 hover:text-gray-900">
-                        AI Control Center →
+                    <Link href="/settings/ai" className="text-xs text-gray-500 hover:text-gray-900">
+                        AI Control →
                     </Link>
                 }
             >
@@ -125,8 +129,12 @@ export default function AboutSettingsPage() {
                             const h = health.roles[r];
                             return (
                                 <DetailRow key={r} label={ROLE_INFO[r].title}>
-                                    <span className={STATUS_STYLE[h.status] ?? "text-gray-700"}>
-                                        {h.binding ? `${h.binding.label} · ${h.binding.model}` : h.title}
+                                    <span
+                                        title={h.binding?.model}
+                                        className={`inline-flex items-center gap-1.5 ${STATUS_STYLE[h.status] ?? "text-gray-700"}`}
+                                    >
+                                        {h.binding && <ProviderLogo id={h.binding.provider} local={h.binding.local} size={14} />}
+                                        {h.binding ? modelDisplayName(h.binding.model) : h.title}
                                     </span>
                                 </DetailRow>
                             );

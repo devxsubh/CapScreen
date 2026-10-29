@@ -148,7 +148,7 @@ export function CapTableCsvView({
             isDirty
               ? "bg-amber-100 text-amber-800"
               : csv.parseStatus === "valid"
-                ? "bg-green-100 text-green-700"
+                ? "bg-emerald-100 text-emerald-700"
                 : csv.parseStatus === "needs_review"
                   ? "bg-amber-100 text-amber-800"
                   : "bg-red-100 text-red-700"
@@ -191,30 +191,30 @@ export function CapTableCsvView({
       <div className="flex-1 min-h-0 overflow-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <table className="w-full text-sm border-collapse">
           <thead className="sticky top-0 z-10">
-            <tr className="bg-slate-800 text-white">
-              <th className="w-11 px-3 py-2.5 text-left text-xs font-semibold border-r border-slate-700">
+            <tr className="bg-gray-800 text-white">
+              <th className="w-11 px-3 py-2.5 text-left text-xs font-semibold border-r border-gray-700">
                 #
               </th>
               {headers.map((h, i) => (
                 <th
                   key={i}
-                  className="p-0 text-left text-xs font-semibold border-r border-slate-700 whitespace-nowrap min-w-[130px]"
+                  className="p-0 text-left text-xs font-semibold border-r border-gray-700 whitespace-nowrap min-w-[130px]"
                 >
                   <input
                     type="text"
                     value={h}
                     onChange={(e) => updateHeader(i, e.target.value)}
                     placeholder="Column name"
-                    className="w-full px-3 py-2.5 text-xs font-semibold text-white bg-transparent border-0 outline-none placeholder:text-slate-400 focus:bg-slate-700/50"
+                    className="w-full px-3 py-2.5 text-xs font-semibold text-white bg-transparent border-0 outline-none placeholder:text-gray-400 focus:bg-gray-700/50"
                   />
                 </th>
               ))}
-              <th className="w-10 p-0 border-l border-slate-700">
+              <th className="w-10 p-0 border-l border-gray-700">
                 <button
                   type="button"
                   onClick={addColumn}
                   title="Add column"
-                  className="flex h-full w-full items-center justify-center py-2.5 text-slate-300 hover:text-white hover:bg-slate-700 transition-colors"
+                  className="flex h-full w-full items-center justify-center py-2.5 text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
@@ -226,8 +226,8 @@ export function CapTableCsvView({
               <tr
                 key={ri}
                 className={`group border-b border-gray-200 ${
-                  ri % 2 === 0 ? "bg-white" : "bg-slate-50/70"
-                } hover:bg-blue-50/40`}
+                  ri % 2 === 0 ? "bg-white" : "bg-gray-50/70"
+                } hover:bg-gray-50`}
               >
                 <td className="px-3 py-0 text-xs font-medium text-gray-400 bg-gray-50/80 border-r border-gray-200 align-middle text-center">
                   {ri + 1}
@@ -241,7 +241,7 @@ export function CapTableCsvView({
                       type="text"
                       value={row[ci] ?? ""}
                       onChange={(e) => updateCell(ri, ci, e.target.value)}
-                      className="w-full min-w-[130px] px-3 py-2 text-sm text-gray-900 bg-transparent border-0 outline-none group-hover:bg-blue-50/30 focus:bg-blue-50 focus:ring-2 focus:ring-inset focus:ring-blue-400/60"
+                      className="w-full min-w-[130px] px-3 py-2 text-sm text-gray-900 bg-transparent border-0 outline-none group-hover:bg-gray-50/60 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-gray-400/60"
                     />
                   </td>
                 ))}

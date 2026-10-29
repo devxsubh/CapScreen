@@ -72,6 +72,8 @@ export function StartupChatPanel({
             role: "user",
             content: message.content,
             files: message.files?.map((f) => ({ filename: f.filename })),
+            focus: message.focus,
+            workflow: message.workflow,
         });
     }
 
@@ -98,6 +100,8 @@ export function StartupChatPanel({
                                     <UserMessage
                                         content={msg.content}
                                         files={msg.files}
+                                        focus={msg.focus}
+                                        workflow={msg.workflow}
                                     />
                                 ) : (
                                     <ScreenerAssistantMessage

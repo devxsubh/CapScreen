@@ -81,7 +81,7 @@ export default function SanctionsSettingsPage() {
     const totalEntries = Object.values(loadedLists).reduce((a, b) => a + b, 0);
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             <SettingsHeader
                 title="Sanctions data"
                 description="Lists are downloaded from official public sources and matched on this computer. Every screening records the exact list versions it used."

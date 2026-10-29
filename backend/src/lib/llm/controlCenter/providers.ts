@@ -70,13 +70,22 @@ export function keyFormatProblem(providerId: string, key: string): string | null
 
 // ── Cloud model choice ───────────────────────────────────────────────────────
 
-/** Preferred chat models per provider, best first. The provider's own list decides what exists. */
-const RECOMMENDED_CHAT: Record<string, string[]> = {
-  anthropic: ["claude-sonnet-5-5", "claude-sonnet-4-5", "claude-haiku-5-5", "claude-haiku-4-5"],
-  openai: ["gpt-5-mini", "gpt-4.1-mini", "gpt-4o-mini", "gpt-4.1", "gpt-4o"],
-  gemini: ["models/gemini-2.5-flash", "gemini-2.5-flash", "models/gemini-2.0-flash", "gemini-2.0-flash"],
-  groq: ["llama-3.3-70b-versatile", "openai/gpt-oss-120b", "llama-3.1-8b-instant"],
-  openrouter: ["anthropic/claude-sonnet-4.5", "openai/gpt-4o-mini", "google/gemini-2.5-flash"],
+/** Preferred tiers per provider, best first. Patterns, so a new release is picked up without a code change. */
+const PREFERRED_CHAT: Record<string, RegExp[]> = {
+  anthropic: [/^claude-sonnet-/, /^claude-haiku-/, /^claude-opus-/],
+  openai: [/^gpt-[\d.]+-mini$/, /^gpt-[\d.]+$/],
+  gemini: [/^(models\/)?gemini-[\d.]+-flash$/, /^(models\/)?gemini-[\d.]+-flash-lite$/],
+  groq: [/gpt-oss-120b$/, /^llama-[\d.]+-70b-versatile$/, /llama-/],
+  openrouter: [/^anthropic\/claude-sonnet-/, /^openai\/gpt-[\d.]+-mini$/, /^google\/gemini-[\d.]+-flash$/],
+};
+
+/** Default when a provider's listing is empty (some gateways don't list models). */
+const FALLBACK_CHAT: Record<string, string> = {
+  anthropic: "claude-sonnet-5-5",
+  openai: "gpt-5-mini",
+  gemini: "gemini-3.8-flash",
+  groq: "llama-3.3-70b-versatile",
+  openrouter: "anthropic/claude-sonnet-4.5",
 };
 
 /** Embedding models a cloud provider offers (providers missing here have none we support). */
@@ -85,18 +94,120 @@ export const CLOUD_EMBEDDING: Record<string, string> = {
   gemini: "gemini-embedding-001",
 };
 
-const NON_CHAT = /embed|whisper|tts|dall-e|image|audio|realtime|moderation|transcribe|search|computer-use|davinci|babbage|guard|vision-preview|veo|imagen|aqa/i;
+const NON_CHAT = /embed|whisper|tts|dall-e|image|audio|realtime|moderation|transcribe|search|computer-use|davinci|babbage|guard|vision-preview|veo|imagen|aqa|robotics|sora/i;
 
-/** Chat-capable models from a provider's listing, recommended ones first. */
-export function chatModels(providerId: string, listed: string[]): string[] {
-  const chat = listed.filter((m) => !NON_CHAT.test(m));
-  const preferred = (RECOMMENDED_CHAT[providerId] ?? []).filter((m) => chat.includes(m));
+/** Product lines a provider still lists but has replaced with its main chat models. */
+const SUPERSEDED: Record<string, RegExp> = {
+  openai: /^(o\d|chatgpt-|codex-|gpt-oss)/,
+  gemini: /^(models\/)?(gemma|learnlm)/,
+};
+
+/**
+ * Model families to offer when a provider lists many paid ones. Google's free tier covers the Flash and Flash-Lite
+ * chat models; Pro, Argon, Omni and the image models are paid-only (ai.google.dev/gemini-api/docs/pricing).
+ */
+const ONLY_FAMILIES: Record<string, string[]> = {
+  gemini: ["gemini-flash", "gemini-flash-lite"],
+};
+
+/** Dated snapshots and preview/experimental builds; stripped to find the model they are a build of. */
+const SNAPSHOT_SUFFIX = /-(\d{8}|\d{4}-\d{2}-\d{2}|\d{2}-\d{2}|\d{3,4}|preview|exp|experimental|latest|beta)$/;
+const VERSION_TOKEN = /^\d+(\.\d+)*$/;
+
+type ParsedModel = {
+  id: string;
+  /** The id without snapshot/preview suffixes: `claude-haiku-4-5-20251001` → `claude-haiku-4-5`. */
+  base: string;
+  /** First name token, e.g. `claude`, `gpt`, `gemini`, `llama`. */
+  line: string;
+  /** The name without its version: `claude-haiku`, `gpt-mini`, `gemini-flash-lite`. */
+  family: string;
+  version: number[] | null;
+  stable: boolean;
+};
+
+function parseModel(id: string): ParsedModel {
+  const plain = id.replace(/^models\//, "").toLowerCase();
+  let base = plain;
+  for (let prev = ""; prev !== base; ) {
+    prev = base;
+    base = base.replace(SNAPSHOT_SUFFIX, "");
+  }
+  // Ignore the vendor prefix of gateway ids (`anthropic/claude-…`, `meta-llama/llama-…`).
+  const tokens = base.split("/").pop()!.split("-");
+  const start = tokens.findIndex((t, i) => i > 0 && VERSION_TOKEN.test(t));
+  if (start < 0) return { id, base, line: tokens[0], family: tokens.join("-"), version: null, stable: plain === base };
+  let end = start;
+  while (end < tokens.length && VERSION_TOKEN.test(tokens[end])) end++;
+  return {
+    id,
+    base,
+    line: tokens[0],
+    family: [...tokens.slice(0, start), ...tokens.slice(end)].join("-"),
+    // `claude-opus-4-5` and `gpt-4.1` both read as [4, 5] / [4, 1].
+    version: tokens.slice(start, end).join(".").split(".").map(Number),
+    stable: plain === base,
+  };
+}
+
+function compareVersions(a: number[], b: number[]): number {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const d = (a[i] ?? 0) - (b[i] ?? 0);
+    if (d) return d;
+  }
+  return 0;
+}
+
+/**
+ * The newest model of each tier from a line's newest generation: Claude 5 Opus, Sonnet and Haiku rather than
+ * every 4.x release and dated snapshot. Plain aliases win over snapshots and previews of the same model.
+ * Unversioned names are kept only in lines with no versioned models.
+ */
+export function latestModels(listed: string[]): string[] {
+  const byBase = new Map<string, ParsedModel>();
+  for (const p of listed.map(parseModel)) {
+    const cur = byBase.get(p.base);
+    // Same model: the alias, else the newest snapshot (dates sort as text).
+    if (!cur || (p.stable && !cur.stable) || (p.stable === cur.stable && p.id > cur.id)) byBase.set(p.base, p);
+  }
+  const newestMajor = new Map<string, number>();
+  for (const p of byBase.values()) {
+    if (p.version) newestMajor.set(p.line, Math.max(newestMajor.get(p.line) ?? 0, p.version[0]));
+  }
+  const keep = new Map<string, ParsedModel>();
+  for (const p of byBase.values()) {
+    const major = newestMajor.get(p.line);
+    if (!p.version) {
+      if (major === undefined) keep.set(`base:${p.base}`, p);
+      continue;
+    }
+    if (p.version[0] !== major) continue;
+    const key = `family:${p.line}:${p.family}`;
+    const cur = keep.get(key);
+    const newer = cur ? compareVersions(p.version, cur.version!) : 1;
+    if (newer > 0 || (newer === 0 && p.stable && !cur!.stable)) keep.set(key, p);
+  }
+  const kept = new Set([...keep.values()].map((p) => p.id));
+  return listed.filter((m) => kept.has(m));
+}
+
+/**
+ * Chat-capable models from a provider's listing, recommended ones first. Cloud listings are trimmed to the
+ * latest models (`latestOnly`); a local server lists exactly what the user downloaded, so it is left whole.
+ */
+export function chatModels(providerId: string, listed: string[], latestOnly = true): string[] {
+  const hidden = latestOnly ? SUPERSEDED[providerId] : undefined;
+  const families = latestOnly ? ONLY_FAMILIES[providerId] : undefined;
+  let chat = listed.filter(
+    (m) => !NON_CHAT.test(m) && !hidden?.test(m) && (!families || families.includes(parseModel(m).family)),
+  );
+  if (latestOnly) chat = latestModels(chat);
+  const preferred = [...new Set((PREFERRED_CHAT[providerId] ?? []).flatMap((re) => chat.filter((m) => re.test(m)).sort()))];
   return [...preferred, ...chat.filter((m) => !preferred.includes(m)).sort()];
 }
 
-export function recommendedCloudModel(providerId: string, listed: string[]): string | null {
-  const preferred = RECOMMENDED_CHAT[providerId] ?? [];
+export function recommendedCloudModel(providerId: string, listed: string[], latestOnly = true): string | null {
   // An empty listing (some gateways) still gets a sensible default.
-  if (!listed.length) return preferred[0] ?? null;
-  return chatModels(providerId, listed)[0] ?? null;
+  if (!listed.length) return FALLBACK_CHAT[providerId] ?? null;
+  return chatModels(providerId, listed, latestOnly)[0] ?? null;
 }

@@ -46,7 +46,7 @@ export function ApprovalCard({
                 <div className="flex gap-2">
                     <button
                         onClick={() => onAnswer(request.runId, true)}
-                        className="rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700"
+                        className="rounded-md bg-gray-950 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800"
                     >
                         Allow
                     </button>

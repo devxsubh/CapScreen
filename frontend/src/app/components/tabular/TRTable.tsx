@@ -210,7 +210,7 @@ export const TRTable = forwardRef<TRTableHandle, Props>(function TRTable(
                         <div className="mt-4 flex items-center gap-2">
                             <button
                                 onClick={onAddColumn}
-                                className="inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-700 shadow-md"
+                                className="inline-flex items-center gap-1 rounded-full bg-gray-950 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 shadow-md"
                             >
                                 + Add Columns
                             </button>
@@ -348,7 +348,7 @@ export const TRTable = forwardRef<TRTableHandle, Props>(function TRTable(
                                 className={`sticky left-8 z-[60] ${COL_W} border-b border-r border-gray-200 p-2 text-xs text-gray-800 flex items-center ${baseRowBg}`}
                             >
                                 <span
-                                    className={`line-clamp-1 ${onDocumentClick ? "cursor-pointer hover:text-blue-600 hover:underline" : ""}`}
+                                    className={`line-clamp-1 ${onDocumentClick ? "cursor-pointer hover:text-gray-950 hover:underline" : ""}`}
                                     title={doc.filename}
                                     onClick={() => onDocumentClick?.(doc)}
                                     onKeyDown={(e) => {

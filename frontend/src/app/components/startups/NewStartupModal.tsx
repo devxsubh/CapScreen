@@ -284,7 +284,7 @@ export function NewStartupModal({ open, onClose, onCreated, initialCsv }: Props)
                     if (e.target === e.currentTarget && !loading) handleClose();
                 }}
             >
-                <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col h-[min(600px,90vh)]">
+                <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[min(600px,90vh)]">
                     <div className="flex items-center justify-between px-6 pt-5 pb-2 shrink-0">
                         <div className="flex items-center gap-1.5 text-xs text-gray-400">
                             <span>Startups</span>
@@ -434,7 +434,7 @@ export function NewStartupModal({ open, onClose, onCreated, initialCsv }: Props)
                                             <span className="shrink-0 h-3.5 w-3.5 rounded border bg-gray-900 border-gray-900 flex items-center justify-center">
                                                 <Check className="h-2.5 w-2.5 text-white" />
                                             </span>
-                                            <FileSpreadsheet className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                                            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                             <span className="flex-1 min-w-0 truncate text-gray-900">
                                                 {file.name}
                                             </span>
@@ -514,7 +514,7 @@ export function NewStartupModal({ open, onClose, onCreated, initialCsv }: Props)
                                         fileInputRef.current?.click()
                                     }
                                     disabled={loading}
-                                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-60"
+                                    className="flex items-center gap-1.5 rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-60"
                                 >
                                     <Upload className="h-3.5 w-3.5" />
                                     Upload CSV
@@ -549,7 +549,7 @@ export function NewStartupModal({ open, onClose, onCreated, initialCsv }: Props)
                                             "needs_review" &&
                                             !confirmMapping)
                                     }
-                                    className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                                    className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40 transition-colors"
                                 >
                                     {loading ? "Creating…" : "Create startup"}
                                 </button>

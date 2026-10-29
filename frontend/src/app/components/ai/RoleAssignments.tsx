@@ -5,6 +5,15 @@ import { Check, ChevronDown, Loader2, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { aiApi, ROLE_INFO, type AiHealth, type AiState, type LlmRole, type ProviderView } from "@/lib/aiControlCenterApi";
+import { modelDisplayName, modelHint, providerDisplayName } from "@/lib/modelDisplay";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ModelLogo, ProviderLogo } from "./ProviderLogo";
 
 /** Providers without embedding models. */
 const NO_EMBEDDINGS = new Set(["anthropic", "groq", "openrouter"]);
@@ -28,10 +37,12 @@ export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state
     const [provider, setProvider] = useState(current?.provider ?? "");
     const [model, setModel] = useState(current?.model ?? "");
     const [supportsTools, setSupportsTools] = useState<boolean | undefined>(current?.supportsTools);
-    const [models, setModels] = useState<string[]>([]);
+    const [models, setModels] = useState<{ all: string[]; chat: string[] }>({ all: [], chat: [] });
     const [modelsError, setModelsError] = useState<string | null>(null);
     const [busy, setBusy] = useState<"save" | "test" | null>(null);
     const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+    const [modelMenuOpen, setModelMenuOpen] = useState(false);
+    const [customModel, setCustomModel] = useState("");
 
     useEffect(() => {
         if (!provider) return;
@@ -40,12 +51,12 @@ export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state
             .models(provider)
             .then((r) => {
                 if (cancelled) return;
-                setModels(r.models);
+                setModels({ all: r.models, chat: r.chatModels });
                 setModelsError(null);
             })
             .catch((e: Error) => {
                 if (cancelled) return;
-                setModels([]);
+                setModels({ all: [], chat: [] });
                 setModelsError(e.message);
             });
         return () => {
@@ -53,8 +64,8 @@ export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state
         };
     }, [provider]);
 
-    const filteredModels =
-        role === "embedding" ? models.filter((m) => /embed/i.test(m)) : models.filter((m) => !/embed/i.test(m));
+    // Chat roles suggest the latest models only; any other model can still be typed in.
+    const filteredModels = role === "embedding" ? models.all.filter((m) => /embed/i.test(m)) : models.chat;
 
     const probe = async (p: string, m: string) => {
         if (role === "embedding" || !p || !m) return;
@@ -123,7 +134,19 @@ export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state
     };
 
     const selected = providers.find((p) => p.id === provider);
-    const listId = `models-${role}`;
+
+    const pickProvider = (id: string) => {
+        if (id === provider) return;
+        setProvider(id);
+        setModel("");
+        setSupportsTools(undefined);
+    };
+
+    const pickModel = (m: string) => {
+        setModel(m);
+        setModelMenuOpen(false);
+        void probe(provider, m);
+    };
 
     return (
         <div id={`role-${role}`} className="scroll-mt-24 py-5 border-b border-gray-100 last:border-0">
@@ -136,40 +159,112 @@ export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state
             </div>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-[200px_1fr_auto]">
-                <select
-                    value={provider}
-                    onChange={(e) => {
-                        setProvider(e.target.value);
-                        setModel("");
-                        setSupportsTools(undefined);
-                    }}
-                    className="h-9 rounded-md border border-gray-200 bg-white px-2 text-sm"
-                    aria-label={`${ROLE_INFO[role].title} provider`}
-                >
-                    <option value="">{role === "embedding" ? "Off (keyword search)" : "Choose provider…"}</option>
-                    {providers.map((p) => (
-                        <option key={p.id} value={p.id}>
-                            {p.label}
-                            {p.local ? (/local/i.test(p.label) ? "" : " · on this computer") : " · cloud"}
-                        </option>
-                    ))}
-                </select>
-                <div>
-                    <Input
-                        list={listId}
-                        value={model}
-                        disabled={!provider}
-                        placeholder={provider ? "Model name" : "Pick a provider first"}
-                        onChange={(e) => setModel(e.target.value)}
-                        onBlur={() => probe(provider, model)}
-                        aria-label={`${ROLE_INFO[role].title} model`}
-                    />
-                    <datalist id={listId}>
-                        {filteredModels.map((m) => (
-                            <option key={m} value={m} />
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            aria-label={`${ROLE_INFO[role].title} provider`}
+                            className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-gray-200 bg-white px-2.5 text-left text-sm transition-colors hover:border-gray-300 data-[state=open]:border-gray-400"
+                        >
+                            {selected ? (
+                                <ProviderLogo id={selected.id} local={selected.local} size={16} />
+                            ) : null}
+                            <span className={`min-w-0 flex-1 truncate ${selected ? "text-gray-900" : "text-gray-500"}`}>
+                                {selected
+                                    ? providerDisplayName(selected.label)
+                                    : role === "embedding"
+                                      ? "Off (keyword search)"
+                                      : "Choose provider"}
+                            </span>
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-64 rounded-xl bg-white p-1.5">
+                        <DropdownMenuItem
+                            className="cursor-pointer gap-2.5 rounded-lg px-3 py-2 text-sm text-gray-600"
+                            onSelect={() => pickProvider("")}
+                        >
+                            <span className="flex-1">{role === "embedding" ? "Off (keyword search)" : "None"}</span>
+                            {!provider && <Check className="h-4 w-4 text-gray-900" />}
+                        </DropdownMenuItem>
+                        {providers.map((p) => (
+                            <DropdownMenuItem
+                                key={p.id}
+                                className="cursor-pointer gap-2.5 rounded-lg px-3 py-2"
+                                onSelect={() => pickProvider(p.id)}
+                            >
+                                <ProviderLogo id={p.id} local={p.local} size={16} tile />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm text-gray-900">{providerDisplayName(p.label)}</span>
+                                    <span className="block text-[11px] text-gray-500">{p.local ? "This computer" : "Cloud"}</span>
+                                </span>
+                                {p.id === provider && <Check className="h-4 w-4 text-gray-900" />}
+                            </DropdownMenuItem>
                         ))}
-                    </datalist>
-                </div>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu open={modelMenuOpen} onOpenChange={setModelMenuOpen}>
+                    <DropdownMenuTrigger asChild disabled={!provider}>
+                        <button
+                            type="button"
+                            title={model || undefined}
+                            aria-label={`${ROLE_INFO[role].title} model`}
+                            className="flex h-9 min-w-0 items-center gap-2 rounded-md border border-gray-200 bg-white px-2.5 text-left text-sm transition-colors hover:border-gray-300 disabled:cursor-not-allowed disabled:bg-gray-50 data-[state=open]:border-gray-400"
+                        >
+                            {model && <ModelLogo model={model} provider={provider} local={selected?.local} size={16} />}
+                            <span className={`min-w-0 flex-1 truncate ${model ? "text-gray-900" : "text-gray-500"}`}>
+                                {model ? modelDisplayName(model) : provider ? "Choose a model" : "Pick a provider first"}
+                            </span>
+                            {model && <span className="hidden truncate font-mono text-[11px] text-gray-400 lg:inline">{model}</span>}
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="max-h-[min(26rem,70vh)] w-80 overflow-y-auto rounded-xl bg-white p-1.5">
+                        {filteredModels.length === 0 ? (
+                            <p className="px-3 py-2 text-xs text-gray-500">
+                                {modelsError ? "The model list didn't load." : "No suggested models."} Type a model name below.
+                            </p>
+                        ) : (
+                            filteredModels.map((m) => {
+                                const hint = modelHint(m);
+                                return (
+                                    <DropdownMenuItem
+                                        key={m}
+                                        title={m}
+                                        className="cursor-pointer gap-2.5 rounded-lg px-3 py-2"
+                                        onSelect={() => pickModel(m)}
+                                    >
+                                        <ModelLogo model={m} provider={provider} local={selected?.local} size={16} />
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-sm text-gray-900">{modelDisplayName(m)}</span>
+                                            {hint && <span className="block truncate text-xs text-gray-500">{hint}</span>}
+                                        </span>
+                                        {m === model && <Check className="h-4 w-4 text-gray-900" />}
+                                    </DropdownMenuItem>
+                                );
+                            })
+                        )}
+                        <DropdownMenuSeparator />
+                        {/* Typing must not trigger the menu's type-ahead. */}
+                        <div className="px-1.5 pb-1 pt-1.5" onKeyDown={(e) => e.stopPropagation()}>
+                            <p className="px-1.5 pb-1 text-[11px] text-gray-500">Other model</p>
+                            <Input
+                                value={customModel}
+                                onChange={(e) => setCustomModel(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && customModel.trim()) {
+                                        pickModel(customModel.trim());
+                                        setCustomModel("");
+                                    }
+                                }}
+                                placeholder="Type a model id and press Enter"
+                                className="h-8 font-mono text-xs"
+                                aria-label="Other model id"
+                            />
+                        </div>
+                    </DropdownMenuContent>
+                </DropdownMenu>
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={test} disabled={!provider || !model || busy !== null}>
                         {busy === "test" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
@@ -178,7 +273,7 @@ export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state
                     <Button
                         onClick={save}
                         disabled={!dirty || busy !== null || (!!provider && !model)}
-                        className="bg-black hover:bg-gray-900 text-white"
+                        className="bg-gray-950 text-white hover:bg-gray-800"
                     >
                         {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
                     </Button>

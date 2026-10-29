@@ -158,11 +158,11 @@ export function AssistantSidePanel({
             {!isMobile && (
                 <div
                     onMouseDown={onMouseDown}
-                    className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-blue-400/80 active:bg-blue-500 transition-colors z-10 group"
+                    className="absolute left-0 top-0 h-full w-1.5 cursor-col-resize hover:bg-gray-300/80 active:bg-gray-400 transition-colors z-10 group"
                     style={{ marginLeft: -3 }}
                     title="Drag to resize"
                 >
-                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-gray-200 group-hover:bg-blue-400" />
+                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-px bg-gray-200 group-hover:bg-gray-400" />
                 </div>
             )}
 

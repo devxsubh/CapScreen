@@ -47,7 +47,7 @@ export function DesktopShell({ children }: { children: React.ReactNode }) {
         };
     }, [pathname]);
 
-    const showBanner = !!problem && !dismissed && !pathname.startsWith("/ai");
+    const showBanner = !!problem && !dismissed && !pathname.startsWith("/settings/ai");
 
     return (
         <>
@@ -61,7 +61,7 @@ export function DesktopShell({ children }: { children: React.ReactNode }) {
                 <div className="flex items-center gap-3 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-900">
                     <Cpu className="h-4 w-4 shrink-0" />
                     <span className="flex-1">{problem}</span>
-                    <Link href="/ai" className="shrink-0 rounded-md bg-amber-900 px-3 py-1 text-xs font-medium text-white hover:bg-amber-800">
+                    <Link href="/settings/ai" className="shrink-0 rounded-md bg-amber-900 px-3 py-1 text-xs font-medium text-white hover:bg-amber-800">
                         Fix in AI Control Center
                     </Link>
                     <button type="button" onClick={() => setDismissed(true)} aria-label="Dismiss" className="text-amber-700 hover:text-amber-900">

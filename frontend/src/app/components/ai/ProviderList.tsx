@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, ExternalLink, KeyRound, Loader2, Plus, Server, Trash2, Zap } from "lucide-react";
+import { Check, ChevronDown, ExternalLink, Loader2, Plus, Trash2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { aiApi, AiApiError, KEY_LINKS, ROLE_INFO, type AiState, type LlmRole, type ProviderView } from "@/lib/aiControlCenterApi";
 import { openExternal } from "./useModelDownload";
+import { ProviderLogo } from "./ProviderLogo";
+import { providerDisplayName } from "@/lib/modelDisplay";
 
 /** Tasks bound to a provider (utility counts when it inherits the assistant's binding). */
 function tasksUsing(state: AiState, providerId: string): string[] {
@@ -75,7 +77,7 @@ function CloudProviderRow({
     return (
         <li id={`provider-${p.id}`} className="scroll-mt-24 rounded-lg border border-gray-200">
             <div className="flex items-center gap-3 px-4 py-3">
-                <KeyRound className="h-4 w-4 shrink-0 text-gray-400" />
+                <ProviderLogo id={p.id} size={18} tile />
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium text-sm text-gray-900">{p.label}</span>
@@ -156,7 +158,7 @@ function CloudProviderRow({
                         <Button
                             onClick={() => saveKey(false)}
                             disabled={!key.trim() || busy !== null}
-                            className="bg-black hover:bg-gray-900 text-white"
+                            className="bg-gray-950 text-white hover:bg-gray-800"
                         >
                             {busy === "save" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Check and save"}
                         </Button>
@@ -232,10 +234,10 @@ function ServerRow({ p, state, onChange }: { p: ProviderView; state: AiState; on
     return (
         <li id={`provider-${p.id}`} className="scroll-mt-24 rounded-lg border border-gray-200">
             <div className="flex items-center gap-3 px-4 py-3">
-                <Server className="h-4 w-4 shrink-0 text-gray-400" />
+                <ProviderLogo id={p.id} local={p.local} size={18} tile />
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium text-sm">{p.label}</span>
+                        <span className="font-medium text-sm">{providerDisplayName(p.label)}</span>
                         <span
                             className={`rounded-full px-2 py-0.5 text-[11px] ${
                                 p.local ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
@@ -358,7 +360,7 @@ function AddCustomProvider({ takenIds, onChange }: { takenIds: Set<string>; onCh
             <PasswordInput value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key (optional)" autoComplete="off" />
             {error && <p className="text-xs text-red-600">{error}</p>}
             <div className="flex gap-2">
-                <Button onClick={add} disabled={!label.trim() || !baseUrl.trim() || busy} className="bg-black hover:bg-gray-900 text-white">
+                <Button onClick={add} disabled={!label.trim() || !baseUrl.trim() || busy} className="bg-gray-950 text-white hover:bg-gray-800">
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
                 </Button>
                 <Button variant="outline" onClick={() => setOpen(false)}>

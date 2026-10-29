@@ -23,7 +23,7 @@ const REVIEW_STATUS_LABEL: Record<EntityReview["status"], string> = {
 
 const REVIEW_STATUS_CLASS: Record<EntityReview["status"], string> = {
   pending: "text-gray-400",
-  cleared: "text-green-600 font-medium",
+  cleared: "text-emerald-600 font-medium",
   escalated: "text-amber-600 font-medium",
   blocked: "text-red-600 font-medium",
 };
@@ -37,12 +37,12 @@ function RiskBadge({ level }: { level: string }) {
     );
   if (level === "review")
     return (
-      <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-semibold text-yellow-800">
+      <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800">
         Review
       </span>
     );
   return (
-    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-800">
+    <span className="inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-800">
       Clear
     </span>
   );

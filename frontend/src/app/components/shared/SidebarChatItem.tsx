@@ -48,8 +48,8 @@ export function SidebarChatItem({ chat, isActive, onSelect, projectName }: Props
 
     return (
         <div
-            className={`group relative flex items-center w-full h-9 rounded-md transition-colors ${
-                isActive ? "bg-gray-100" : "hover:bg-gray-100"
+            className={`group relative flex h-8 w-full items-center rounded-md transition-colors ${
+                isActive ? "bg-black/[0.06]" : "hover:bg-black/[0.04]"
             }`}
         >
             {isRenaming ? (
@@ -63,11 +63,11 @@ export function SidebarChatItem({ chat, isActive, onSelect, projectName }: Props
                             if (e.key === "Enter") void handleRenameSave();
                             if (e.key === "Escape") handleRenameCancel();
                         }}
-                        className="flex-1 bg-white shadow-inner rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="flex-1 bg-white shadow-inner rounded px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400"
                     />
                     <button
                         onClick={() => void handleRenameSave()}
-                        className="ml-1.5 py-2 hover:bg-gray-200 rounded text-green-600"
+                        className="ml-1.5 py-2 hover:bg-gray-200 rounded text-emerald-600"
                     >
                         <Check className="h-3 w-3" />
                     </button>
@@ -90,13 +90,13 @@ export function SidebarChatItem({ chat, isActive, onSelect, projectName }: Props
                         onMouseLeave={(e) => {
                             e.currentTarget.scrollTo({ left: 0, behavior: "smooth" });
                         }}
-                        className={`flex-1 min-w-0 text-left px-3 py-2 text-xs overflow-x-hidden whitespace-nowrap scrollbar-none ${
-                            isActive ? "text-gray-900" : "text-gray-700"
+                        className={`flex-1 min-w-0 overflow-x-hidden whitespace-nowrap px-3 py-1.5 text-left text-[13px] scrollbar-none ${
+                            isActive ? "text-gray-950" : "text-gray-600 hover:text-gray-950"
                         }`}
                         title={projectName ? `${projectName}: ${chat.title ?? "Untitled chat"}` : (chat.title ?? "Untitled chat")}
                     >
                         {projectName && (
-                            <span className="text-gray-400 font-normal">{projectName}: </span>
+                            <span className="font-normal text-gray-400">{projectName} · </span>
                         )}
                         {chat.title ?? "Untitled chat"}
                     </button>
@@ -104,7 +104,8 @@ export function SidebarChatItem({ chat, isActive, onSelect, projectName }: Props
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
-                                className={`p-1 mr-1 text-gray-500 transition-opacity hover:text-gray-900 ${
+                                aria-label="Chat options"
+                                className={`mr-1 rounded-md p-1 text-gray-400 transition-opacity hover:bg-black/[0.06] hover:text-gray-900 ${
                                     isActive
                                         ? "opacity-100"
                                         : "opacity-0 group-hover:opacity-100"

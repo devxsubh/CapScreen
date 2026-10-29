@@ -53,8 +53,8 @@ export function ResizeDivider({ onDrag }: Props) {
                 <div
                     className={`w-px transition-colors ${
                         isDragging
-                            ? "bg-blue-500"
-                            : "bg-gray-200 group-hover:bg-blue-400"
+                            ? "bg-gray-400"
+                            : "bg-gray-200 group-hover:bg-gray-400"
                     }`}
                 />
             </div>

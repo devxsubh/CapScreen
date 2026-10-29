@@ -1,9 +1,11 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Cloud, HardDrive, Loader2, RefreshCw, Settings2, Sparkles, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Settings2, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ROLE_INFO, type AiHealth, type FixAction, type LlmRole, type RoleHealth } from "@/lib/aiControlCenterApi";
 import type { ModelDownloader } from "./useModelDownload";
+import { ProviderLogo } from "./ProviderLogo";
+import { modelDisplayName } from "@/lib/modelDisplay";
 
 function headline(h: AiHealth): { title: string; subtitle: string; tone: "ok" | "warn" | "new" } {
     if (h.overall === "not-set-up") {
@@ -56,7 +58,7 @@ function IssueRow({
                 {downloading && download.current && (
                     <div className="mt-2 max-w-sm">
                         <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
-                            <div className="h-full bg-black transition-[width] duration-300" style={{ width: `${download.current.percent ?? 2}%` }} />
+                            <div className="h-full bg-gray-950 transition-[width] duration-300" style={{ width: `${download.current.percent ?? 2}%` }} />
                         </div>
                         <p className="mt-1 text-[11px] text-gray-500">
                             {download.current.status}
@@ -75,7 +77,7 @@ function IssueRow({
                         size="sm"
                         onClick={() => onFix(r.fix!, r.role)}
                         disabled={busyFix !== null || (r.fix.action === "download-model" && !!download.current)}
-                        className={`h-8 shrink-0 text-xs ${r.status === "error" ? "bg-black text-white hover:bg-gray-900" : ""}`}
+                        className={`h-8 shrink-0 text-xs ${r.status === "error" ? "bg-gray-950 text-white hover:bg-gray-800" : ""}`}
                         variant={r.status === "error" ? "default" : "outline"}
                     >
                         {busyFix === fixKey && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -129,9 +131,9 @@ export function AiStatusCard({
                     <p className="mt-0.5 text-sm text-gray-600">{h.subtitle}</p>
                     {health.overall !== "not-set-up" && agent.binding && (
                         <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-600">
-                            {agent.binding.local ? <HardDrive className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />}
-                            <span>
-                                Chat: <span className="font-medium text-gray-800">{agent.binding.model}</span>
+                            <ProviderLogo id={agent.binding.provider} local={agent.binding.local} size={14} />
+                            <span title={agent.binding.model}>
+                                Chat: <span className="font-medium text-gray-800">{modelDisplayName(agent.binding.model)}</span>
                                 {" · "}
                                 {agent.binding.local ? "on this computer" : agent.binding.label}
                             </span>
@@ -148,7 +150,7 @@ export function AiStatusCard({
 
             {health.overall === "not-set-up" ? (
                 <div className="mt-4">
-                    <Button onClick={onChangeSetup} className="bg-black text-white hover:bg-gray-900">
+                    <Button onClick={onChangeSetup} className="bg-gray-950 text-white hover:bg-gray-800">
                         <Sparkles className="h-4 w-4" /> Set up AI
                     </Button>
                 </div>

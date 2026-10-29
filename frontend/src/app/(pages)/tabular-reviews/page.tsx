@@ -1,5 +1,8 @@
 "use client";
 
+import { EmptyState } from "@/app/components/shared/EmptyState";
+import { PageHeader } from "@/app/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Loader2, ChevronDown, Check, Table2 } from "lucide-react";
@@ -269,25 +272,19 @@ export default function TabularReviewsPage() {
     return (
         <div className="flex-1 overflow-y-auto bg-white">
             {/* Page header */}
-            <div className="mb-1 flex items-center justify-between px-4 py-3 md:px-10">
-                <h1 className="text-2xl font-medium font-serif text-gray-900">
-                    Tabular Reviews
-                </h1>
-                <div className="flex items-center gap-2">
-                    <HeaderSearchBtn value={search} onChange={setSearch} placeholder="Search reviews…" />
-                    <button
-                        onClick={() => setNewTROpen(true)}
-                        disabled={creating}
-                        className="flex items-center justify-center p-1.5 text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40"
-                    >
-                        {creating ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Plus className="h-4 w-4" />
-                        )}
-                    </button>
-                </div>
-                </div>
+            <PageHeader
+                title="Tabular reviews"
+                description="Extract the same fields from many documents into one grid."
+                actions={
+                    <>
+                        <HeaderSearchBtn value={search} onChange={setSearch} placeholder="Search reviews…" />
+                        <Button size="sm" onClick={() => setNewTROpen(true)} disabled={creating}>
+                            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                            New review
+                        </Button>
+                    </>
+                }
+            />
 
                 <PortfolioMonitoringCard />
 
@@ -353,28 +350,26 @@ export default function TabularReviewsPage() {
                         ))}
                     </div>
                 ) : filtered.length === 0 ? (
-                    <div className="flex flex-col items-start py-24 w-full max-w-xs mx-auto">
+                    <div>
                         {activeTab === "all" && !projectFilter ? (
-                            <>
-                                <Table2 className="h-8 w-8 text-gray-300 mb-4" />
-                                <p className="text-2xl font-medium font-serif text-gray-900">
-                                    Tabular Reviews
-                                </p>
-                                <p className="mt-1 text-xs text-gray-400 max-w-xs text-left">
-                                    Extract data from documents into tables
-                                    using AI.
-                                </p>
-                                <button
-                                    onClick={() => setNewTROpen(true)}
-                                    disabled={creating}
-                                    className="mt-4 inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700 transition-colors shadow-md disabled:opacity-40"
-                                >
-                                    + Create New
-                                </button>
-                            </>
+                            <EmptyState
+                                icon={Table2}
+                                title="No tabular reviews yet"
+                                description="A tabular review pulls the same fields out of many documents into one grid, so you can compare and sign off row by row."
+                                steps={[
+                                    "Pick the documents to review, or a startup's screening results.",
+                                    "Choose the columns to extract, or start from a workflow template.",
+                                    "Check each row, add notes, and export the grid when you're done.",
+                                ]}
+                                action={
+                                    <Button onClick={() => setNewTROpen(true)} disabled={creating}>
+                                        <Plus className="h-4 w-4" /> New review
+                                    </Button>
+                                }
+                            />
                         ) : (
-                            <p className="text-sm text-gray-400">
-                                No reviews found
+                            <p className="px-6 py-16 text-center text-sm text-gray-500 md:px-10">
+                                No reviews match this view.
                             </p>
                         )}
                     </div>

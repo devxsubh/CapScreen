@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { aiApi, AiApiError, CLOUD_CHOICES, type AiState } from "@/lib/aiControlCenterApi";
 import { openExternal } from "./useModelDownload";
+import { ProviderLogo } from "./ProviderLogo";
+import { modelDisplayName, modelHint } from "@/lib/modelDisplay";
 
 type KeyStatus =
     | { kind: "idle" }
@@ -120,11 +122,14 @@ export function CloudSetup({
                                     aria-checked={selected}
                                     onClick={() => pickProvider(c.id)}
                                     className={`h-full w-full rounded-lg border p-3 text-left transition-colors ${
-                                        selected ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-300"
+                                        selected ? "border-gray-950 bg-gray-50" : "border-gray-200 hover:border-gray-300"
                                     }`}
                                 >
                                     <span className="flex items-center justify-between gap-2 text-sm font-medium">
-                                        {c.label}
+                                        <span className="flex items-center gap-2">
+                                            <ProviderLogo id={c.id} size={16} />
+                                            {c.label}
+                                        </span>
                                         {(p?.key.configured || p?.envKey) && <span className="text-[11px] font-normal text-emerald-700">Key saved</span>}
                                     </span>
                                     <span className="mt-0.5 block text-xs text-gray-500">{c.blurb}</span>
@@ -172,7 +177,7 @@ export function CloudSetup({
                                     aria-label={`${choice.label} API key`}
                                 />
                             </div>
-                            <Button onClick={() => saveKey()} disabled={!key.trim() || keyStatus.kind === "checking"} className="bg-black text-white hover:bg-gray-900">
+                            <Button onClick={() => saveKey()} disabled={!key.trim() || keyStatus.kind === "checking"} className="bg-gray-950 text-white hover:bg-gray-800">
                                 {keyStatus.kind === "checking" ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                 {keyStatus.kind === "checking" ? "Checking…" : "Check and save"}
                             </Button>
@@ -224,7 +229,8 @@ export function CloudSetup({
                         >
                             {list.models.map((m) => (
                                 <option key={m} value={m}>
-                                    {m}
+                                    {modelDisplayName(m)}
+                                    {modelHint(m) ? ` — ${modelHint(m)}` : ""}
                                     {m === list.recommended ? " (recommended)" : ""}
                                 </option>
                             ))}
@@ -260,7 +266,7 @@ export function CloudSetup({
             </div>
 
             {error && <p className="text-xs text-red-600">{error}</p>}
-            <Button onClick={finish} disabled={!keyReady || !consent || finishing || list.state === "loading"} className="bg-black text-white hover:bg-gray-900">
+            <Button onClick={finish} disabled={!keyReady || !consent || finishing || list.state === "loading"} className="bg-gray-950 text-white hover:bg-gray-800">
                 {finishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                 Finish setup
             </Button>

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import { listStartups } from "@/lib/startupsApi";
 import { ProjectPicker } from "../shared/ProjectPicker";
 import type { AppProject } from "../shared/types";
@@ -18,7 +17,6 @@ export function SelectAssistantProjectModal({ open, onClose }: Props) {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
     const router = useRouter();
-    const { saveChat } = useChatHistoryContext();
     const [loading, setLoading] = useState(false);
     const [startups, setStartups] = useState<AppProject[]>([]);
 
@@ -47,22 +45,16 @@ export function SelectAssistantProjectModal({ open, onClose }: Props) {
 
     if (!open) return null;
 
-    async function handleContinue() {
+    function handleContinue() {
         if (!selectedId) return;
         setCreating(true);
-        try {
-            const chatId = await saveChat(selectedId);
-            if (!chatId) return;
-            onClose();
-            router.push(`/startups/${selectedId}/assistant/chat/${chatId}`);
-        } finally {
-            setCreating(false);
-        }
+        onClose();
+        router.push(`/startups/${selectedId}`);
     }
 
     return createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/10 backdrop-blur-xs">
-            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col h-[600px]">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-xs">
+            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[600px]">
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4">
                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -101,7 +93,7 @@ export function SelectAssistantProjectModal({ open, onClose }: Props) {
                     <button
                         onClick={handleContinue}
                         disabled={!selectedId || creating}
-                        className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40"
+                        className="rounded-lg bg-gray-950 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40"
                     >
                         {creating ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />

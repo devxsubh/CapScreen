@@ -415,8 +415,9 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
         setSaving(true);
         try {
             const projectId = inProject ? selectedProjectId! : undefined;
-            const chatId = await saveChat(projectId);
-            if (!chatId) return;
+            // Startup workflows run in the startup workspace's chat; others get a new assistant chat.
+            const chatId = projectId ? null : await saveChat();
+            if (!projectId && !chatId) return;
 
             const { files, csvContent, screeningResult } =
                 await resolveSelectedAssets();
@@ -438,7 +439,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
             handleClose();
             router.push(
                 projectId
-                    ? `/startups/${projectId}/assistant/chat/${chatId}`
+                    ? `/startups/${projectId}?workflow=1`
                     : `/assistant/chat/${chatId}`,
             );
         } finally {
@@ -530,7 +531,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
     return createPortal(
         <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/20 backdrop-blur-xs">
             <div
-                className={`w-full rounded-2xl bg-white shadow-2xl flex flex-col h-[600px] transition-all duration-200 ${screen === "select" ? "max-w-4xl" : "max-w-2xl"}`}
+                className={`w-full rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[600px] transition-all duration-200 ${screen === "select" ? "max-w-4xl" : "max-w-2xl"}`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 py-4 shrink-0">
@@ -634,7 +635,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
                                         router.push(`/workflows/${wf.id}`);
                                         handleClose();
                                     }}
-                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                                    className="rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
                                 >
                                     View Page
                                 </button>
@@ -644,14 +645,14 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
                                         router.push(`/workflows/${wf.id}`);
                                         handleClose();
                                     }}
-                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                                    className="rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
                                 >
                                     Edit
                                 </button>
                             )}
                             <button
                                 onClick={() => setScreen("configure")}
-                                className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700"
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800"
                             >
                                 Use
                             </button>
@@ -785,7 +786,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
                                 disabled={
                                     saving || (inProject && !selectedProjectId)
                                 }
-                                className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
                             >
                                 {saving ? "Starting…" : "Start Chat"}
                             </button>
@@ -908,7 +909,7 @@ export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
                                     selectedDocIds.size === 0 ||
                                     (inProject && !selectedProjectId)
                                 }
-                                className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
                             >
                                 {saving ? "Creating…" : "Create Review"}
                             </button>

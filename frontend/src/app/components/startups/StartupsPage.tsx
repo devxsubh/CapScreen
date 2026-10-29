@@ -1,5 +1,8 @@
 "use client";
 
+import { EmptyState } from "@/app/components/shared/EmptyState";
+import { PageHeader } from "@/app/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Building2, RefreshCw } from "lucide-react";
@@ -198,20 +201,15 @@ export function StartupsPage() {
     return (
         <>
             <div className="flex-1 overflow-y-auto bg-white">
-                <div className="mb-1 flex items-center justify-between px-4 py-3 md:px-10">
-                    <div>
-                        <h1 className="text-2xl font-medium font-serif text-gray-900">
-                            Startups
-                        </h1>
-                        {!loading && startups.length > 0 && (
-                            <p className="mt-0.5 text-xs text-gray-400">
-                                {startups.length} startup
-                                {startups.length !== 1 ? "s" : ""} ·{" "}
-                                {flaggedTotal} flagged · {reviewTotal} review
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2">
+                <PageHeader
+                    title="Startups"
+                    description={
+                        !loading && startups.length > 0
+                            ? `${startups.length} startup${startups.length !== 1 ? "s" : ""} · ${flaggedTotal} flagged · ${reviewTotal} to review`
+                            : "Screen each startup's cap table and keep the results in one place."
+                    }
+                    actions={
+                    <>
                         <HeaderSearchBtn
                             value={search}
                             onChange={setSearch}
@@ -219,10 +217,10 @@ export function StartupsPage() {
                         />
                         <PortfolioMonitoringCard compact />
                         {filtered.length >= 2 && (
-                            <button
-                                type="button"
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => setCompareOpen(true)}
-                                className="text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
                                 title={
                                     selectedIds.size >= 2
                                         ? `Compare ${selectedIds.size} selected`
@@ -231,26 +229,24 @@ export function StartupsPage() {
                             >
                                 Compare
                                 {selectedIds.size >= 2 ? ` (${selectedIds.size})` : ""}
-                            </button>
+                            </Button>
                         )}
-                        <button
-                            type="button"
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => void handleRescreenAll()}
                             disabled={rescreeningAll}
                             title="Re-screen all startups"
-                            className="flex items-center justify-center p-1.5 text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-40"
+                            aria-label="Re-screen all startups"
                         >
                             <RefreshCw className={`h-4 w-4 ${rescreeningAll ? "animate-spin" : ""}`} />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setModalOpen(true)}
-                            className="flex items-center justify-center p-1.5 text-gray-500 hover:text-gray-900 transition-colors"
-                        >
-                            <Plus className="h-4 w-4" />
-                        </button>
-                    </div>
-                </div>
+                        </Button>
+                        <Button size="sm" onClick={() => setModalOpen(true)}>
+                            <Plus className="h-4 w-4" /> New startup
+                        </Button>
+                    </>
+                    }
+                />
 
                 <ToolbarTabs
                     tabs={tabs}
@@ -325,32 +321,27 @@ export function StartupsPage() {
                                 ))}
                             </div>
                         ) : filtered.length === 0 ? (
-                            <div className="flex flex-col items-start py-24 pl-4 md:pl-10 max-w-xs">
-                                {activeTab === "all" && !search ? (
-                                    <>
-                                        <Building2 className="h-8 w-8 text-gray-300 mb-4" />
-                                        <p className="text-2xl font-medium font-serif text-gray-900">
-                                            Startups
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-400 max-w-xs">
-                                            Create a deal workspace, upload a
-                                            cap-table CSV, and screen ownership
-                                            against sanctions lists.
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={() => setModalOpen(true)}
-                                            className="mt-4 inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700 transition-colors shadow-md"
-                                        >
-                                            + Create New
-                                        </button>
-                                    </>
-                                ) : (
-                                    <p className="text-sm text-gray-400">
-                                        No matching startups
-                                    </p>
-                                )}
-                            </div>
+                            activeTab === "all" && !search ? (
+                                <EmptyState
+                                    icon={Building2}
+                                    title="Create your first startup"
+                                    description="A startup is one deal's workspace: its cap table, screening results, ownership graph, documents and a chat that knows the deal."
+                                    steps={[
+                                        "Create a startup and give it the company's name.",
+                                        "Upload its cap table as a CSV (columns are mapped for you).",
+                                        "CapScreen screens every owner against OFAC, EU, UK and UN lists and flags what needs review.",
+                                    ]}
+                                    action={
+                                        <Button onClick={() => setModalOpen(true)}>
+                                            <Plus className="h-4 w-4" /> New startup
+                                        </Button>
+                                    }
+                                />
+                            ) : (
+                                <p className="px-6 py-16 text-center text-sm text-gray-500 md:px-10">
+                                    No startups match this view.
+                                </p>
+                            )
                         ) : (
                             <div>
                                 {filtered.map((s) => {
@@ -383,7 +374,7 @@ export function StartupsPage() {
                                                 <span className="text-sm text-gray-800 truncate block">
                                                     {s.name}
                                                     {s.isSample ? (
-                                                        <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                                        <span className="ml-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">
                                                             Sample
                                                         </span>
                                                     ) : null}

@@ -32,7 +32,7 @@ export function IcMemoDownloadCard({ startupId, documentId, title }: Props) {
   }
 
   return (
-    <div className="rounded-lg border border-blue-100 bg-blue-50/80 px-3 py-2.5 mt-2">
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 mt-2">
       <div className="flex items-start gap-2">
         <FileText className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -47,7 +47,7 @@ export function IcMemoDownloadCard({ startupId, documentId, title }: Props) {
             type="button"
             onClick={() => void handleDownload(format)}
             disabled={loading !== null}
-            className="inline-flex items-center gap-1.5 shrink-0 rounded-md bg-white border border-gray-200 px-2.5 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-2.5 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:opacity-60"
           >
             {loading === format ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

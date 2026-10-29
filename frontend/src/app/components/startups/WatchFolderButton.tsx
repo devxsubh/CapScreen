@@ -83,10 +83,10 @@ export function WatchFolderButton({ startupId }: { startupId: string }) {
                     </p>
                     {watch.lastError && <p className="text-amber-700">{watch.lastError}</p>}
                     <div className="flex gap-2 pt-1">
-                        <button type="button" onClick={() => void bridge.revealInFolder(watch.path)} className="rounded-md border border-gray-200 px-2 py-1 hover:bg-gray-50">
+                        <button type="button" onClick={() => void bridge.revealInFolder(watch.path)} className="rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-2 py-1 hover:bg-gray-50">
                             Open folder
                         </button>
-                        <button type="button" onClick={() => void choose()} className="rounded-md border border-gray-200 px-2 py-1 hover:bg-gray-50">
+                        <button type="button" onClick={() => void choose()} className="rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-2 py-1 hover:bg-gray-50">
                             Change…
                         </button>
                         <button type="button" onClick={() => void stop()} className="ml-auto rounded-md px-2 py-1 text-red-600 hover:bg-red-50">

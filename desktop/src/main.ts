@@ -141,7 +141,7 @@ function buildTray(): void {
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: "Open CapScreen", click: () => showWindow() },
-      { label: "AI Control Center", click: () => navigate("/ai") },
+      { label: "AI Control Center", click: () => navigate("/settings/ai") },
       { label: "Portfolio monitoring", click: () => navigate("/startups") },
       { type: "separator" },
       { label: "Open logs folder", click: () => void shell.openPath(userData("logs")) },
@@ -163,7 +163,7 @@ function buildMenu(): void {
             submenu: [
               { role: "about" },
               { type: "separator" },
-              { label: "AI Control Center…", accelerator: "Cmd+,", click: () => navigate("/ai") },
+              { label: "AI Control Center…", accelerator: "Cmd+,", click: () => navigate("/settings/ai") },
               { label: "Data & Backup…", click: () => navigate("/settings/data") },
               { type: "separator" },
               { role: "hide" },
@@ -181,7 +181,7 @@ function buildMenu(): void {
         { type: "separator" },
         ...(!isMac
           ? ([
-              { label: "AI Control Center…", accelerator: "Ctrl+,", click: () => navigate("/ai") },
+              { label: "AI Control Center…", accelerator: "Ctrl+,", click: () => navigate("/settings/ai") },
               { label: "Data & Backup…", click: () => navigate("/settings/data") },
               { type: "separator" },
               { label: "Quit", accelerator: "Ctrl+Q", click: () => quit() },

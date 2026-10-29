@@ -1,13 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { PlusIcon, Upload, LayoutGridIcon, Loader2Icon } from "lucide-react";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Upload, LayoutGridIcon, Loader2Icon } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { uploadStandaloneDocument } from "@/app/lib/capScreenApi";
 import {
     uploadRagDocument,
@@ -55,7 +50,7 @@ interface DocActionsProps {
     startupId?: string;
 }
 
-/** Shared upload + menu items for the standalone button and the compact tools menu. */
+/** File upload for the chat composer: hidden input, menu items, and a way to open the picker. */
 export function useAddDocActions({
     onSelectDoc,
     onSelectCsvFile,
@@ -135,65 +130,4 @@ export function useAddDocActions({
     );
 
     return { uploading, fileInput, menuItems, openFilePicker: () => fileInputRef.current?.click() };
-}
-
-interface Props {
-    onSelectDoc: (doc: AppDocument) => void;
-    onSelectCsvFile?: (file: File) => void;
-    onBrowseAll: () => void;
-    selectedDocIds?: string[];
-    attachmentCount?: number;
-    /** When set, uploads go to startup RAG storage instead of standalone docs. */
-    startupId?: string;
-}
-
-export function AddDocButton({
-    onSelectDoc,
-    onSelectCsvFile,
-    onBrowseAll,
-    selectedDocIds = [],
-    attachmentCount,
-    startupId,
-}: Props) {
-    const [isOpen, setIsOpen] = useState(false);
-    const { fileInput, menuItems } = useAddDocActions({
-        onSelectDoc,
-        onSelectCsvFile,
-        onBrowseAll,
-        startupId,
-    });
-    const count = attachmentCount ?? selectedDocIds.length;
-
-    return (
-        <>
-            {fileInput}
-            <DropdownMenu onOpenChange={setIsOpen}>
-                <DropdownMenuTrigger asChild>
-                    <button
-                        type="button"
-                        className={`flex items-center gap-1.5 rounded-lg px-2 h-8 text-sm transition-colors cursor-pointer ${
-                            count > 0
-                                ? "text-blue-600 hover:bg-blue-50"
-                                : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                        } ${isOpen ? "bg-gray-100" : ""}`}
-                        title="Add documents"
-                        aria-label="Add documents"
-                    >
-                        <PlusIcon
-                            className={`h-3.5 w-3.5 shrink-0 transition-transform duration-300 ${isOpen ? "rotate-[135deg]" : ""}`}
-                        />
-                        <span className="hidden sm:inline">Documents</span>
-                        {count > 0 && (
-                            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium tabular-nums text-white">
-                                {count}
-                            </span>
-                        )}
-                    </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-44 z-50" side="bottom" align="start">
-                    {menuItems}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </>
-    );
 }

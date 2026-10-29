@@ -421,7 +421,7 @@ function TRChatInput({
                         type="button"
                         onClick={handleAction}
                         disabled={!isLoading && !value.trim()}
-                        className="relative bg-gradient-to-b from-neutral-700 to-black text-white rounded-[10px] h-7 w-7 shrink-0 flex items-center justify-center disabled:cursor-default disabled:from-neutral-600 disabled:to-black border border-white/30 active:enabled:scale-95 transition-all duration-150"
+                        className="relative bg-gray-950 hover:bg-gray-800 text-white rounded-full h-7 w-7 shrink-0 flex items-center justify-center disabled:cursor-default disabled:bg-gray-300 active:enabled:scale-95 transition-all duration-150"
                     >
                         {isLoading ? (
                             <Square
@@ -1022,8 +1022,8 @@ export function TRChatPanel({
                 }}
                 className={`absolute top-0 right-0 h-full w-1 cursor-col-resize z-20 transition-colors ${
                     isResizing
-                        ? "bg-blue-500"
-                        : "bg-transparent hover:bg-blue-500"
+                        ? "bg-gray-400"
+                        : "bg-transparent hover:bg-gray-300"
                 }`}
             />
             {/* Header */}

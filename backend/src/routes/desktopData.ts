@@ -7,6 +7,7 @@ import { getWatchFolder, scanWatchedFolders, setWatchFolder } from "../lib/infra
 import { AVAILABLE_SANCTIONS_LISTS, readSettings, validateScreeningSettings, writeSettings } from "../lib/infra/settings";
 import { defaultScreeningThresholds } from "../lib/screening/screeningConfig";
 import { databaseFile } from "../lib/infra/db";
+import { eraseLocalData } from "../lib/infra/eraseData";
 import { fetchWatchmanListInfo, getWatchmanBaseUrl } from "../lib/screening/watchman";
 import { AuditLog } from "../models";
 import { ownerFilter } from "./startups/middleware";
@@ -67,6 +68,19 @@ desktopDataRouter.put("/settings", (req, res) => {
   }
   // The desktop shell watches settings.json and reloads Watchman when lists change.
   res.json({ settings: writeSettings(patch) });
+});
+
+/** Start fresh: erase everything the user added (keeps sign-in, AI setup and settings). Asks for the word ERASE. */
+desktopDataRouter.post("/erase", async (req, res) => {
+  if ((req.body as { confirm?: unknown })?.confirm !== "ERASE") {
+    res.status(400).json({ detail: 'Type ERASE to confirm.' });
+    return;
+  }
+  try {
+    res.json(await eraseLocalData());
+  } catch (err) {
+    res.status(500).json({ detail: err instanceof Error ? err.message : "Couldn't erase the data" });
+  }
 });
 
 /** Written by the desktop shell: "online", or "offline" when using its list snapshot. */

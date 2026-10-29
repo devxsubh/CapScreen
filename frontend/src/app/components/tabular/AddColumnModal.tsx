@@ -192,7 +192,7 @@ export function AddColumnModal({ open, existingCount, onClose, onAdd, editingCol
 
     return createPortal(
         <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/20 backdrop-blur-xs">
-            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col h-[600px]">
+            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[600px]">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 pt-5 pb-2">
                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -508,7 +508,7 @@ export function AddColumnModal({ open, existingCount, onClose, onAdd, editingCol
                                 disabled={columns.some(
                                     (col) => !col.name.trim() || !col.prompt.trim(),
                                 )}
-                                className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40 transition-colors"
                             >
                                 {isEditing ? "Save changes" : "Add columns"}
                             </button>

@@ -27,7 +27,7 @@ export function HeaderSearchBtn({ value, onChange, placeholder = "Search…" }: 
     return (
         <div ref={ref} className="relative flex items-center">
             {open ? (
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm z-10 w-72">
+                <div className="absolute right-0 top-1/2 z-10 flex h-8 w-72 -translate-y-1/2 items-center gap-2 rounded-lg bg-white px-3 shadow-[0_0_0_1px_rgba(0,0,0,0.12),0_4px_12px_rgba(0,0,0,0.06)]">
                     <Search className="h-3.5 w-3.5 text-gray-400 shrink-0" />
                     <input
                         autoFocus
@@ -46,8 +46,11 @@ export function HeaderSearchBtn({ value, onChange, placeholder = "Search…" }: 
                 </div>
             ) : (
                 <button
+                    type="button"
                     onClick={() => setOpen(true)}
-                    className="flex h-8 w-8 items-center justify-center text-gray-500 hover:text-gray-900 transition-colors"
+                    aria-label="Search"
+                    title="Search"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-black/[0.04] hover:text-gray-900"
                 >
                     <Search className="h-4 w-4" />
                 </button>

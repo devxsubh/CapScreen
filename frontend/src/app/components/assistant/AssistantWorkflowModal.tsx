@@ -81,9 +81,9 @@ export function AssistantWorkflowModal({
     }
 
     return createPortal(
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/10 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-xs">
             <div
-                className={`w-full rounded-2xl bg-white shadow-2xl flex flex-col h-[600px] ${selected ? "max-w-4xl" : "max-w-2xl"}`}
+                className={`w-full rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[600px] ${selected ? "max-w-4xl" : "max-w-2xl"}`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-4 shrink-0 border-b border-gray-100">
@@ -274,7 +274,7 @@ export function AssistantWorkflowModal({
                         type="button"
                         onClick={handleUse}
                         disabled={!selected}
-                        className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                        className="rounded-lg bg-gray-950 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40 transition-colors"
                     >
                         Use
                     </button>

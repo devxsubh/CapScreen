@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-    ArrowLeft,
+    ChevronRight,
     Check,
     ChevronDown,
     File,
@@ -32,6 +32,7 @@ import {
 } from "@/lib/startupsApi";
 import { createAuditLog } from "@/app/lib/auditLogApi";
 import { useSidebar } from "@/app/contexts/SidebarContext";
+import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import {
     consumeScreenerInitialPrompt,
     CAP_TABLE_SCREEN_WORKFLOW_PROMPT,
@@ -76,7 +77,7 @@ function StatusPill({ result }: { result: StartupRecord["lastScreeningResult"] }
             </span>
         );
     return (
-        <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+        <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
             Clear
         </span>
     );
@@ -89,6 +90,7 @@ export function StartupScreenerPage({ startupId }: Props) {
     const splitRef = useRef<HTMLDivElement>(null);
     const [chatPanelWidth, setChatPanelWidth] = useState(CHAT_PANEL_DEFAULT);
     const [mobilePane, setMobilePane] = useState<"chat" | "analysis">("chat");
+    const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
     const { setSidebarOpen } = useSidebar();
     const [startup, setStartup] = useState<StartupRecord | null>(null);
     const [csvList, setCsvList] = useState<CsvRecord[]>([]);
@@ -118,7 +120,12 @@ export function StartupScreenerPage({ startupId }: Props) {
         screeningResult,
         setScreeningResult,
         isScreeningActive,
-    } = useScreenerChat({ startupId });
+    } = useScreenerChat({
+        startupId,
+        onDocumentCreated: () => setDocumentsRefreshKey((k) => k + 1),
+    });
+    const { newChatMessages, setNewChatMessages } = useChatHistoryContext();
+    const workflowSent = useRef(false);
 
     const activeCsv = useMemo(() => {
         if (csvList.length === 0) return null;
@@ -224,6 +231,43 @@ export function StartupScreenerPage({ startupId }: Props) {
         screeningResult,
         messages.length,
         isResponseLoading,
+        handleChat,
+        router,
+    ]);
+
+    // A workflow started from the Workflows page for this startup: send it through this chat.
+    useEffect(() => {
+        const pending = newChatMessages?.[0];
+        if (
+            workflowSent.current ||
+            searchParams.get("workflow") !== "1" ||
+            !chatHydrated ||
+            isResponseLoading ||
+            !pending ||
+            pending.role !== "user"
+        ) {
+            return;
+        }
+        workflowSent.current = true;
+        setNewChatMessages(null);
+        router.replace(`/startups/${startupId}`, { scroll: false });
+        void handleChat(
+            {
+                role: "user",
+                content: pending.content,
+                files: pending.files?.map((f) => ({ filename: f.filename })),
+                workflow: pending.workflow,
+                focus: pending.focus,
+            },
+            pending.csvContent,
+        );
+    }, [
+        startupId,
+        searchParams,
+        chatHydrated,
+        isResponseLoading,
+        newChatMessages,
+        setNewChatMessages,
         handleChat,
         router,
     ]);
@@ -419,18 +463,18 @@ export function StartupScreenerPage({ startupId }: Props) {
     return (
         <div className="flex flex-col h-full min-h-0 bg-white">
             {/* ── Unified header ─────────────────────────────────────── */}
-            <header className="shrink-0 border-b border-gray-200 bg-white px-3 py-2">
+            <header className="shrink-0 border-b border-black/[0.06] bg-white px-4 py-2.5 md:px-6">
                 <div className="flex items-center gap-2 min-w-0">
-                    <button
-                        type="button"
-                        onClick={() => router.push("/startups")}
-                        className="shrink-0 p-1.5 rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                        title="All startups"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                    </button>
-
-                    <div className="h-4 w-px bg-gray-200 shrink-0" />
+                    <nav aria-label="Breadcrumb" className="flex shrink-0 items-center gap-1 text-sm text-gray-500">
+                        <button
+                            type="button"
+                            onClick={() => router.push("/startups")}
+                            className="rounded-md px-1.5 py-0.5 transition-colors hover:bg-black/[0.04] hover:text-gray-900"
+                        >
+                            Startups
+                        </button>
+                        <ChevronRight className="h-3.5 w-3.5 text-gray-300" />
+                    </nav>
 
                     {editingName ? (
                         <form
@@ -444,9 +488,9 @@ export function StartupScreenerPage({ startupId }: Props) {
                                 ref={nameInputRef}
                                 value={nameInput}
                                 onChange={(e) => setNameInput(e.target.value)}
-                                className="text-sm font-semibold text-gray-900 border-b border-gray-400 outline-none bg-transparent w-36"
+                                className="w-48 border-b border-gray-400 bg-transparent font-eb-garamond text-xl font-medium text-gray-950 outline-none"
                             />
-                            <button type="submit" disabled={savingName} className="text-green-600">
+                            <button type="submit" disabled={savingName} className="text-emerald-600">
                                 <Check className="h-3.5 w-3.5" />
                             </button>
                             <button
@@ -468,7 +512,7 @@ export function StartupScreenerPage({ startupId }: Props) {
                                 <span className="text-sm text-red-500">{pageError}</span>
                             ) : (
                                 <>
-                                    <span className="text-sm font-semibold text-gray-900 truncate">
+                                    <span className="truncate font-eb-garamond text-xl font-medium text-gray-950">
                                         {(startup?.name as string) ?? "Startup"}
                                     </span>
                                     <button
@@ -490,7 +534,7 @@ export function StartupScreenerPage({ startupId }: Props) {
                         <button
                             type="button"
                             onClick={() => setCsvMenuOpen((o) => !o)}
-                            className="inline-flex items-center gap-1.5 text-xs text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
+                            className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] rounded-lg px-2.5 py-1.5 hover:bg-gray-50"
                         >
                             <File className="h-3.5 w-3.5" />
                             {pageLoading ? (
@@ -548,7 +592,7 @@ export function StartupScreenerPage({ startupId }: Props) {
                                                         screening ||
                                                         csv.parseStatus === "invalid"
                                                     }
-                                                    className="text-[11px] text-blue-600 hover:underline disabled:opacity-40 flex items-center gap-0.5"
+                                                    className="text-[11px] text-gray-700 hover:text-gray-950 hover:underline disabled:opacity-40 flex items-center gap-0.5"
                                                 >
                                                     <RefreshCw className="h-2.5 w-2.5" />
                                                     Screen
@@ -671,6 +715,7 @@ export function StartupScreenerPage({ startupId }: Props) {
                             showCoInvestor={showCoInvestor}
                             showVendor={showVendor}
                             onCsvSaveAndRescreen={handleCsvSaveAndRescreen}
+                            documentsRefreshKey={documentsRefreshKey}
                         />
                         <ScreeningFollowUpActions
                             startupId={startupId}

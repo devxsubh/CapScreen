@@ -62,7 +62,7 @@ export function StartupMentionMenu({
             : review > 0
             ? <span className="text-[10px] font-medium text-amber-600 bg-amber-50 rounded-full px-2 py-0.5">{review} review</span>
             : s.lastScreeningResult
-            ? <span className="text-[10px] font-medium text-green-600 bg-green-50 rounded-full px-2 py-0.5">clear</span>
+            ? <span className="text-[10px] font-medium text-emerald-600 bg-emerald-50 rounded-full px-2 py-0.5">clear</span>
             : <span className="text-[10px] text-gray-400">not screened</span>;
           return (
             <li key={s.id}>

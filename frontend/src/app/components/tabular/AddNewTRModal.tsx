@@ -212,7 +212,7 @@ export function AddNewTRModal({
 
     return createPortal(
         <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/20 backdrop-blur-xs">
-            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl flex flex-col h-[600px]">
+            <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[600px]">
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 pt-5 pb-2 shrink-0">
                     <div className="flex items-center gap-1.5 text-xs text-gray-400">
@@ -490,7 +490,7 @@ export function AddNewTRModal({
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploading}
-                                className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                                className="flex items-center gap-1.5 rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
                             >
                                 {uploading ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -514,7 +514,7 @@ export function AddNewTRModal({
                                     !title.trim() ||
                                     (underProject && !selectedProjectId)
                                 }
-                                className="rounded-lg bg-gray-900 px-5 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-40 transition-colors"
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-40 transition-colors"
                             >
                                 Create
                             </button>

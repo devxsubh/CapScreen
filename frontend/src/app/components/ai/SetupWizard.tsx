@@ -26,7 +26,7 @@ function PathCard({
         <button
             type="button"
             onClick={onClick}
-            className="flex h-full flex-col rounded-xl border border-gray-200 p-4 text-left transition-colors hover:border-black hover:bg-gray-50"
+            className="flex h-full flex-col rounded-xl border border-gray-200 p-4 text-left transition-colors hover:border-gray-950 hover:bg-gray-50"
         >
             <span className="flex items-center gap-2 text-base font-medium">
                 {icon}
@@ -104,14 +104,14 @@ export function SetupWizard({
                 {!path && (
                     <div className="grid gap-3 sm:grid-cols-2">
                         <PathCard
-                            icon={<HardDrive className="h-5 w-5 text-emerald-600" />}
+                            icon={<HardDrive className="h-5 w-5 text-gray-700" />}
                             title="On this computer"
                             points={["Private: nothing leaves this computer", "Free, no account needed", "Works offline"]}
                             caveat={`Needs a one-time download of 3–6 GB.${mem && mem < 12 ? ` With ${mem} GB of memory, answers take a little while.` : ""}`}
                             onClick={() => setPath("local")}
                         />
                         <PathCard
-                            icon={<Cloud className="h-5 w-5 text-sky-600" />}
+                            icon={<Cloud className="h-5 w-5 text-gray-700" />}
                             title="Cloud provider"
                             points={["Fastest and most capable answers", "No download", "Works on any computer"]}
                             caveat="Needs your own API key (paid usage). Cap-table details you ask the AI about are sent to the provider."

@@ -231,6 +231,8 @@ export function useScreenerChat({
         role: "user",
         content: message.content,
         files: message.files,
+        focus: message.focus,
+        workflow: message.workflow,
       };
 
       setMessages((prev) => [
@@ -249,6 +251,8 @@ export function useScreenerChat({
           m.role === "user" && m.files?.length
             ? `${m.content}\n\n[Attached: ${m.files.map((f) => f.filename).join(", ")}]`
             : m.content,
+        focus: m.focus,
+        workflow: m.workflow,
       }));
 
       turnRef.current = newTurn();

@@ -1,5 +1,6 @@
 // Shared TypeScript types for CapScreen compliance assistant
 
+import type { ChatFocus } from "@/lib/chatFocus";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 
 export interface AppCapTableCsvMeta {
@@ -130,6 +131,8 @@ export interface AppMessage {
   content: string;
   files?: { filename: string; document_id?: string }[];
   workflow?: { id: string; title: string };
+  /** Capability picked in the composer's Tools menu. */
+  focus?: ChatFocus;
   model?: string;
   /** Client-only cap-table text for screening; not persisted to chat history. */
   csvContent?: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Loader2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     aiApi,
@@ -18,6 +18,7 @@ import { ChatModelSection, OtherTasksSection } from "@/app/components/ai/RoleAss
 import { LocalModels } from "@/app/components/ai/LocalModels";
 import { ProviderList } from "@/app/components/ai/ProviderList";
 import { openExternal, useModelDownload } from "@/app/components/ai/useModelDownload";
+import { SettingsHeader } from "@/app/components/settings/SettingsParts";
 
 type Wizard = { open: boolean; path?: SetupPath; provider?: string };
 
@@ -34,6 +35,7 @@ export default function AiControlCenterPage() {
     const [savingPolicy, setSavingPolicy] = useState(false);
     const [expandProvider, setExpandProvider] = useState<string | null>(null);
     const [forceOtherTasks, setForceOtherTasks] = useState(false);
+    const [advancedOpen, setAdvancedOpen] = useState(false);
     const autoOpened = useRef(false);
 
     const checkHealth = useCallback(async (fresh = true) => {
@@ -106,6 +108,12 @@ export default function AiControlCenterPage() {
         );
     };
 
+    const openAdvancedAndReveal = (id: string) => {
+        setAdvancedOpen(true);
+        // Wait a tick so the advanced section mounts before scrolling.
+        requestAnimationFrame(() => requestAnimationFrame(() => reveal(id)));
+    };
+
     const setLocalOnly = async (on: boolean) => {
         setSavingPolicy(true);
         try {
@@ -144,15 +152,20 @@ export default function AiControlCenterPage() {
                 setWizard({ open: true, path: "local" });
                 return;
             case "download-model":
+                setAdvancedOpen(true);
                 if (await download.start(fix.model)) setNotice(`${fix.model} is downloaded.`);
                 return;
             case "add-key":
                 setExpandProvider(fix.provider);
-                reveal(`provider-${fix.provider}`);
+                openAdvancedAndReveal(`provider-${fix.provider}`);
                 return;
             case "edit-role":
-                if (role === "utility" || role === "embedding") setForceOtherTasks(true);
-                reveal(`role-${role}`);
+                if (role === "agent") {
+                    reveal(`role-${role}`);
+                    return;
+                }
+                setForceOtherTasks(true);
+                openAdvancedAndReveal(`role-${role}`);
                 return;
             case "turn-off-local-only":
                 if (confirm("Allow cloud AI?\n\nThis turns off Local-only mode. Cloud models you choose will receive cap-table details you ask the AI about.")) {
@@ -180,18 +193,18 @@ export default function AiControlCenterPage() {
         void refresh();
     };
 
-    // Hide dense sections only on first-run (wizard owns the screen). After setup, keep them while the wizard is open for "Change how AI runs".
-    const showDetails = Boolean(health && health.overall !== "not-set-up");
+    const configured = Boolean(health && health.overall !== "not-set-up");
+    // After setup: status + chat model. Wizard for "Change how AI runs" replaces that stack instead of duplicating it.
+    const showPrimary = configured && !wizard.open;
+    const firstRunWizard = wizard.open && health?.overall === "not-set-up";
 
     return (
-        <div className="flex h-full flex-col overflow-y-auto">
-            <header className="mx-auto flex w-full max-w-3xl shrink-0 flex-col px-6 pt-10 pb-4">
-                <h1 className="text-4xl font-medium font-eb-garamond">AI Control Center</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                    Choose where CapScreen&apos;s AI runs — on this computer, or with your own cloud API key.
-                </p>
-            </header>
-            <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 pb-16">
+        <div>
+            <SettingsHeader
+                title="AI Control"
+                description="Choose where CapScreen's AI runs — on this computer, or with your own cloud API key."
+            />
+            <div className="space-y-6">
                 {loadError && (
                     <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                         <span>Couldn&apos;t load AI settings: {loadError}</span>
@@ -218,7 +231,7 @@ export default function AiControlCenterPage() {
                     )
                 ) : (
                     <>
-                        {!(wizard.open && health.overall === "not-set-up") && (
+                        {!firstRunWizard && (
                             <AiStatusCard
                                 health={health}
                                 checking={checking}
@@ -249,30 +262,58 @@ export default function AiControlCenterPage() {
                             />
                         )}
 
-                        {showDetails && (
+                        {showPrimary && (
                             <>
                                 <ChatModelSection state={state} health={health} onChange={() => void refresh()} />
-                                <ProviderList
-                                    key={expandProvider ?? "providers"}
-                                    state={state}
-                                    onChange={() => void refresh()}
-                                    expandProvider={expandProvider}
-                                />
-                                {local && (
-                                    <LocalModels local={local} state={state} download={download} onChange={() => void refresh()} />
-                                )}
-                                <OtherTasksSection
-                                    key={forceOtherTasks ? "other-open" : "other"}
-                                    state={state}
-                                    health={health}
-                                    onChange={() => void refresh()}
-                                    forceOpen={forceOtherTasks}
-                                />
+
+                                <section className="border-t border-gray-100 pt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdvancedOpen((o) => !o)}
+                                        aria-expanded={advancedOpen}
+                                        className="flex w-full items-center justify-between text-left"
+                                    >
+                                        <span>
+                                            <span className="block text-xl font-medium">Advanced</span>
+                                            <span className="block text-sm text-gray-500">
+                                                API keys, on-device models, and models for background tasks and document search.
+                                            </span>
+                                        </span>
+                                        <ChevronDown
+                                            className={`h-5 w-5 shrink-0 text-gray-400 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                                        />
+                                    </button>
+                                    {advancedOpen && (
+                                        <div className="mt-6 space-y-10">
+                                            <ProviderList
+                                                key={expandProvider ?? "providers"}
+                                                state={state}
+                                                onChange={() => void refresh()}
+                                                expandProvider={expandProvider}
+                                            />
+                                            {local && (
+                                                <LocalModels
+                                                    local={local}
+                                                    state={state}
+                                                    download={download}
+                                                    onChange={() => void refresh()}
+                                                />
+                                            )}
+                                            <OtherTasksSection
+                                                key={forceOtherTasks ? "other-open" : "other"}
+                                                state={state}
+                                                health={health}
+                                                onChange={() => void refresh()}
+                                                forceOpen={forceOtherTasks}
+                                            />
+                                        </div>
+                                    )}
+                                </section>
                             </>
                         )}
                     </>
                 )}
-            </main>
+            </div>
         </div>
     );
 }

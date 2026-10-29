@@ -163,15 +163,14 @@ frontend/src/
   app/
     (pages)/
       assistant/            — compliance assistant (InitialView → ChatView)
-      startups/             — StartupsPage; [id] = StartupScreenerPage; [id]/assistant/chat/[chatId] = startup-scoped chat with documents
+      startups/             — StartupsPage; [id] = StartupScreenerPage (the one startup workspace); [id]/assistant/chat/[chatId] redirects to it
       tabular-reviews/      — review list + TRView
       workflows/            — WorkflowList + workflow editor
-      ai/                   — AI Control Center
-      settings/data/        — Data & Backup
+      settings/             — Settings: account, ai (AI Control Center), screening (thresholds), sanctions, data (backup & audit), about
       account/              — signed-in account (from the desktop shell)
     components/
       screen/               — ScreeningResultsPanel, OwnershipGraph, RiskTable, RiskCard, EntityDetailModal, …
-      startups/             — StartupsPage, StartupScreenerPage, StartupChatPanel, CSV views, banners
+      startups/             — StartupsPage, StartupScreenerPage, StartupChatPanel, StartupAnalysisDock, StartupDocumentsPanel, CSV views, banners
       assistant/            — ChatView, ChatInput, AssistantMessage, ApprovalCard, AgentPlan, side panel
       tabular/, workflows/, ai/, projects/ (ProjectExplorer), shared/
     hooks/
@@ -195,13 +194,17 @@ frontend/src/
 |---|---|---|
 | `/assistant`, `/assistant/chat/:id` | Compliance assistant | Primary chat shell |
 | `/startups` | `StartupsPage` | List + create startups |
-| `/startups/:id` | `StartupScreenerPage` | CSVs, screening results, scoped chat |
-| `/startups/:id/assistant/chat/:chatId` | Startup-scoped assistant chat | With the startup's documents |
+| `/startups/:id` | `StartupScreenerPage` | The startup workspace: chat on the left; Cap table, Graph, Entities, Flags and Documents tabs on the right. Choose startup, the Startups list and workflows run on a startup all open it |
+| `/startups/:id/assistant/chat/:chatId` | Redirect | Old startup chat links land on `/startups/:id` |
 | `/startups/:id/tabular-reviews/:reviewId`, `/tabular-reviews[/:id]` | Tabular review | |
 | `/workflows[/:id]` | Workflows | Built-ins come from `GET /workflows` |
-| `/ai` | AI Control Center | Providers, BYO keys, local models, model assignments, local-only mode |
-| `/settings/data` | Data & Backup | Sanctions lists/versions, background re-screening, encrypted backup/restore, audit export |
-| `/account` | Account | Signed-in account; password changes happen on the hosted portal |
+| `/settings/account` | Account | Signed-in account; password changes happen on the hosted portal (`/account` redirects here) |
+| `/settings/ai` | AI Control Center | Providers, BYO keys, local models, model assignments, local-only mode (`/ai` redirects here) |
+| `/settings/screening` | Screening | Match-score and ownership thresholds (never looser than OFAC 50% / UBO 25%); recorded on every result |
+| `/settings/sanctions` | Sanctions data | Sanctions lists/versions, background re-screening |
+| `/settings/connectors` | Connectors | Upcoming integrations (all coming soon); choose which appear in the chat's Files & Sources menu |
+| `/settings/data` | Backup & audit | Encrypted backup/restore, audit export |
+| `/settings/about` | About | Version, data folder, engine/AI status, diagnostics |
 
 ---
 
@@ -224,7 +227,7 @@ frontend/src/
 | Human approval for sensitive tools | ✅ | LangGraph `interrupt()` + `needsApproval` in `lib/tools/registry.ts`, `POST /chat/runs/:id/resume` |
 | Pluggable / local models | ✅ | `backend/src/lib/llm/providers/` |
 | Desktop app (Electron) | ✅ | `desktop/`, `docs/DESKTOP_PLAN.md` |
-| AI Control Center (BYO keys, local models) | ✅ | `/ai`, `backend/src/routes/aiControlCenter.ts` |
+| AI Control Center (BYO keys, local models) | ✅ | `/settings/ai`, `backend/src/routes/aiControlCenter.ts` |
 | Persistent agent memory | ✅ seeded | `.claude/agent-memory/project/` |
 | Document RAG | ✅ local embeddings | `backend/src/lib/rag/` |
 | Chat-first UI shell | ✅ restored | `frontend/.../assistant/` |

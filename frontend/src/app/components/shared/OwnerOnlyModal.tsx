@@ -40,11 +40,11 @@ export function OwnerOnlyModal({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/10 backdrop-blur-xs"
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/20 backdrop-blur-xs"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col"
+                className="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -81,7 +81,7 @@ export function OwnerOnlyModal({
                 <div className="flex justify-end gap-2 px-5 pb-5 pt-3">
                     <button
                         onClick={onClose}
-                        className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-700"
+                        className="rounded-lg bg-gray-950 px-4 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
                     >
                         OK
                     </button>

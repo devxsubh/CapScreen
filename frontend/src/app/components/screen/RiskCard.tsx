@@ -28,10 +28,10 @@ export function RiskCard({
   const [expanded, setExpanded] = useState(true);
 
   const isFlagged = entity.riskLevel === "flagged";
-  const headerBg = isFlagged ? "bg-red-50 border-red-200" : "bg-yellow-50 border-yellow-200";
+  const headerBg = isFlagged ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200";
   const badgeCls = isFlagged
     ? "bg-red-100 text-red-800"
-    : "bg-yellow-100 text-yellow-800";
+    : "bg-amber-100 text-amber-800";
 
   return (
     <div className={`rounded-lg border overflow-hidden ${headerBg}`}>
@@ -70,11 +70,11 @@ export function RiskCard({
       {expanded && (
         <div className="border-t bg-white px-5 py-4 space-y-4">
           {entity.exposureStatement && (
-            <div className="rounded-md bg-slate-50 border border-slate-200 px-3 py-2.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-1">
+            <div className="rounded-md bg-gray-50 border border-gray-200 px-3 py-2.5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                 Ownership exposure
               </p>
-              <p className="text-sm text-slate-800 leading-relaxed">
+              <p className="text-sm text-gray-800 leading-relaxed">
                 {entity.exposureStatement}
               </p>
             </div>
@@ -94,7 +94,7 @@ export function RiskCard({
                 <button
                   type="button"
                   onClick={onViewDetails}
-                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                  className="inline-flex items-center gap-1 text-xs text-gray-700 hover:text-gray-950 hover:underline"
                 >
                   Expand
                   <ExternalLink className="h-3 w-3" />

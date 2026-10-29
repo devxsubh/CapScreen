@@ -18,7 +18,7 @@ interface Props {
 }
 
 const FLAG_STYLES = {
-    green: "bg-green-500",
+    green: "bg-emerald-500",
     grey: "bg-gray-400",
     yellow: "bg-amber-400",
     red: "bg-red-500",
@@ -85,7 +85,7 @@ function CellMarkdown({
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 underline"
+                        className="text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900"
                         {...props}
                     >
                         {children}
@@ -201,7 +201,7 @@ export function TabularCell({
                         onStatusChange(e.target.value);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+                    className="w-full text-xs border border-gray-200 rounded px-1.5 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-gray-400"
                 >
                     <option value="pending">pending</option>
                     <option value="cleared">cleared</option>

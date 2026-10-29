@@ -49,10 +49,26 @@ const BASE_SYSTEM =
   `When you call web_search, you MUST include every source URL from the results as a markdown hyperlink [title](url) in your response. Never summarise web results without citing links.\n\n` +
   `CSV ingest: any CSV format is accepted — the system auto-detects cap tables or flat entity lists. Missing required fields block screening.`;
 
+/** Capability picked in the composer's Tools menu (frontend lib/chatFocus.ts). */
+const FOCUS_INSTRUCTIONS = {
+  screen:
+    "Run a sanctions screen: call screen_cap_table on the attached or mentioned cap table, then summarise totals and counts by risk tier (flagged / review / clear).",
+  review:
+    "Concentrate on flagged and review entities: for each, explain the match, its ownership path and what a human reviewer should verify. Do not decide guilt.",
+  ownership:
+    "Trace ownership chains through SPVs, trusts and offshore holdings to the ultimate beneficial owners, and apply the OFAC 50% and beneficial-owner thresholds.",
+  research:
+    "Use web_search for current public information (adverse media, sanctions announcements, company background) and cite every source as a markdown link.",
+  memo:
+    "Produce a document with generate_document (IC compliance memo or AML summary) from the screening results, with review items and next steps.",
+} as const;
+type ChatFocus = keyof typeof FOCUS_INSTRUCTIONS;
+
 type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   workflow?: { id: string; title: string } | null;
+  focus?: ChatFocus;
 };
 
 function parseAssistantMessages(
@@ -81,7 +97,9 @@ function parseAssistantMessages(
       row.workflow !== null
         ? (row.workflow as { id: string; title: string })
         : undefined;
-    out.push({ role: row.role, content, workflow });
+    const focus =
+      typeof row.focus === "string" && row.focus in FOCUS_INSTRUCTIONS ? (row.focus as ChatFocus) : undefined;
+    out.push({ role: row.role, content, workflow, focus });
   }
 
   if (out.length === 0) {
@@ -197,6 +215,9 @@ assistantChatRouter.post("/", async (req, res) => {
   let system = buildSystemPrompt(BASE_SYSTEM, ctx, assistantRegistry);
 
   const lastUser = [...validMessages].reverse().find((m) => m.role === "user");
+  if (lastUser?.focus) {
+    system += `\n\nThe user chose a focus for this message. ${FOCUS_INSTRUCTIONS[lastUser.focus]}`;
+  }
   if (lastUser?.workflow?.id) {
     system += `\n\nThe user's latest message selected workflow "${lastUser.workflow.title}" (id: ${lastUser.workflow.id}). Call read_workflow with that id immediately — do not ask which workflow to run.`;
 

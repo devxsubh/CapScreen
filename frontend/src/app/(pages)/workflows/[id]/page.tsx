@@ -229,21 +229,25 @@ export default function WorkflowDetailPage({ params }: Props) {
     return (
         <div className="flex flex-col h-full">
             {/* Page header */}
-            <div className="flex items-center justify-between px-8 py-4 shrink-0">
-                <div className="flex items-center gap-1.5 text-2xl font-medium font-serif">
+            <div className="shrink-0 px-6 pb-3 pt-5 md:px-10">
+                <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-gray-500">
                     <button
+                        type="button"
                         onClick={() => router.push("/workflows")}
-                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                        className="-ml-1.5 rounded-md px-1.5 py-0.5 transition-colors hover:bg-black/[0.04] hover:text-gray-900"
                     >
                         Workflows
                     </button>
                     <span className="text-gray-300">›</span>
+                </nav>
+                <div className="mt-1 flex items-center justify-between gap-4">
+                <h1 className="min-w-0 truncate font-eb-garamond text-3xl font-medium tracking-tight text-gray-950">
                     {readOnly ? (
-                        <span className="text-gray-900 truncate max-w-xs">{workflow.title}</span>
+                        workflow.title
                     ) : (
                         <RenameableTitle value={workflow.title} onCommit={handleTitleCommit} />
                     )}
-                </div>
+                </h1>
 
                 <div className="flex items-center gap-3">
                     {/* Save status */}
@@ -255,6 +259,7 @@ export default function WorkflowDetailPage({ params }: Props) {
                               : ""}
                     </span>
 
+                </div>
                 </div>
             </div>
 
@@ -358,7 +363,7 @@ export default function WorkflowDetailPage({ params }: Props) {
                                     {!readOnly && (
                                         <button
                                             onClick={() => setAddColumnOpen(true)}
-                                            className="mt-4 inline-flex items-center gap-1 rounded-full bg-gray-900 px-3 py-1 text-xs font-medium text-white hover:bg-gray-700 transition-colors shadow-md"
+                                            className="mt-4 inline-flex items-center gap-1 rounded-full bg-gray-950 px-3 py-1 text-xs font-medium text-white hover:bg-gray-800 transition-colors shadow-md"
                                         >
                                             + Add Column
                                         </button>

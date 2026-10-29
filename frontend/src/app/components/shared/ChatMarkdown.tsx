@@ -109,7 +109,7 @@ export function ChatMarkdown({ text, className = "" }: ChatMarkdownProps) {
           a: ({ node, href, children, ...props }) => (
             <a
               href={href}
-              className="text-blue-600 hover:text-blue-700 underline"
+              className="text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900"
               target="_blank"
               rel="noopener noreferrer"
               {...props}

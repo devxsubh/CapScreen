@@ -3,9 +3,15 @@ import type {
   ScreeningResult,
 } from "@/lib/screenerTypes";
 import { apiBase } from "@/lib/apiBase";
+import type { ChatFocus } from "@/lib/chatFocus";
 import { resumeAgentRun } from "@/app/lib/capScreenApi";
 
-export type ChatMessage = { role: "user" | "assistant"; content: string };
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+  focus?: ChatFocus;
+  workflow?: { id: string; title: string };
+};
 
 const API_BASE = apiBase();
 
