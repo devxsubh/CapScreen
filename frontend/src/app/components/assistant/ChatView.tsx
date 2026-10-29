@@ -17,7 +17,6 @@ import {
 import { NewStartupModal } from "@/app/components/startups/NewStartupModal";
 import type {
     AppCitationAnnotation,
-    AppEditAnnotation,
     AppMessage,
 } from "../shared/types";
 import type { ScreeningResult } from "@/lib/screenerTypes";
@@ -26,7 +25,6 @@ import {
     type AssistantStartupHandoff,
 } from "@/lib/assistantStartupHandoff";
 import { useSidebar } from "@/app/contexts/SidebarContext";
-import { invalidateDocxBytes } from "@/app/hooks/useFetchDocxBytes";
 import { latestScreeningFromMessages } from "@/lib/assistantScreening";
 import { shouldShowMessageOptions } from "@/lib/parseMessageOptions";
 
@@ -65,15 +63,6 @@ export function ChatView({
     const [workflowModalInitialId, setWorkflowModalInitialId] = useState<
         string | undefined
     >();
-    const [reloadingDocIds, setReloadingDocIds] = useState<Set<string>>(
-        () => new Set(),
-    );
-    // Per-edit in-flight set — disables Accept/Reject on only the one
-    // edit currently being resolved, so sibling edits in the same message
-    // (and their twins in DocPanel) stay clickable.
-    const [reloadingEditIds, setReloadingEditIds] = useState<Set<string>>(
-        () => new Set(),
-    );
     const { setSidebarOpen } = useSidebar();
 
     useEffect(() => {
@@ -249,25 +238,6 @@ export function ChatView({
     );
 
     /**
-     * Open a tab showing a single tracked change. Called from
-     * AssistantMessage when the user clicks an EditCard's View button.
-     */
-    const openEditor = useCallback(
-        (ann: AppEditAnnotation, filename: string) => {
-            upsertTab({
-                kind: "edit",
-                id: ann.document_id,
-                documentId: ann.document_id,
-                filename,
-                versionId: ann.version_id ?? null,
-                versionNumber: ann.version_number ?? null,
-                edit: ann,
-            });
-        },
-        [upsertTab],
-    );
-
-    /**
      * Open a tab showing a document without targeting a specific
      * citation/edit — used by the download-card click.
      */
@@ -324,80 +294,6 @@ export function ChatView({
         }
     }, [messages, openDocument]);
 
-    const [resolvedEditStatuses, setResolvedEditStatuses] = useState<
-        Record<string, "accepted" | "rejected">
-    >({});
-
-    const handleEditResolveStart = useCallback(
-        (args: {
-            editId: string;
-            documentId: string;
-            verb: "accept" | "reject";
-        }) => {
-            setReloadingDocIds((prev) => {
-                if (prev.has(args.documentId)) return prev;
-                const next = new Set(prev);
-                next.add(args.documentId);
-                return next;
-            });
-            setReloadingEditIds((prev) => {
-                if (prev.has(args.editId)) return prev;
-                const next = new Set(prev);
-                next.add(args.editId);
-                return next;
-            });
-        },
-        [],
-    );
-
-    const handleEditResolved = useCallback(
-        (args: {
-            editId: string;
-            documentId: string;
-            status: "accepted" | "rejected";
-            versionId: string | null;
-            downloadUrl: string | null;
-        }) => {
-            setResolvedEditStatuses((prev) => ({
-                ...prev,
-                [args.editId]: args.status,
-            }));
-            setReloadingDocIds((prev) => {
-                if (!prev.has(args.documentId)) return prev;
-                const next = new Set(prev);
-                next.delete(args.documentId);
-                return next;
-            });
-            setReloadingEditIds((prev) => {
-                if (!prev.has(args.editId)) return prev;
-                const next = new Set(prev);
-                next.delete(args.editId);
-                return next;
-            });
-            // Propagate the new status onto any open edit-tab for this
-            // edit so DocPanel's Accept/Reject buttons flip and disable
-            // (their sync effect keys off edit.status). Without this, a
-            // resolve triggered from the inline EditCard or BulkEditActions
-            // leaves the panel buttons looking live.
-            setTabs((prev) =>
-                prev.map((t) =>
-                    t.kind === "edit" && t.edit.edit_id === args.editId
-                        ? {
-                              ...t,
-                              edit: { ...t.edit, status: args.status },
-                          }
-                        : t,
-                ),
-            );
-            // Accept/reject mutates bytes for this document's current
-            // version; drop the cache so the next DocxView render (or an
-            // explicit re-open) fetches the fresh file.
-            invalidateDocxBytes(args.documentId);
-        },
-        [],
-    );
-
-
     const patchTab = useCallback(
         (
             tabId: string,
@@ -405,7 +301,7 @@ export function ChatView({
                 Pick<
                     Extract<
                         AssistantSidePanelTab,
-                        { kind: "document" | "citation" | "edit" }
+                        { kind: "document" | "citation" }
                     >,
                     "warning" | "initialScrollTop"
                 >
@@ -420,39 +316,6 @@ export function ChatView({
                 copy[idx] = { ...existing, ...patch };
                 return copy;
             });
-        },
-        [],
-    );
-
-    const handleEditError = useCallback(
-        (args: {
-            editId?: string;
-            documentId: string;
-            versionId?: string | null;
-            message: string;
-        }) => {
-            setTabs((prev) =>
-                prev.map((t) =>
-                    t.kind !== "screening" &&
-                    t.documentId === args.documentId
-                        ? { ...t, warning: args.message }
-                        : t,
-                ),
-            );
-            setReloadingDocIds((prev) => {
-                if (!prev.has(args.documentId)) return prev;
-                const next = new Set(prev);
-                next.delete(args.documentId);
-                return next;
-            });
-            if (args.editId) {
-                setReloadingEditIds((prev) => {
-                    if (!prev.has(args.editId!)) return prev;
-                    const next = new Set(prev);
-                    next.delete(args.editId!);
-                    return next;
-                });
-            }
         },
         [],
     );
@@ -701,25 +564,8 @@ export function ChatView({
                                                     );
                                                     setWorkflowModalOpen(true);
                                                 }}
-                                                onEditViewClick={openEditor}
                                                 onOpenDocument={openDocument}
                                                 onOpenScreening={openScreeningTab}
-                                                onEditResolveStart={
-                                                    handleEditResolveStart
-                                                }
-                                                onEditResolved={
-                                                    handleEditResolved
-                                                }
-                                                onEditError={handleEditError}
-                                                isDocReloading={(docId) =>
-                                                    reloadingDocIds.has(docId)
-                                                }
-                                                isEditReloading={(editId) =>
-                                                    reloadingEditIds.has(editId)
-                                                }
-                                                resolvedEditStatuses={
-                                                    resolvedEditStatuses
-                                                }
                                                 showOptionChips={shouldShowMessageOptions(
                                                     i,
                                                     messages,
@@ -767,6 +613,7 @@ export function ChatView({
                                 onSubmit={handleChat}
                                 onCancel={cancel}
                                 isLoading={isResponseLoading}
+                                showProviderMenu
                             />
                             <div className="py-3 text-center">
                                 <p className="text-xs text-gray-500">
@@ -825,15 +672,6 @@ export function ChatView({
                                 ? openStartupHandoffModal
                                 : undefined
                         }
-                        isEditorReloading={(documentId) =>
-                            reloadingDocIds.has(documentId)
-                        }
-                        isEditReloading={(editId) =>
-                            reloadingEditIds.has(editId)
-                        }
-                        onEditResolveStart={handleEditResolveStart}
-                        onEditResolved={handleEditResolved}
-                        onEditError={handleEditError}
                         onWarningDismiss={handleWarningDismiss}
                         onScrollChange={handleScrollChange}
                     />

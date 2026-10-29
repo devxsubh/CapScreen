@@ -1,4 +1,3 @@
-import { getAuthHeaders } from "@/lib/apiAuth";
 import type { ScreenPurpose } from "./screenerInitialPrompt";
 import type {
   ColumnMapping,
@@ -69,13 +68,11 @@ export interface CsvRecord {
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const authHeaders = await getAuthHeaders();
   const { headers: initHeaders, ...restInit } = init ?? {};
   const resp = await fetch(`${API_BASE}${path}`, {
     ...restInit,
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders,
       ...(initHeaders as Record<string, string> | undefined),
     },
   });
@@ -226,9 +223,7 @@ export function screeningReportCsvUrl(startupId: string): string {
 export async function downloadScreeningReportCsv(
   startupId: string,
 ): Promise<void> {
-  const authHeaders = await getAuthHeaders();
   const resp = await fetch(screeningReportCsvUrl(startupId), {
-    headers: authHeaders,
   });
   if (!resp.ok) {
     const err = (await resp.json().catch(() => ({}))) as { detail?: string };
@@ -316,14 +311,12 @@ export async function uploadRagDocument(
   startupId: string,
   file: File,
 ): Promise<RagDocumentRecord> {
-  const authHeaders = await getAuthHeaders();
   const form = new FormData();
   form.append("file", file);
   const resp = await fetch(
     `${API_BASE}/api/startups/${startupId}/rag-documents`,
     {
       method: "POST",
-      headers: authHeaders,
       body: form,
     },
   );
@@ -365,10 +358,9 @@ export interface StartupDocument {
 export async function generateIcMemo(
   startupId: string,
 ): Promise<StartupDocument> {
-  const authHeaders = await getAuthHeaders();
   const resp = await fetch(`${API_BASE}/api/startups/${startupId}/ic-memo`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders },
+    headers: { "Content-Type": "application/json" },
   });
   if (resp.status === 404) {
     throw new Error(
@@ -385,10 +377,9 @@ export async function generateIcMemo(
 export async function getLatestIcMemo(
   startupId: string,
 ): Promise<StartupDocument | null> {
-  const authHeaders = await getAuthHeaders();
   const resp = await fetch(
     `${API_BASE}/api/startups/${startupId}/ic-memo/latest`,
-    { headers: { "Content-Type": "application/json", ...authHeaders } },
+    { headers: { "Content-Type": "application/json" } },
   );
   if (resp.status === 404) return null;
   if (!resp.ok) {

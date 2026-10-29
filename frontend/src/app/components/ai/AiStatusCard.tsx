@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ROLE_INFO, type AiHealth, type FixAction, type LlmRole, type RoleHealth } from "@/lib/aiControlCenterApi";
 import type { ModelDownloader } from "./useModelDownload";
 
-const DOT: Record<RoleHealth["status"], string> = {
-    ok: "bg-emerald-500",
-    warning: "bg-amber-500",
-    error: "bg-red-500",
-    off: "bg-gray-300",
-};
-
 function headline(h: AiHealth): { title: string; subtitle: string; tone: "ok" | "warn" | "new" } {
     if (h.overall === "not-set-up") {
         return {
@@ -35,47 +28,31 @@ function fixId(f: FixAction): string {
     return f.action === "download-model" ? `${f.action}:${f.model}` : f.action === "add-key" ? `${f.action}:${f.provider}` : f.action;
 }
 
-function RoleLine({
+function IssueRow({
     r,
-    sameAsAgent,
     showFix,
     busyFix,
     download,
     onFix,
 }: {
     r: RoleHealth;
-    sameAsAgent: boolean;
     showFix: boolean;
     busyFix: string | null;
     download: ModelDownloader;
     onFix: (fix: FixAction, role: LlmRole) => void;
 }) {
+    if (r.status === "ok" || r.status === "off") return null;
     const downloading = r.fix?.action === "download-model" && download.current?.model === r.fix.model;
     const fixKey = r.fix ? `${r.role}:${r.fix.action}` : null;
     return (
-        <li className="flex items-start gap-3 py-3">
-            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${DOT[r.status]}`} aria-hidden />
+        <li className="flex items-start gap-3 py-2.5">
             <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="text-sm font-medium text-gray-900">{ROLE_INFO[r.role].title}</span>
-                    {r.binding && (
-                        <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                            {r.binding.local ? <HardDrive className="h-3 w-3" /> : <Cloud className="h-3 w-3" />}
-                            {sameAsAgent ? "same model as the assistant" : `${r.binding.model} · ${r.binding.local ? "on this computer" : r.binding.label}`}
-                        </span>
-                    )}
-                </div>
-                {r.status === "ok" ? (
-                    <p className="text-xs text-emerald-700">Ready</p>
-                ) : (
-                    <p className="text-xs text-gray-600">
-                        <span className={r.status === "error" ? "font-medium text-red-700" : r.status === "warning" ? "font-medium text-amber-700" : "text-gray-700"}>
-                            {r.title}.
-                        </span>{" "}
-                        {/* The first row with this cause already explains it. */}
-                        {r.fix && !showFix ? "" : r.detail}
-                    </p>
-                )}
+                <p className="text-sm text-gray-800">
+                    <span className="font-medium">{ROLE_INFO[r.role].short}</span>
+                    <span className="text-gray-500"> — </span>
+                    <span className={r.status === "error" ? "text-red-700" : "text-amber-800"}>{r.title}.</span>
+                    {showFix && r.detail ? <span className="text-gray-600"> {r.detail}</span> : null}
+                </p>
                 {downloading && download.current && (
                     <div className="mt-2 max-w-sm">
                         <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
@@ -133,6 +110,7 @@ export function AiStatusCard({
 }) {
     const h = headline(health);
     const roles = (["agent", "utility", "embedding"] as LlmRole[]).map((r) => health.roles[r]);
+    const issues = roles.filter((r) => r.status === "error" || r.status === "warning");
     const agent = health.roles.agent;
 
     const tone =
@@ -149,6 +127,16 @@ export function AiStatusCard({
                 <div className="min-w-0 flex-1">
                     <h2 className="text-lg font-medium">{h.title}</h2>
                     <p className="mt-0.5 text-sm text-gray-600">{h.subtitle}</p>
+                    {health.overall !== "not-set-up" && agent.binding && (
+                        <p className="mt-2 inline-flex items-center gap-1.5 text-xs text-gray-600">
+                            {agent.binding.local ? <HardDrive className="h-3.5 w-3.5" /> : <Cloud className="h-3.5 w-3.5" />}
+                            <span>
+                                Chat: <span className="font-medium text-gray-800">{agent.binding.model}</span>
+                                {" · "}
+                                {agent.binding.local ? "on this computer" : agent.binding.label}
+                            </span>
+                        </p>
+                    )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                     <Button variant="ghost" size="sm" onClick={onRecheck} disabled={checking} className="h-8 text-xs text-gray-600" title="Check again">
@@ -164,21 +152,15 @@ export function AiStatusCard({
                         <Sparkles className="h-4 w-4" /> Set up AI
                     </Button>
                 </div>
-            ) : (
+            ) : issues.length > 0 ? (
                 <>
                     <ul className="mt-3 divide-y divide-black/5 rounded-lg border border-black/5 bg-white/70 px-4">
-                        {roles.map((r, i) => {
-                            const earlier = roles.slice(0, i).some((o) => o.fix && r.fix && fixId(o.fix) === fixId(r.fix));
+                        {issues.map((r, i) => {
+                            const earlier = issues.slice(0, i).some((o) => o.fix && r.fix && fixId(o.fix) === fixId(r.fix));
                             return (
-                                <RoleLine
+                                <IssueRow
                                     key={r.role}
                                     r={r}
-                                    sameAsAgent={
-                                        r.role === "utility" &&
-                                        !!agent.binding &&
-                                        r.binding?.provider === agent.binding.provider &&
-                                        r.binding?.model === agent.binding.model
-                                    }
                                     showFix={!earlier}
                                     busyFix={busyFix}
                                     download={download}
@@ -193,7 +175,7 @@ export function AiStatusCard({
                         </p>
                     )}
                 </>
-            )}
+            ) : null}
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-black/5 pt-4">
                 <label className="flex cursor-pointer select-none items-start gap-3">

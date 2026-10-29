@@ -12,7 +12,6 @@ import {
 import type {
   ColumnMapping,
   CsvIngestResult,
-  CsvKind,
   ParseSource,
 } from "../../types/screening";
 

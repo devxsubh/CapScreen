@@ -97,8 +97,6 @@ backend, clean shutdown (no orphaned sidecars).
   current OFAC/EU lists — the demo data needs a real or fixture-backed match.
 - Deploy the auth service to Vercel and set `capscreenAuthUrl` in `desktop/package.json` before
   building installers (until then packaged builds stop at the sign-in screen).
-- Unused server-era code still in the tree: frontend login/signup pages (sign-in now happens on the
-  hosted portal), `docker-compose.yml`, `backend/Dockerfile`, Cloudflare/OpenNext config.
 
 ## Accounts (2026-10-25)
 

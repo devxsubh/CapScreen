@@ -17,8 +17,8 @@ Compare this repo against the target compliance-platform patterns (chat-first UI
 | Area | Check |
 |---|---|
 | Chat UI | `assistant/InitialView`, `ChatView`, `ChatInput`, workflows modal |
-| Agent loop | `backend/src/lib/llm/agent.ts`, `chatTools.ts` |
-| Tools | Count tools in `SCREENER_TOOLS`; any document retrieval tools? |
+| Agent loop | `backend/src/lib/agent/agentGraph.ts`, `lib/agent/runTools.ts` |
+| Tools | Count tools registered in `backend/src/lib/tools/index.ts`; any document retrieval tools? |
 | Memory | `.claude/agent-memory/` populated? `MEMORY.md` indexes? |
 | RAG | Any `embedding`, `pgvector`, `chunk` services? |
 | Persistence | `startups.ts`, `lastScreeningResult`, chat history in DB? |

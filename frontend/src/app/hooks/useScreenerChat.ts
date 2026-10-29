@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { streamChatMessage } from "@/app/lib/screenerApi";
+import {
+  resumeChatTurn,
+  streamChatMessage,
+  type ChatStreamHandlers,
+} from "@/app/lib/screenerApi";
 import { getStartupChat, saveStartupChat } from "@/lib/startupsApi";
 import { createAuditLog } from "@/app/lib/auditLogApi";
 import type {
@@ -20,6 +24,29 @@ interface UseScreenerChatOptions {
   }) => void;
 }
 
+/** What the current assistant message has collected so far (kept across an approval pause). */
+type TurnState = {
+  toolEvents: AssistantEvent[];
+  progress: ScreeningProgressEvent[];
+  text: string;
+};
+
+const newTurn = (): TurnState => ({ toolEvents: [], progress: [], text: "" });
+
+/** A pending approval the user didn't answer before moving on is retired. */
+function skipPendingApprovals(messages: ScreenerMessage[]): ScreenerMessage[] {
+  return messages.map((m) =>
+    m.events?.some((e) => e.type === "approval_request" && e.status === "pending")
+      ? {
+          ...m,
+          events: m.events.map((e) =>
+            e.type === "approval_request" && e.status === "pending" ? { ...e, status: "skipped" as const } : e,
+          ),
+        }
+      : m,
+  );
+}
+
 export function useScreenerChat({
   startupId,
   onDocumentCreated,
@@ -34,6 +61,7 @@ export function useScreenerChat({
   const csvRef = useRef<string | null>(null);
   const screeningResultRef = useRef<ScreeningResult | null>(null);
   const messagesRef = useRef<ScreenerMessage[]>([]);
+  const turnRef = useRef<TurnState>(newTurn());
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -82,6 +110,119 @@ export function useScreenerChat({
     });
   }, []);
 
+  /** Replace the last (assistant) message's events and text. */
+  const updateLastAssistant = useCallback(
+    (events: AssistantEvent[], content?: string, persist = false) => {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (!last || last.role !== "assistant") return prev;
+        const updated = [
+          ...prev.slice(0, -1),
+          { ...last, events, content: content ?? last.content, error: undefined },
+        ];
+        if (persist) persistMessages(updated);
+        return updated;
+      });
+    },
+    [persistMessages],
+  );
+
+  /**
+   * Streams one agent turn into the last assistant message. Used for a new
+   * message and for continuing after an approval, so both render the same way.
+   */
+  const runTurn = useCallback(
+    async (start: (handlers: ChatStreamHandlers, signal: AbortSignal) => Promise<void>) => {
+      const turn = turnRef.current;
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setIsResponseLoading(true);
+      setIsScreeningActive(false);
+
+      const progressEvent = (streaming: boolean): AssistantEvent[] =>
+        turn.progress.length > 0
+          ? [{ type: "screening_progress", progressHistory: [...turn.progress], isStreaming: streaming }]
+          : [];
+      const showWorking = () =>
+        updateLastAssistant([...turn.toolEvents, ...progressEvent(true), { type: "thinking", isStreaming: true }]);
+
+      try {
+        await start(
+          {
+            onToken: (text) => {
+              turn.text += text;
+              updateLastAssistant(
+                [...turn.toolEvents, ...progressEvent(false), { type: "content", text: turn.text, isStreaming: true }],
+                turn.text,
+              );
+            },
+            onToolCall: (name) => {
+              turn.toolEvents.push({ type: "tool_call_start", name, isStreaming: false });
+              if (name === "screen_cap_table") {
+                turn.progress.length = 0;
+                setIsScreeningActive(true);
+              }
+              showWorking();
+            },
+            onScreeningProgress: (event) => {
+              turn.progress.push(event);
+              showWorking();
+            },
+            onDocumentCreated: (document) => {
+              turn.toolEvents.push({ type: "document_created", document });
+              onDocumentCreated?.(document);
+              showWorking();
+            },
+            onApprovalRequired: (runId, calls) => {
+              turn.toolEvents.push({ type: "approval_request", runId, calls, status: "pending" });
+            },
+            onScreeningResult: (result) => {
+              setScreeningResult(result);
+              screeningResultRef.current = result;
+              setIsScreeningActive(false);
+              csvRef.current = null;
+              if (startupId) {
+                createAuditLog({
+                  startupId,
+                  eventType: "screening_completed",
+                  details: {
+                    totalEntities: result.totalEntities,
+                    flaggedCount: result.flaggedCount,
+                    reviewCount: result.reviewCount,
+                    clearCount: result.clearCount,
+                  },
+                }).catch(() => {});
+              }
+            },
+          },
+          controller.signal,
+        );
+
+        updateLastAssistant(
+          [...turn.toolEvents, ...progressEvent(false), { type: "content", text: turn.text, isStreaming: false }],
+          turn.text,
+          true,
+        );
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        const msg = err instanceof Error ? err.message : "Request failed";
+        setMessages((prev) => {
+          const updated = [
+            ...prev.slice(0, -1),
+            { role: "assistant" as const, content: "", error: msg, events: [{ type: "content" as const, text: msg }] },
+          ];
+          persistMessages(updated);
+          return updated;
+        });
+      } finally {
+        setIsResponseLoading(false);
+        setIsScreeningActive(false);
+        abortRef.current = null;
+      }
+    },
+    [startupId, persistMessages, onDocumentCreated, updateLastAssistant],
+  );
+
   const handleChat = useCallback(
     async (message: ScreenerMessage, csvContent?: string | null) => {
       if (csvContent) csvRef.current = csvContent;
@@ -93,7 +234,7 @@ export function useScreenerChat({
       };
 
       setMessages((prev) => [
-        ...prev,
+        ...skipPendingApprovals(prev),
         userMsg,
         {
           role: "assistant",
@@ -101,8 +242,6 @@ export function useScreenerChat({
           events: [{ type: "thinking", isStreaming: true }],
         },
       ]);
-      setIsResponseLoading(true);
-      setIsScreeningActive(false);
 
       const apiMessages = [...messagesRef.current, userMsg].map((m) => ({
         role: m.role as "user" | "assistant",
@@ -112,165 +251,34 @@ export function useScreenerChat({
             : m.content,
       }));
 
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      const toolCallEvents: AssistantEvent[] = [];
-      const screeningProgressEvents: ScreeningProgressEvent[] = [];
-      let accumulatedText = "";
-      let latestScreeningResult: ScreeningResult | null = null;
-
-      const pushAssistantEvents = (streaming: boolean) => {
-        setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last.role !== "assistant") return prev;
-          const events: AssistantEvent[] = [...toolCallEvents];
-          if (screeningProgressEvents.length > 0) {
-            events.push({
-              type: "screening_progress",
-              progressHistory: [...screeningProgressEvents],
-              isStreaming: streaming,
-            });
-          }
-          events.push({ type: "thinking", isStreaming: streaming });
-          updated[updated.length - 1] = { ...last, events };
-          return updated;
-        });
-      };
-
-      try {
-        await streamChatMessage({
+      turnRef.current = newTurn();
+      await runTurn((handlers, signal) =>
+        streamChatMessage({
+          ...handlers,
           messages: apiMessages,
           screeningResult: screeningResultRef.current,
           csvContent: csvContent ?? csvRef.current,
           startupId: startupId ?? null,
-          signal: controller.signal,
-
-          onDocumentCreated: (document) => {
-            toolCallEvents.push({ type: "document_created", document });
-            onDocumentCreated?.(document);
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role !== "assistant") return prev;
-              updated[updated.length - 1] = {
-                ...last,
-                events: [
-                  ...toolCallEvents,
-                  { type: "thinking", isStreaming: true },
-                ],
-              };
-              return updated;
-            });
-          },
-
-          onToolCall: (name: string) => {
-            toolCallEvents.push({ type: "tool_call_start", name, isStreaming: false });
-            if (name === "screen_cap_table") {
-              screeningProgressEvents.length = 0;
-              setIsScreeningActive(true);
-            }
-            pushAssistantEvents(true);
-          },
-
-          onScreeningProgress: (event) => {
-            screeningProgressEvents.push(event);
-            pushAssistantEvents(true);
-          },
-
-          onToken: (text: string) => {
-            accumulatedText += text;
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last.role !== "assistant") return prev;
-              updated[updated.length - 1] = {
-                ...last,
-                content: accumulatedText,
-                events: [
-                  ...toolCallEvents,
-                  {
-                    type: "content",
-                    text: accumulatedText,
-                    isStreaming: true,
-                  },
-                ],
-              };
-              return updated;
-            });
-          },
-
-          onScreeningResult: (result: ScreeningResult) => {
-            latestScreeningResult = result;
-            setScreeningResult(result);
-            screeningResultRef.current = result;
-            setIsScreeningActive(false);
-            csvRef.current = null;
-            if (startupId) {
-              createAuditLog({
-                startupId,
-                eventType: "screening_completed",
-                details: {
-                  totalEntities: result.totalEntities,
-                  flaggedCount: result.flaggedCount,
-                  reviewCount: result.reviewCount,
-                  clearCount: result.clearCount,
-                },
-              }).catch(() => {});
-            }
-          },
-        });
-
-        const finalEvents: AssistantEvent[] = [...toolCallEvents];
-        if (screeningProgressEvents.length > 0) {
-          finalEvents.push({
-            type: "screening_progress",
-            progressHistory: [...screeningProgressEvents],
-            isStreaming: false,
-          });
-        }
-        finalEvents.push({
-          type: "content",
-          text: accumulatedText,
-          isStreaming: false,
-        });
-
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: "assistant",
-            content: accumulatedText,
-            events: finalEvents,
-          };
-          persistMessages(updated);
-          return updated;
-        });
-
-        void latestScreeningResult;
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return null;
-        const msg = err instanceof Error ? err.message : "Request failed";
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: "assistant",
-            content: "",
-            error: msg,
-            events: [{ type: "content", text: msg }],
-          };
-          persistMessages(updated);
-          return updated;
-        });
-      } finally {
-        setIsResponseLoading(false);
-        setIsScreeningActive(false);
-        abortRef.current = null;
-      }
-
+          signal,
+        }),
+      );
       return null;
     },
-    [startupId, persistMessages, onDocumentCreated],
+    [startupId, runTurn],
+  );
+
+  /** Allow / Deny a paused tool call, then stream the rest of the answer. */
+  const answerApproval = useCallback(
+    async (runId: string, approved: boolean) => {
+      const status = approved ? ("approved" as const) : ("declined" as const);
+      const mark = (e: AssistantEvent): AssistantEvent =>
+        e.type === "approval_request" && e.runId === runId ? { ...e, status } : e;
+      const turn = turnRef.current;
+      turn.toolEvents = turn.toolEvents.map(mark);
+      setMessages((prev) => prev.map((m) => (m.events ? { ...m, events: m.events.map(mark) } : m)));
+      await runTurn((handlers, signal) => resumeChatTurn(runId, approved, handlers, signal));
+    },
+    [runTurn],
   );
 
   const resetChat = useCallback(() => {
@@ -288,6 +296,7 @@ export function useScreenerChat({
     isResponseLoading,
     chatHydrated,
     handleChat,
+    answerApproval,
     cancel,
     screeningResult,
     setScreeningResult,

@@ -1,5 +1,5 @@
 import { Startup } from "../../models";
-import type { EntityResult, ScreeningResult } from "../../types/screening";
+import type { ScreeningResult } from "../../types/screening";
 
 export interface CompareStartupRow {
   startupId: string;

@@ -18,7 +18,7 @@ You audit CapScreen ( cap-table screener) for **security** and **regulatory comp
 
 ### Security checklist
 - Secrets only in `backend/.env` — never `NEXT_PUBLIC_*` for API keys
-- Rate limits on `/api/screen` and `/api/chat`
+- Local API: loopback binding + per-launch desktop token (`middleware/desktopToken.ts`); auth service: rate limits on `/api/auth/*`
 - MongoDB injection — use mongoose schemas, no raw user strings in queries
 - CORS locked to `FRONTEND_URL`
 - Export/download endpoints require auth when Supabase enabled

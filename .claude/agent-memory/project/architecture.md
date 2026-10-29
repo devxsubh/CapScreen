@@ -1,38 +1,24 @@
 ---
 name: architecture
-description: CapScreen deployment topology, Docker, and service boundaries
+description: CapScreen runtime topology and service boundaries
 metadata:
   type: project
 ---
 
-## Deployment (current)
+## Runtime (desktop app)
 
-- **Frontend:** Vercel — `frontend/` Next.js 15 app
-- **Backend + Watchman:** AWS EC2 — `docker-compose.yml` (two containers on `internal` network)
-- **MongoDB:** Atlas (`MONGODB_URI`)
-- **Cache:** Upstash Redis (optional Watchman cache)
-- **R2:** Cloudflare object storage for documents
-- **LLM:** Anthropic Haiku on EC2; OpenAI for RAG embeddings when enabled
+- **Electron shell** (`desktop/`) starts three loopback sidecars on free ports: Watchman (bundled Go binary), the Express backend (utilityProcess, per-launch token) and the Next.js standalone UI. The window loads `capscreen://app`; `/__api/*` is proxied to the backend with the token.
+- **Data:** SQLite at `<userData>/capscreen.db` via the mongoose driver shim (`backend/src/lib/infra/sqliteStore/`); files under `<userData>/files/`.
+- **Models:** chosen in the AI Control Center (local Ollama/LM Studio or BYO cloud keys); keys encrypted with a keychain-sealed master key.
+- **Cloud:** only the auth service (`backend/src/authService`, Vercel + Atlas) — accounts, never screening data.
 
-Full diagram: `docs/architecture-diagram.svg`; plan: `docs/DESKTOP_PLAN.md`.
+Full picture: `docs/DESKTOP_PLAN.md`, `docs/PROJECT_GUIDE.md`.
 
-## Local vs production
+## Browser-only dev
 
-| | Local | Production |
-|---|---|---|
-| Frontend | `pnpm dev` :3000 | Vercel |
-| Backend | `pnpm dev` :3001 | EC2 Docker |
-| Watchman | `docker-compose.dev.yml` → :8084 | compose internal `watchman:8084` |
-| Env file | `.env` | `.env.production` on EC2; Vercel dashboard for `NEXT_PUBLIC_*` |
-
-## Agent loop (unchanged)
-
-`POST /api/chat` → `runAgentWithTools` → `SCREENER_TOOLS` in `chatTools.ts`.
-
-Screening calls Watchman over Docker network on EC2; over `localhost:8084` locally.
+`pnpm dev` (backend :3001 + Next :3000), root `.env`, data in `~/.capscreen`, Watchman via `docker compose -f docker-compose.dev.yml up`.
 
 ## When editing
 
-- CORS: backend `FRONTEND_URL` must match Vercel origin
-- Never expose Watchman publicly in production compose
-- Secrets only on EC2 / local `.env` — not in Docker image (see `.dockerignore`)
+- The desktop backend never reads `.env`; everything arrives from the shell.
+- Screening must fail closed when Watchman is unavailable.

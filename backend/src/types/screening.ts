@@ -213,6 +213,16 @@ export interface ScreeningResult {
   watchmanListInfo?: WatchmanListInfo;
   /** Max hits requested per entity from Watchman. */
   watchmanSearchLimit?: number;
+  /** Thresholds this result was classified with ("settings" = user-tuned in Settings → Screening). */
+  screeningThresholds?: {
+    watchmanMinMatch: number;
+    reviewMinScore: number;
+    flaggedMinScore: number;
+    beneficialOwnerPct: number;
+    ofacOwnershipRulePct: number;
+    watchmanResultLimit: number;
+    source: "settings" | "default";
+  };
 }
 
 export interface ScreeningSummary {

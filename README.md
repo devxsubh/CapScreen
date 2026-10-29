@@ -112,7 +112,8 @@ Cap tables need `entity`, `owner`, `ownership_pct`; rosters need `name`. **Demo 
 pnpm desktop                  # run the desktop app (dev)
 pnpm desktop:dist             # build installers
 pnpm dev                      # browser-only dev
-pnpm -w run typecheck         # backend tsc --noEmit
+pnpm -w run typecheck         # backend tsc (src, scripts, tests)
+pnpm -w run test              # backend tests
 pnpm -w run lint              # frontend eslint
 ```
 
@@ -129,5 +130,5 @@ capscreen/
 │   ├── sample-data/    demo cap tables and walkthrough
 │   └── compliance-corpus/  reference policy docs
 ├── docs/       DESKTOP_PLAN.md + architecture diagrams
-└── docker-compose*.yml   local Watchman for browser-only dev
+└── docker-compose.dev.yml   local Watchman for browser-only dev
 ```

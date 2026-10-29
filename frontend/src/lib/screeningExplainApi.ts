@@ -1,4 +1,3 @@
-import { getAuthHeaders } from "@/lib/apiAuth";
 import type { EntityResult } from "@/lib/screenerTypes";
 import { apiBase } from "@/lib/apiBase";
 
@@ -8,10 +7,9 @@ export async function fetchEntityExplanation(
   entity: EntityResult,
   startupName?: string,
 ): Promise<string> {
-  const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/screen/explain`, {
     method: "POST",
-    headers: { ...headers, "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: entity.name,
       type: entity.type,

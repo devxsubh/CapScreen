@@ -1,4 +1,6 @@
-/** Firm screening thresholds — env overrides for demo tuning. */
+import { readSettings, type ScreeningSettings } from "../infra/settings";
+
+/** Firm screening thresholds — Settings → Screening, else env overrides, else defaults. */
 export interface ScreeningThresholds {
   watchmanMinMatch: number;
   flaggedMinScore: number;
@@ -13,7 +15,8 @@ export interface ScreeningThresholds {
   watchmanDebug: boolean;
 }
 
-export function getScreeningThresholds(): ScreeningThresholds {
+/** Thresholds before the user's saved settings: env overrides (dev), else built-in defaults. */
+export function defaultScreeningThresholds(): ScreeningThresholds {
   const num = (key: string, fallback: number) => {
     const raw = process.env[key];
     if (!raw) return fallback;
@@ -33,4 +36,14 @@ export function getScreeningThresholds(): ScreeningThresholds {
     ),
     watchmanDebug: process.env.SCREENING_WATCHMAN_DEBUG !== "false",
   };
+}
+
+export function getScreeningThresholds(): ScreeningThresholds {
+  return { ...defaultScreeningThresholds(), ...(readSettings().screening ?? {}) };
+}
+
+/** The thresholds a screening ran with, recorded on the result for audit. */
+export function screeningThresholdsSnapshot(): ScreeningSettings & { source: "settings" | "default" } {
+  const { watchmanDebug: _debug, ...t } = getScreeningThresholds();
+  return { ...t, source: readSettings().screening ? "settings" : "default" };
 }

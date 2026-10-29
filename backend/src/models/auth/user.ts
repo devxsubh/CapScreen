@@ -103,10 +103,3 @@ export function serializePublicUser(user: UserDocument) {
     emailVerified: Boolean(user.confirmed),
   };
 }
-
-export function serializeProfile(user: UserDocument) {
-  return {
-    displayName: user.displayName,
-    organisation: user.organisation,
-  };
-}

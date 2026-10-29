@@ -113,6 +113,7 @@ export function StartupScreenerPage({ startupId }: Props) {
         isResponseLoading,
         chatHydrated,
         handleChat,
+        answerApproval,
         cancel,
         screeningResult,
         setScreeningResult,
@@ -644,6 +645,7 @@ export function StartupScreenerPage({ startupId }: Props) {
                         isResponseLoading={isResponseLoading}
                         handleChat={handleChat}
                         cancel={cancel}
+                        onApprovalAnswer={(runId, approved) => void answerApproval(runId, approved)}
                         startupName={startup?.name}
                         startupId={startupId}
                     />

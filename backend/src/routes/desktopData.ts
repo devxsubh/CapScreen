@@ -4,7 +4,8 @@ import { dataFile } from "../lib/infra/dataDir";
 import express from "express";
 import { createBackup, stageRestore } from "../lib/infra/backup";
 import { getWatchFolder, scanWatchedFolders, setWatchFolder } from "../lib/infra/folderWatch";
-import { AVAILABLE_SANCTIONS_LISTS, readSettings, writeSettings } from "../lib/infra/settings";
+import { AVAILABLE_SANCTIONS_LISTS, readSettings, validateScreeningSettings, writeSettings } from "../lib/infra/settings";
+import { defaultScreeningThresholds } from "../lib/screening/screeningConfig";
 import { databaseFile } from "../lib/infra/db";
 import { fetchWatchmanListInfo, getWatchmanBaseUrl } from "../lib/screening/watchman";
 import { AuditLog } from "../models";
@@ -18,11 +19,21 @@ export const desktopDataRouter = express.Router();
 export const RESTART_EXIT_CODE = 75;
 
 desktopDataRouter.get("/settings", (_req, res) => {
-  res.json({ settings: readSettings(), availableLists: AVAILABLE_SANCTIONS_LISTS, databaseFile: databaseFile() });
+  const { watchmanDebug: _debug, ...screeningDefaults } = defaultScreeningThresholds();
+  res.json({
+    settings: readSettings(),
+    availableLists: AVAILABLE_SANCTIONS_LISTS,
+    databaseFile: databaseFile(),
+    screeningDefaults,
+  });
 });
 
 desktopDataRouter.put("/settings", (req, res) => {
-  const body = req.body as { backgroundScreening?: { enabled?: unknown; intervalHours?: unknown }; sanctionsLists?: unknown };
+  const body = req.body as {
+    backgroundScreening?: { enabled?: unknown; intervalHours?: unknown };
+    sanctionsLists?: unknown;
+    screening?: unknown;
+  };
   const patch: Parameters<typeof writeSettings>[0] = {};
   if (body.backgroundScreening) {
     const cur = readSettings().backgroundScreening;
@@ -40,6 +51,19 @@ desktopDataRouter.put("/settings", (req, res) => {
       return;
     }
     patch.sanctionsLists = lists;
+  }
+  if (body.screening !== undefined) {
+    // null resets to the firm defaults.
+    if (body.screening === null) {
+      patch.screening = null;
+    } else {
+      const v = validateScreeningSettings(body.screening);
+      if ("error" in v) {
+        res.status(400).json({ detail: v.error });
+        return;
+      }
+      patch.screening = v.value;
+    }
   }
   // The desktop shell watches settings.json and reloads Watchman when lists change.
   res.json({ settings: writeSettings(patch) });

@@ -34,7 +34,7 @@ Network egress: public sanctions-list downloads (Watchman, every 12 h) and cloud
 
 ### Backend stack
 
-- `express` + `helmet`, `cors`, `express-rate-limit`; loopback-only; `middleware/desktopToken.ts` gate; single local user (`middleware/requireAuth.ts`)
+- `express` + `helmet`, `cors`; loopback-only; `middleware/desktopToken.ts` gate; single local user (`middleware/requireAuth.ts`)
 - **SQLite via mongoose**: `lib/infra/sqliteStore/` implements the MongoDB driver surface mongoose calls (`node:sqlite`, no native deps). All mongoose models/queries run unchanged. `$vectorSearch` is in-process cosine.
 - **Pluggable LLMs** (`lib/llm/providers/`): Anthropic, native Ollama, and OpenAI-compatible (OpenAI, Gemini, OpenRouter, Groq, LM Studio, llama.cpp, any custom endpoint). Roles: `agent`, `utility`, `embedding`.
 - **AI Control Center** (`lib/llm/controlCenter/`, `routes/aiControlCenter.ts`): providers, model assignments, local-only policy; API keys AES-256-GCM encrypted with a master key sealed by the OS keychain (Electron `safeStorage`).
@@ -75,13 +75,12 @@ Desktop: production auth URL is `capscreenAuthUrl` in `desktop/package.json` (ov
 
 ```
 User uploads CSV (or drops it in a watched folder)
-  → POST /api/startups/:id/csvs  (stored in SQLite)
-  → POST /api/chat (send with csvContent)
-      → screen_cap_table tool:
-          parseCapTable → buildOwnershipGraph → searchWatchman → classifyScore → explainMatch
-      → returns ScreeningResult (+ watchmanListInfo) + LLM narrative
-  → screeningResult saved to the startup (lastScreeningResult)
-  → ScreeningResultsPanel opens: OwnershipGraph + RiskTable + RiskCards
+  → POST /api/startups/:id/csvs        (ingest + store in SQLite)
+  → POST /api/startups/:id/screen      (or the agent's screen_cap_table tool via POST /chat)
+      → runScreening: ingestCsv → buildOwnershipGraph → searchWatchman → classifyScore
+                      → ownership rules (OFAC 50% / UBO 25%) → explainMatch (LLM narrative)
+      → ScreeningResult (+ watchmanListInfo) saved as lastScreeningResult, snapshot + delta
+  → ScreeningResultsPanel: OwnershipGraph + RiskTable + RiskCards
 ```
 
 Screening fails **closed**: if Watchman is unavailable, `runScreening` throws instead of returning "clear".
@@ -115,50 +114,45 @@ Build each OS on that OS (Next's traced `sharp` binary is platform-specific). Un
 
 ```
 backend/src/
-  index.ts                  — Express app, rate limiters, route mounts
+  index.ts                  — Express app (loopback, desktop-token gate), route mounts
   routes/
-    screen.ts               — POST /api/screen  (one-shot CSV screening, no chat)
-    chat.ts                 — POST /api/chat    (agentic Claude chat with tool-use)
-    startups.ts             — CRUD /api/startups + /api/startups/:id/csvs
+    assistantChat.ts        — POST /chat (+ /chat/runs/:id/resume): the one agent route, SSE
+    screen.ts               — POST /api/screen/explain (on-demand analyst narrative)
+    startups/               — /api/startups CRUD, CSVs, scoped chat, document search uploads
+    screening/              — POST /api/startups/:id/screen, delta, report, entity reviews
+    documents/              — IC memo, generated-document download, uploaded documents
+    projects/               — GET /projects (startups + their documents, CSVs, screenings)
+    tabularReview.ts        — grids, cell generation, grid chat
+    workflows.ts            — built-in + custom workflows, hide/unhide
+    portfolioMonitoring.ts  — portfolio grid sync, re-screen, digest, compare
+    aiControlCenter.ts      — /api/ai: providers, keys, roles, local models
+    desktopData.ts          — /api/desktop: settings, sanctions lists, backup/restore, audit export
+    auth.ts, desktopOAuth.ts— cloud auth service only (mounted by authService/app.ts)
   lib/
-    parseCapTable.ts        — CSV → OwnershipRecord[]
-    graph.ts                — buildOwnershipGraph, getAllNodes, getEdges, findOwnershipPath
-    watchman.ts             — searchWatchman(name, type) → WatchmanMatch[]
-    classify.ts             — classifyScore(topScore) → "clear"|"review"|"flagged"
-    explain.ts              — explainMatch(node, matches, path, level) → Claude narrative
-    runScreening.ts         — orchestrates parse→graph→watchman→classify→explain → ScreeningResult
-    chatTools.ts            — SCREENER_TOOLS (Anthropic Tool[]) + createToolExecutor
-    llm/
-      providers/            — neutral types, Anthropic + OpenAI-compatible adapters, registry (roles: agent/utility/embedding)
-      complete.ts           — completeText / chatText (single-shot + multi-turn, provider-neutral)
-      validateLlm.ts        — boot-time ping of the configured agent model
-      index.ts              — re-exports
-    agent/                  — agent harness on LangGraph (see docs/AGENT_HARNESS.md)
-      agentGraph.ts         — StateGraph (callModel → askApproval → runTools), interrupt() approvals, runAgent / resumeAgent / runSubAgent
-      runTools.ts           — parallel read-only tools, timeouts, error capture, output trimming
-    infra/db.ts             — opens SQLite store and attaches it to mongoose (applies pending restore)
-    infra/sqliteStore/      — MongoDB-driver-compatible store on node:sqlite (query, update, store)
-    infra/backup.ts         — encrypted .capscreen-backup create/restore
-    infra/folderWatch.ts    — watched data-room folders → auto-ingest
-    infra/fileStorage.ts    — local file storage + signed download URLs
-    infra/settings.ts       — settings.json (background screening, sanctions lists)
-  models/
-    startup.ts              — Startup mongoose schema (name, createdAt, lastScreeningResult)
-    capTableCsv.ts          — CapTableCsv schema (startupId, filename, content, uploadedAt)
+    screening/              — runScreening, csvIngest, parseCapTable, graph, watchman, classify,
+                              ownershipExposure, explain, delta, preview, confidence
+    agent/                  — LangGraph harness (docs/AGENT_HARNESS.md): agentGraph, runTools
+    tools/                  — ToolRegistry + the 13 agent tools (index.ts registers them)
+    llm/                    — provider adapters, registry (roles agent/utility/embedding), controlCenter/
+    chat/                   — system prompt assembly, @-mentions, project assets, payload validation
+    rag/                    — parse, chunk, embed, retrieve, entity extraction
+    workflows/              — builtinWorkflows.ts (single source for agent + UI), workflowMemory.ts
+    infra/                  — db (SQLite via sqliteStore/), backup, folderWatch, fileStorage, settings, Watchman cache
+  models/                   — mongoose schemas (screening/, chat/, documents/, rag/, tabular/, workflows/, audit/, auth/)
+  types/screening.ts        — screening domain types (re-exported by the frontend)
+backend/test/               — node:test suites (CSV ingest, ownership math/rules, SQLite store, workflows)
 ```
 
-### Chat tool-use flow (`chat.ts` + `chatTools.ts`)
+### Agent chat (`routes/assistantChat.ts` + `lib/tools/`)
 
-The `/api/chat` endpoint runs a Claude agent loop. Four tools are registered:
+One route serves the assistant, the startup page chat and (with approvals off) tabular grid chat. Tools:
+`update_plan`, `delegate_task`, `list_workflows`, `read_workflow`, `screen_cap_table`, `list_mentioned_startups`,
+`query_screening_data`, `generate_document`, `search_compliance_playbook`, `list_startup_documents`,
+`search_startup_documents`, `screen_document_entities`, `web_search` (needs the user's approval).
 
-| Tool | When Claude calls it |
-|---|---|
-| `screen_cap_table` | User attaches a CSV and wants screening |
-| `get_screening_summary` | User asks for counts or a summary |
-| `get_entity_details` | User asks about a specific entity |
-| `list_entities` | User wants filtered entity lists |
-
-Context is carried per-request: the caller always sends `{ messages, screeningResult, csvContent }`. The handler injects these into the system prompt and the tool executor's context object.
+The caller sends `{ messages, csvContent?, screeningResult?, startup_id?, attached_documents? }`. When a CSV is
+attached and nothing has been screened yet, the first turn is forced to call `screen_cap_table`
+(`backend/docs/tool-routing-analysis.md`). Add a tool: create it in `lib/tools/`, register it in `lib/tools/index.ts`.
 
 ---
 
@@ -168,48 +162,30 @@ Context is carried per-request: the caller always sends `{ messages, screeningRe
 frontend/src/
   app/
     (pages)/
-      assistant/            — CapScreen compliance assistant (general + screener)
-        page.tsx
-        chat/[id]/page.tsx
-      projects/
-        page.tsx            — StartupsPage (list + create startups)
-        [id]/page.tsx       — StartupScreenerPage (CSV strip + screener chat)
-      screen/page.tsx       — Redirects to /assistant (unused — keep or wire up)
+      assistant/            — compliance assistant (InitialView → ChatView)
+      startups/             — StartupsPage; [id] = StartupScreenerPage; [id]/assistant/chat/[chatId] = startup-scoped chat with documents
+      tabular-reviews/      — review list + TRView
+      workflows/            — WorkflowList + workflow editor
+      ai/                   — AI Control Center
+      settings/data/        — Data & Backup
+      account/              — signed-in account (from the desktop shell)
     components/
-      screen/               — All screener UI
-        ScreenerInitialView.tsx   — Landing view (animated logo + chat input)
-        ScreenerChatView.tsx      — Active chat: messages + side panel toggle
-        ScreenerChatInput.tsx     — Textarea + CSV file attach button
-        ScreenerAssistantMessage.tsx
-        ScreeningResultsPanel.tsx — Side panel: graph + risk table + risk cards
-        OwnershipGraph.tsx        — React Flow graph (flagged=red, review=yellow)
-        RiskTable.tsx             — Entity risk table
-        RiskCard.tsx              — Individual flagged/review entity card
-        chatTypes.ts              — ScreenerMessage, AssistantEvent types
-      startups/
-        StartupsPage.tsx          — Startup list with create/delete
-        StartupScreenerPage.tsx   — Per-startup: CSV strip + screener chat
-      assistant/            — General assistant components (not screener)
-      shared/               — AppSidebar, DocPanel, etc.
+      screen/               — ScreeningResultsPanel, OwnershipGraph, RiskTable, RiskCard, EntityDetailModal, …
+      startups/             — StartupsPage, StartupScreenerPage, StartupChatPanel, CSV views, banners
+      assistant/            — ChatView, ChatInput, AssistantMessage, ApprovalCard, AgentPlan, side panel
+      tabular/, workflows/, ai/, projects/ (ProjectExplorer), shared/
     hooks/
-      useScreenerChat.ts    — Core screener state: messages, screeningResult, csvRef
-                              Carries context across all turns in a session
+      useAssistantChat.ts   — assistant chat state + SSE handling (approvals, plans, screening results)
+      useScreenerChat.ts    — startup page chat on POST /chat (keeps CSV + result across turns, approvals)
     lib/
-      screenerApi.ts        — sendChatMessage, screenCapTable (fetch wrappers)
-      capScreenApi.ts       — CapScreen API (projects, chats, documents)
+      capScreenApi.ts       — projects, documents, chats, tabular, workflows
+      screenerApi.ts        — startup chat stream + resume, tool labels
   lib/
-    screenerTypes.ts        — ScreeningResult, EntityResult, OwnershipEdge types
-    startupsApi.ts          — listStartups, createStartup, listCsvs, saveCsv, etc.
-    supabase.ts             — Supabase client
-    uiPreview.ts            — UI_PREVIEW_MODE flag
+    screenerTypes.ts        — re-exports backend/src/types/screening.ts (+ a few UI-only types)
+    startupsApi.ts, aiControlCenterApi.ts, desktopDataApi.ts, portfolioApi.ts
+    apiBase.ts, desktop.ts  — backend origin + typed preload bridge
+  contexts/                 — AuthContext / UserProfileContext (identity from the desktop shell)
 ```
-
-### Context carryover in `useScreenerChat`
-
-- `csvRef` (useRef) — holds raw CSV text across turns; passed as `csvContent` to every chat request
-- `screeningResult` (useState) — updated when backend returns a new result; passed back each turn
-- After a new `screeningResult` arrives → save it to the startup record via `startupsApi` → panel auto-opens
-- On startup page load → fetch stored `lastScreeningResult` from MongoDB → inject as initial state
 
 ---
 
@@ -217,15 +193,15 @@ frontend/src/
 
 | URL | Component | Notes |
 |---|---|---|
+| `/assistant`, `/assistant/chat/:id` | Compliance assistant | Primary chat shell |
 | `/startups` | `StartupsPage` | List + create startups |
-| `/startups/:id` | `StartupScreenerPage` | CSV strip + full screener chat |
-| `/assistant` | CapScreen compliance assistant | Primary chat shell |
-| `/assistant/chat/:id` | Persisted chat view | |
-| `/screen` | Redirects → `/assistant` | Unused |
+| `/startups/:id` | `StartupScreenerPage` | CSVs, screening results, scoped chat |
+| `/startups/:id/assistant/chat/:chatId` | Startup-scoped assistant chat | With the startup's documents |
+| `/startups/:id/tabular-reviews/:reviewId`, `/tabular-reviews[/:id]` | Tabular review | |
+| `/workflows[/:id]` | Workflows | Built-ins come from `GET /workflows` |
 | `/ai` | AI Control Center | Providers, BYO keys, local models, model assignments, local-only mode |
 | `/settings/data` | Data & Backup | Sanctions lists/versions, background re-screening, encrypted backup/restore, audit export |
-
-The sidebar shows "Startups" → `/startups` and "Recent Projects" (up to 5).
+| `/account` | Account | Signed-in account; password changes happen on the hosted portal |
 
 ---
 
@@ -235,7 +211,7 @@ The sidebar shows "Startups" → `/startups` and "Recent Projects" (up to 5).
 
 `backend/sample-data/sample-entity-roster.csv` — flat entity list for roster screening mode.
 
-**CSV ingest** (`backend/src/lib/csvIngest.ts`): strict → heuristic column aliases → Claude schema inference. Supports cap tables (varied column names) and entity rosters. Reference/metadata files (e.g. OpenSanctions sources catalogs) are blocked with guidance. Required fields: cap table needs `entity`, `owner`, `ownership_pct`; roster needs `name`. Watchman matching stays deterministic — AI only maps columns, never decides hits.
+**CSV ingest** (`backend/src/lib/screening/csvIngest.ts`): strict → heuristic column aliases → Claude schema inference. Supports cap tables (varied column names) and entity rosters. Reference/metadata files (e.g. OpenSanctions sources catalogs) are blocked with guidance. Required fields: cap table needs `entity`, `owner`, `ownership_pct`; roster needs `name`. Watchman matching stays deterministic — AI only maps columns, never decides hits.
 
 ---
 
@@ -256,17 +232,6 @@ The sidebar shows "Startups" → `/startups` and "Recent Projects" (up to 5).
 
 ---
 
-## What's Next (Pending Implementation)
-
-See the plan in conversation context for full details. Short version:
-
-1. **Persist `lastScreeningResult` per startup** — Startup model already has the field; need backend PATCH to save it and frontend to call it after screening
-2. **Restore graph on page load** — `useScreenerChat` needs `initialScreeningResult` param; `StartupScreenerPage` fetches it on mount
-3. **Follow-up chat against stored result** — falls out of 1+2 for free
-4. **Fix `/screen` standalone route** — wire `useScreenerChat` directly or remove the redirect
-
----
-
 ## Common Commands
 
 ```bash
@@ -275,7 +240,8 @@ pnpm install                        # install all workspaces
 pnpm desktop                        # run the desktop app (dev)
 pnpm desktop:dist                   # build installers
 pnpm dev                            # browser-only dev: backend + frontend on host
-pnpm -w run typecheck               # backend tsc --noEmit
+pnpm -w run typecheck               # backend tsc (src, scripts, tests)
+pnpm -w run test                    # backend tests (node:test)
 pnpm -w run lint                    # frontend eslint
 
 # Desktop only
@@ -287,6 +253,7 @@ pnpm --filter capscreen-desktop run dist:mac
 pnpm --filter vc-screener-backend run dev
 pnpm --filter vc-screener-backend run build
 pnpm --filter vc-screener-backend run typecheck
+pnpm --filter vc-screener-backend run test
 
 # Frontend only
 pnpm --filter capscreen run dev
@@ -300,5 +267,5 @@ docker compose -f docker-compose.dev.yml up
 ## TypeScript / Lint Notes
 
 - Backend: strict TypeScript via `tsc`. No `any` casts without reason.
-- Frontend: Next.js ESLint config. `pnpm -w run lint` runs before every commit via Husky.
+- Frontend: Next.js ESLint config. Typecheck, tests and lint run before every commit via Husky.
 - Do not use `console.log` in production paths — backend uses `console.log` only for startup messages.

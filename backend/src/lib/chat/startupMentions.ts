@@ -44,7 +44,7 @@ export async function resolveStartupMentions(
   await connectDb();
 
   const startups = userId
-    ? await Startup.find(await visibleStartupFilter(userId)).lean()
+    ? await Startup.find(visibleStartupFilter(userId)).lean()
     : await Startup.find({ isSample: true }).lean();
   const byId = new Map<string, Record<string, unknown>>();
   const byName = new Map<string, Record<string, unknown>>();

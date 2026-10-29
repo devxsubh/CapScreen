@@ -4,6 +4,7 @@ import {
     useState,
     useCallback,
     useRef,
+    useEffect,
     forwardRef,
     useImperativeHandle,
 } from "react";
@@ -14,25 +15,26 @@ import {
     FileText,
     Building2,
     Library,
+    MoreHorizontal,
+    Plug,
+    PlusIcon,
     Square,
     X,
 } from "lucide-react";
-import { AddDocButton } from "./AddDocButton";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { AddDocButton, useAddDocActions } from "./AddDocButton";
 import { AddDocumentsModal } from "../shared/AddDocumentsModal";
 import { AssistantWorkflowModal } from "./AssistantWorkflowModal";
-import { ApiKeyMissingModal } from "../shared/ApiKeyMissingModal";
-import { ModelToggle } from "./ModelToggle";
-import { useSelectedModel } from "@/app/hooks/useSelectedModel";
-import { useUserProfile } from "@/contexts/UserProfileContext";
-import {
-    getModelProvider,
-    isModelAvailable,
-    type ModelProvider,
-} from "@/app/lib/modelAvailability";
-import { UI_PREVIEW_MODE } from "@/lib/uiPreview";
-
-/** Claude is always chosen by the backend (Haiku). */
-const USE_SERVER_CLAUDE = true;
+import { ModelPicker } from "../ai/ModelPicker";
 import {
     StartupMentionMenu,
     insertStartupMention,
@@ -42,6 +44,9 @@ import {
     ASSISTANT_SAMPLE_PROMPTS,
     type AssistantSamplePrompt,
 } from "@/lib/assistantSamplePrompts";
+
+/** Collapse toolbar tools into one menu when the chat box is narrower than this. */
+const COMPACT_TOOLS_BELOW_PX = 480;
 
 export interface ChatInputHandle {
     addDoc: (doc: AppDocument) => void;
@@ -59,6 +64,8 @@ interface Props {
     startupId?: string;
     showSamplePrompts?: boolean;
     samplePrompts?: AssistantSamplePrompt[];
+    /** Show the chat model picker (global agent binding). */
+    showProviderMenu?: boolean;
 }
 
 export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
@@ -74,6 +81,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         startupId,
         showSamplePrompts = true,
         samplePrompts = ASSISTANT_SAMPLE_PROMPTS,
+        showProviderMenu,
     }: Props,
     ref,
 ) {
@@ -84,16 +92,33 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         id: string;
         title: string;
     } | null>(null);
-    const [model, setModel] = useSelectedModel();
-    const { profile } = useUserProfile();
-    const apiKeys = profile?.apiKeys;
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const boxRef = useRef<HTMLDivElement>(null);
     const [docSelectorOpen, setDocSelectorOpen] = useState(false);
     const [workflowModalOpen, setWorkflowModalOpen] = useState(false);
-    const [apiKeyModalProvider, setApiKeyModalProvider] =
-        useState<ModelProvider | null>(null);
     const [cursor, setCursor] = useState(0);
     const [mentionOpen, setMentionOpen] = useState(false);
+    const [compactTools, setCompactTools] = useState(false);
+    const [modelPickerOpen, setModelPickerOpen] = useState(false);
+    const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+
+    const showDocs = !hideAddDocButton;
+    const showWorkflows = !hideWorkflowButton && !startupId;
+    const showStartup = Boolean(onStartupsClick);
+    const showModel = Boolean(showProviderMenu);
+    const hasTools = showDocs || showWorkflows || showStartup || showModel;
+
+    useEffect(() => {
+        const el = boxRef.current;
+        if (!el || typeof ResizeObserver === "undefined") return;
+        const ro = new ResizeObserver((entries) => {
+            const w = entries[0]?.contentRect.width ?? el.clientWidth;
+            setCompactTools(w < COMPACT_TOOLS_BELOW_PX);
+        });
+        ro.observe(el);
+        setCompactTools(el.clientWidth < COMPACT_TOOLS_BELOW_PX);
+        return () => ro.disconnect();
+    }, []);
 
     useImperativeHandle(ref, () => ({
         addDoc: (doc: AppDocument) => {
@@ -123,6 +148,15 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         },
         [],
     );
+
+    const docActions = useAddDocActions({
+        onSelectDoc: handleAddDocFromProject,
+        onSelectCsvFile: setAttachedCsvFile,
+        onBrowseAll: () => setDocSelectorOpen(true),
+        startupId,
+    });
+
+    const attachmentCount = attachedDocs.length + (attachedCsvFile ? 1 : 0);
 
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setValue(e.target.value);
@@ -154,15 +188,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         const query = value.trim();
         if ((!query && !attachedCsvFile && attachedDocs.length === 0) || isLoading)
             return;
-        if (
-            !USE_SERVER_CLAUDE &&
-            !UI_PREVIEW_MODE &&
-            apiKeys &&
-            !isModelAvailable(model, apiKeys)
-        ) {
-            setApiKeyModalProvider(getModelProvider(model));
-            return;
-        }
         setValue("");
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
@@ -187,8 +212,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
         setAttachedDocs([]);
         const wf = selectedWorkflow;
         setSelectedWorkflow(null);
-        const modelPayload =
-            !USE_SERVER_CLAUDE && !UI_PREVIEW_MODE ? { model } : {};
 
         const content =
             query ||
@@ -202,7 +225,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
             files: files.length > 0 ? files : undefined,
             workflow: wf ?? undefined,
             csvContent,
-            ...modelPayload,
         });
     };
 
@@ -235,7 +257,11 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
     return (
         <>
             <div className="w-full">
-                <div className="border border-gray-300 rounded-[16px] md:rounded-[20px] bg-white">
+                <div
+                    ref={boxRef}
+                    className="border border-gray-300 rounded-[16px] md:rounded-[20px] bg-white"
+                >
+                    {compactTools && showDocs && docActions.fileInput}
                     {/* Attached chips */}
                     {(selectedWorkflow ||
                         attachedDocs.length > 0 ||
@@ -343,60 +369,139 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
 
                     {/* Controls */}
                     <div className="flex items-center justify-between md:p-2.5 p-2">
-                        <div className="flex items-center gap-1">
-                            {!hideAddDocButton && (
-                                <AddDocButton
-                                    onSelectDoc={handleAddDocFromProject}
-                                    onSelectCsvFile={setAttachedCsvFile}
-                                    onBrowseAll={() => setDocSelectorOpen(true)}
-                                    selectedDocIds={attachedDocs.map(
-                                        (d) => d.id,
+                        <div className="relative flex items-center gap-1">
+                            {compactTools && hasTools ? (
+                                <DropdownMenu open={toolsMenuOpen} onOpenChange={setToolsMenuOpen}>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            aria-label="Chat tools"
+                                            title="Tools"
+                                            className={`relative flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 ${toolsMenuOpen ? "bg-gray-100 text-gray-700" : ""}`}
+                                        >
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            {attachmentCount > 0 && (
+                                                <span className="absolute -right-0.5 -top-0.5 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-blue-600 px-0.5 text-[9px] font-medium tabular-nums text-white">
+                                                    {attachmentCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="w-52 bg-white">
+                                        {showDocs && (
+                                            <DropdownMenuSub>
+                                                <DropdownMenuSubTrigger className="gap-2">
+                                                    <PlusIcon className="h-4 w-4 text-gray-500" />
+                                                    Documents
+                                                    {attachmentCount > 0 && (
+                                                        <span className="ml-auto mr-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-medium tabular-nums text-white">
+                                                            {attachmentCount}
+                                                        </span>
+                                                    )}
+                                                </DropdownMenuSubTrigger>
+                                                <DropdownMenuSubContent className="w-44 bg-white">
+                                                    {docActions.menuItems}
+                                                </DropdownMenuSubContent>
+                                            </DropdownMenuSub>
+                                        )}
+                                        {showWorkflows && (
+                                            <DropdownMenuItem
+                                                className="gap-2"
+                                                onSelect={() => setWorkflowModalOpen(true)}
+                                            >
+                                                {selectedWorkflow ? (
+                                                    <Check className="h-4 w-4 text-blue-600" />
+                                                ) : (
+                                                    <Library className="h-4 w-4 text-gray-500" />
+                                                )}
+                                                Workflows
+                                                {selectedWorkflow && (
+                                                    <span className="ml-auto max-w-[7rem] truncate text-xs text-gray-500">
+                                                        {selectedWorkflow.title}
+                                                    </span>
+                                                )}
+                                            </DropdownMenuItem>
+                                        )}
+                                        {showStartup && (
+                                            <DropdownMenuItem
+                                                className="gap-2"
+                                                onSelect={() => onStartupsClick?.()}
+                                            >
+                                                <Building2 className="h-4 w-4 text-gray-500" />
+                                                Startup
+                                            </DropdownMenuItem>
+                                        )}
+                                        {showModel && (
+                                            <>
+                                                {(showDocs || showWorkflows || showStartup) && (
+                                                    <DropdownMenuSeparator />
+                                                )}
+                                                <DropdownMenuItem
+                                                    className="gap-2"
+                                                    onSelect={(e) => {
+                                                        e.preventDefault();
+                                                        setToolsMenuOpen(false);
+                                                        // Open after the tools menu closes so the two menus don't fight.
+                                                        requestAnimationFrame(() =>
+                                                            setModelPickerOpen(true),
+                                                        );
+                                                    }}
+                                                >
+                                                    <Plug className="h-4 w-4 text-gray-500" />
+                                                    Model
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            ) : (
+                                <>
+                                    {showDocs && (
+                                        <AddDocButton
+                                            onSelectDoc={handleAddDocFromProject}
+                                            onSelectCsvFile={setAttachedCsvFile}
+                                            onBrowseAll={() => setDocSelectorOpen(true)}
+                                            selectedDocIds={attachedDocs.map((d) => d.id)}
+                                            attachmentCount={attachmentCount}
+                                            startupId={startupId}
+                                        />
                                     )}
-                                    attachmentCount={
-                                        attachedDocs.length +
-                                        (attachedCsvFile ? 1 : 0)
-                                    }
-                                    startupId={startupId}
-                                />
-                            )}
-                            {!hideWorkflowButton && !startupId && (
-                                <button
-                                    type="button"
-                                    onClick={() => setWorkflowModalOpen(true)}
-                                    aria-label="Open workflows"
-                                    className={`flex items-center gap-1.5 rounded-lg px-2 h-8 text-sm transition-colors ${selectedWorkflow ? "text-blue-600 hover:bg-blue-50" : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"}`}
-                                >
-                                    {selectedWorkflow ? (
-                                        <Check className="h-3.5 w-3.5" />
-                                    ) : (
-                                        <Library className="h-3.5 w-3.5" />
+                                    {showWorkflows && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setWorkflowModalOpen(true)}
+                                            aria-label="Open workflows"
+                                            className={`flex items-center gap-1.5 rounded-lg px-2 h-8 text-sm transition-colors ${selectedWorkflow ? "text-blue-600 hover:bg-blue-50" : "text-gray-400 hover:bg-gray-100 hover:text-gray-700"}`}
+                                        >
+                                            {selectedWorkflow ? (
+                                                <Check className="h-3.5 w-3.5" />
+                                            ) : (
+                                                <Library className="h-3.5 w-3.5" />
+                                            )}
+                                            <span className="hidden sm:inline">Workflows</span>
+                                        </button>
                                     )}
-                                    <span className="hidden sm:inline">
-                                        Workflows
-                                    </span>
-                                </button>
-                            )}
-                            {onStartupsClick && (
-                                <button
-                                    type="button"
-                                    onClick={onStartupsClick}
-                                    aria-label="Open startups"
-                                    className="flex items-center gap-1.5 rounded-lg px-2 h-8 text-sm text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                                >
-                                    <Building2 className="h-3.5 w-3.5" />
-                                    <span className="hidden sm:inline">
-                                        Startup
-                                    </span>
-                                </button>
+                                    {showStartup && (
+                                        <button
+                                            type="button"
+                                            onClick={onStartupsClick}
+                                            aria-label="Open startups"
+                                            className="flex items-center gap-1.5 rounded-lg px-2 h-8 text-sm text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                        >
+                                            <Building2 className="h-3.5 w-3.5" />
+                                            <span className="hidden sm:inline">Startup</span>
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-1">
-                            {!USE_SERVER_CLAUDE && (
-                                <ModelToggle
-                                    value={model}
-                                    onChange={setModel}
-                                    apiKeys={apiKeys}
+                        <div className="relative flex items-center gap-1">
+                            {showModel && (
+                                <ModelPicker
+                                    open={modelPickerOpen}
+                                    onOpenChange={setModelPickerOpen}
+                                    hideTrigger={compactTools}
                                 />
                             )}
                             <button
@@ -465,11 +570,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
                 }}
                 projectName={projectName}
                 projectCmNumber={projectCmNumber}
-            />
-            <ApiKeyMissingModal
-                open={apiKeyModalProvider !== null}
-                provider={apiKeyModalProvider}
-                onClose={() => setApiKeyModalProvider(null)}
             />
         </>
     );

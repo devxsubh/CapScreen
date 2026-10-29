@@ -6,10 +6,7 @@ import { DocPanel, type DocPanelMode } from "../shared/DocPanel";
 import { ScreeningResultsContent } from "../screen/ScreeningResultsPanel";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
-import type {
-    AppCitationAnnotation,
-    AppEditAnnotation,
-} from "../shared/types";
+import type { AppCitationAnnotation } from "../shared/types";
 
 // ---------------------------------------------------------------------------
 // Tab data
@@ -18,11 +15,10 @@ import type {
 // Each tab represents ONE of:
 //   - screening results (graph + risk table),
 //   - a document view (no specific annotation),
-//   - a single citation quote,
-//   - a single tracked change.
+//   - a single citation quote.
 // There is no selector UI inside the panel — the user picks what to view
-// by clicking a different tab (or opening a new one from a citation pill,
-// an EditCard's View button, or the download card).
+// by clicking a different tab (or opening a new one from a citation pill
+// or the download card).
 
 type CommonTab = {
     id: string;
@@ -44,11 +40,6 @@ export type CitationTab = CommonTab & {
     citation: AppCitationAnnotation;
 };
 
-export type EditTab = CommonTab & {
-    kind: "edit";
-    edit: AppEditAnnotation;
-};
-
 export type ScreeningTab = {
     kind: "screening";
     id: string;
@@ -59,7 +50,6 @@ export type ScreeningTab = {
 export type AssistantSidePanelTab =
     | DocumentTab
     | CitationTab
-    | EditTab
     | ScreeningTab;
 
 function tabTitle(tab: AssistantSidePanelTab): string {
@@ -74,36 +64,6 @@ interface Props {
     onCloseAll: () => void;
     /** Cap panel width so the chat column keeps a readable minimum. */
     maxWidth?: number;
-    /**
-     * Parent-driven reloading flag per document. Download buttons in
-     * DocPanel show a spinner iff this returns true for the tab's
-     * documentId. Used to signal "accept/reject in flight".
-     */
-    isEditorReloading?: (documentId: string) => boolean;
-    /**
-     * True while an accept/reject for this exact edit is in flight.
-     * Disables the panel's Accept/Reject buttons for only the edit
-     * currently being resolved — sibling edits stay clickable.
-     */
-    isEditReloading?: (editId: string) => boolean;
-    onEditResolveStart?: (args: {
-        editId: string;
-        documentId: string;
-        verb: "accept" | "reject";
-    }) => void;
-    onEditResolved?: (args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => void;
-    onEditError?: (args: {
-        editId: string;
-        documentId: string;
-        versionId: string | null;
-        message: string;
-    }) => void;
     onWarningDismiss?: (tabId: string) => void;
     onScrollChange?: (tabId: string, scrollTop: number) => void;
     /** Shown on the screening tab when assistant handoff is available. */
@@ -122,11 +82,6 @@ export function AssistantSidePanel({
     onCloseTab,
     onCloseAll,
     maxWidth,
-    isEditorReloading,
-    isEditReloading,
-    onEditResolveStart,
-    onEditResolved,
-    onEditError,
     onWarningDismiss,
     onScrollChange,
     screeningHandoffFilename,
@@ -308,18 +263,7 @@ export function AssistantSidePanel({
                                   kind: "citation",
                                   citation: tab.citation,
                               }
-                            : tab.kind === "edit"
-                              ? {
-                                    kind: "edit",
-                                    edit: tab.edit,
-                                    isEditReloading:
-                                        isEditReloading?.(tab.edit.edit_id) ??
-                                        false,
-                                    onResolveStart: onEditResolveStart,
-                                    onResolved: onEditResolved,
-                                    onError: onEditError,
-                                }
-                              : { kind: "document" };
+                            : { kind: "document" };
                     return (
                         <div
                             key={tab.id}
@@ -334,9 +278,6 @@ export function AssistantSidePanel({
                                 isStartupDocument={tab.isStartupDocument}
                                 startupId={tab.startupId}
                                 mode={mode}
-                                isReloading={
-                                    isEditorReloading?.(tab.documentId) ?? false
-                                }
                                 warning={tab.warning ?? null}
                                 onWarningDismiss={() =>
                                     onWarningDismiss?.(tab.id)

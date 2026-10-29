@@ -88,6 +88,8 @@ export const screeningResultSchema = new mongoose.Schema(
     // Which sanctions-list versions this result was checked against (counts,
     // SHA-256 per list, load time) — audit evidence for "as of" screening.
     watchmanListInfo: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Match-score and ownership thresholds this result was classified with.
+    screeningThresholds: { type: mongoose.Schema.Types.Mixed, default: null },
   },
   { _id: false },
 );

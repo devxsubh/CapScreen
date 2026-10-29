@@ -1,6 +1,8 @@
 import cookieParser from "cookie-parser";
 import express from "express";
 import helmet from "helmet";
+import { logAuthStartupWarnings } from "../lib/auth/config";
+import { logEmailStartupWarnings } from "../lib/auth/emailConfig";
 import { authRouter } from "../routes/auth";
 import { desktopOAuthRouter } from "../routes/desktopOAuth";
 import { portalHtml } from "./portal";
@@ -11,6 +13,8 @@ import { portalHtml } from "./portal";
  * RESEND_API_KEY enables email verification; FRONTEND_URL = this service's URL.
  */
 export function createAuthApp(): express.Express {
+  logAuthStartupWarnings();
+  logEmailStartupWarnings();
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", 1); // Vercel edge

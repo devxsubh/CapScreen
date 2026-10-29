@@ -11,13 +11,6 @@ import { AuditLog, CapTableCsv, Startup } from "../../models";
 import { authIdentityOr500 } from "../../middleware/userIdentity";
 import type { RosterPurpose } from "../../types/screening";
 import { purposeStorageKey, toCsv } from "./serializers";
-import {
-  csvListCache,
-  startupDetailCache,
-  startupListCache,
-  TTL,
-  cacheKey,
-} from "../../lib/infra/cache";
 
 export const startupsCsvAnalyzeRouter = Router();
 export const startupsCsvRouter = Router();
@@ -47,17 +40,10 @@ startupsCsvAnalyzeRouter.post("/analyze-csv", async (req, res) => {
 });
 
 startupsCsvRouter.get("/:id/csvs", async (req, res) => {
-  const key = cacheKey.csvList(req.params.id);
-  const cached = await csvListCache.get(key);
-  if (cached !== null) {
-    res.json(cached);
-    return;
-  }
   const list = await CapTableCsv.find({ startupId: req.params.id })
     .sort({ uploadedAt: -1 })
     .lean();
   const result = list.map(toCsv);
-  await csvListCache.set(key, result, TTL.csvList);
   res.json(result);
 });
 
@@ -145,14 +131,6 @@ startupsCsvRouter.post("/:id/csvs", async (req, res) => {
     },
   });
 
-  await Promise.all([
-    csvListCache.delete(cacheKey.csvList(req.params.id)),
-    startupDetailCache.delete(
-      cacheKey.startupDetail(req.params.id, uploadIdentity.userId),
-    ),
-    startupListCache.delete(cacheKey.startupList(uploadIdentity.userId)),
-  ]);
-
   res.status(201).json(toCsv(csv.toObject()));
 });
 
@@ -211,8 +189,6 @@ startupsCsvRouter.patch("/:id/csvs/:csvId", async (req, res) => {
     },
   });
 
-  await csvListCache.delete(cacheKey.csvList(req.params.id));
-
   res.json(toCsv(csv));
 });
 
@@ -238,13 +214,6 @@ startupsCsvRouter.delete("/:id/csvs/:csvId", async (req, res) => {
       latestCsvId: latest?._id ?? null,
     });
   }
-
-  const userId = res.locals.userId as string;
-  await Promise.all([
-    csvListCache.delete(cacheKey.csvList(req.params.id)),
-    startupDetailCache.delete(cacheKey.startupDetail(req.params.id, userId)),
-    startupListCache.delete(cacheKey.startupList(userId)),
-  ]);
 
   res.status(204).send();
 });

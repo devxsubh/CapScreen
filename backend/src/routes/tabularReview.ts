@@ -8,8 +8,6 @@ import { TabularReview } from "../models";
 import { TabularCell } from "../models";
 import {
   findAccessibleTabularReview,
-  hideSampleAsset,
-  isSampleRecord,
   isWritableTabularReview,
   visibleTabularReviewFilter,
 } from "../lib/sample/sampleAssets";
@@ -27,8 +25,6 @@ import { runAgent } from "../lib/agent/agentGraph";
 import { friendlyLlmError } from "../lib/llm/friendlyError";
 import { buildWorkflowStore } from "../lib/workflows/workflowMemory";
 import type { ColumnConfig, TabularRowDoc } from "../types/tabular";
-import { sendEmailSafe, sendReviewInviteEmail } from "../lib/auth/email";
-import { resolveInviterLabel } from "../lib/auth/inviterLabel";
 
 export const tabularReviewRouter = express.Router();
 
@@ -51,7 +47,6 @@ function toReviewApi(raw: Record<string, unknown>, userId: string) {
     columns_config: raw.columnsConfig ?? [],
     document_ids: raw.rowIds ?? [],
     workflow_id: raw.workflowId ?? null,
-    shared_with: raw.sharedWith ?? [],
     is_owner: raw.userId === userId,
     created_at: new Date(raw.createdAt as string).toISOString(),
     updated_at: new Date(raw.updatedAt as string).toISOString(),
@@ -113,7 +108,7 @@ tabularReviewRouter.get("/", async (req, res) => {
   }
 
   const list = await TabularReview.find(
-    await visibleTabularReviewFilter(userId, extra),
+    visibleTabularReviewFilter(userId, extra),
   )
     .sort({ updatedAt: -1 })
     .lean();
@@ -185,19 +180,11 @@ tabularReviewRouter.get("/:id", async (req, res) => {
 
 tabularReviewRouter.patch("/:id", async (req, res) => {
   const userId = res.locals.userId as string;
-  const userEmail = res.locals.userEmail as string;
-  const {
-    title,
-    columns_config,
-    document_ids,
-    project_id,
-    shared_with,
-  } = req.body as {
+  const { title, columns_config, document_ids, project_id } = req.body as {
     title?: string;
     columns_config?: unknown[];
     document_ids?: string[];
     project_id?: string | null;
-    shared_with?: string[];
   };
 
   const existing = (await findOwnedReview(req.params.id, userId)) as
@@ -208,14 +195,9 @@ tabularReviewRouter.patch("/:id", async (req, res) => {
     return;
   }
 
-  const previousShared = Array.isArray(existing.sharedWith)
-    ? (existing.sharedWith as string[]).map((e) => e.toLowerCase())
-    : [];
-
   const update: Record<string, unknown> = { updatedAt: new Date() };
   if (title !== undefined) update.title = title;
   if (columns_config !== undefined) update.columnsConfig = columns_config;
-  if (shared_with !== undefined) update.sharedWith = shared_with;
   if (project_id !== undefined) {
     update.projectId = project_id
       ? new mongoose.Types.ObjectId(project_id)
@@ -236,33 +218,6 @@ tabularReviewRouter.patch("/:id", async (req, res) => {
     return;
   }
 
-  if (shared_with !== undefined) {
-    const nextShared = shared_with.map((e) => e.trim().toLowerCase()).filter(Boolean);
-    const added = nextShared.filter((email) => !previousShared.includes(email));
-    if (added.length > 0) {
-      const inviterLabel = await resolveInviterLabel(userId, userEmail);
-      const reviewDoc = review as Record<string, unknown>;
-      const reviewTitle =
-        typeof reviewDoc.title === "string" && reviewDoc.title.trim()
-          ? reviewDoc.title
-          : "Tabular review";
-      const projectId = reviewDoc.projectId
-        ? String(reviewDoc.projectId)
-        : null;
-      for (const to of added) {
-        sendEmailSafe(() =>
-          sendReviewInviteEmail({
-            to,
-            inviterLabel,
-            reviewTitle,
-            reviewId: req.params.id,
-            projectId,
-          }),
-        );
-      }
-    }
-  }
-
   res.json(toReviewApi(review as Record<string, unknown>, userId));
 });
 
@@ -274,26 +229,10 @@ tabularReviewRouter.delete("/:id", async (req, res) => {
     return;
   }
 
-  if (isSampleRecord(existing)) {
-    await hideSampleAsset(userId, "tabular_review", req.params.id);
-    res.status(204).send();
-    return;
-  }
-
-  const review = await TabularReview.findOneAndDelete({
-    _id: req.params.id,
-    userId,
-  });
-  if (!review) {
-    res.status(404).json({ detail: "Review not found" });
-    return;
-  }
+  // Sample reviews can be removed too — there is only one user per install.
+  await TabularReview.findByIdAndDelete(req.params.id);
   await TabularCell.deleteMany({ reviewId: req.params.id });
   res.status(204).send();
-});
-
-tabularReviewRouter.get("/:id/people", async (_req, res) => {
-  res.json({ owner: { email: "admin@capscreen.local", name: "CapScreen Admin" }, shared: [] });
 });
 
 function writeSse(write: (line: string) => void, payload: unknown) {
@@ -562,7 +501,7 @@ tabularReviewRouter.post("/:id/chat", async (req, res) => {
   const columns = (review.columnsConfig as ColumnConfig[]) ?? [];
 
   const mentionTokens = extractMentionsFromMessages(parsed.messages);
-  const workflowStore = await buildWorkflowStore(userId, userEmail);
+  const workflowStore = await buildWorkflowStore(userId);
   const fromMessages = await resolveStartupMentions(mentionTokens, userId);
   const fromGrid = await resolveGridStartups(review, userId);
   const mentionedStartups = mergeMentionedStartups(fromMessages, fromGrid);

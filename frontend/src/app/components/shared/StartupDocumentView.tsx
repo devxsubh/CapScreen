@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/apiAuth";
 import { getStartupGeneratedDocument } from "@/lib/startupsApi";
 import { ChatMarkdown } from "./ChatMarkdown";
 import { apiBase } from "@/lib/apiBase";
@@ -25,7 +24,6 @@ async function fetchDocumentContent(
 
     const base = apiBase();
     const resp = await fetch(`${base}/api/documents/${documentId}/view`, {
-        headers: await getAuthHeaders(),
     });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = (await resp.json()) as { content?: string };

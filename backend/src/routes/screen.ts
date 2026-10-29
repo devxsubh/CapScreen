@@ -1,14 +1,6 @@
 import express from "express";
-import multer from "multer";
 import { friendlyLlmError } from "../lib/llm/friendlyError";
-import { runScreening } from "../lib/screening/runScreening";
 import { explainMatch } from "../lib/screening/explain";
-import type { ScreeningProgressFn } from "../lib/screening/screeningProgress";
-import {
-  isAllowedCsvMime,
-  looksLikeCsvText,
-} from "../lib/screening/csvUpload";
-import { WatchmanUnavailableError } from "../lib/screening/watchman";
 import { requireAuth } from "../middleware/requireAuth";
 import type { RiskLevel } from "../lib/screening/classify";
 import type { WatchmanMatch } from "../lib/screening/watchman";
@@ -16,86 +8,6 @@ import type { WatchmanMatch } from "../lib/screening/watchman";
 export const screenRouter = express.Router();
 
 screenRouter.use(requireAuth);
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    if (isAllowedCsvMime(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only CSV files are accepted (text/csv or text/plain)"));
-    }
-  },
-});
-
-async function screenCsvContent(
-  csv: string,
-  filename?: string,
-  onProgress?: ScreeningProgressFn,
-) {
-  return runScreening(csv, { filename, onProgress });
-}
-
-screenRouter.post("/", upload.single("csv"), async (req, res) => {
-  if (!req.file) {
-    res.status(400).json({ detail: "No CSV file provided" });
-    return;
-  }
-
-  if (!looksLikeCsvText(req.file.buffer)) {
-    res.status(400).json({ detail: "Uploaded file does not look like CSV text" });
-    return;
-  }
-
-  const csv = req.file.buffer.toString("utf-8");
-
-  try {
-    const result = await screenCsvContent(csv, req.file.originalname);
-    res.json(result);
-  } catch (err) {
-    if (err instanceof WatchmanUnavailableError) {
-      res.status(503).json({ detail: err.message });
-      return;
-    }
-    const msg = err instanceof Error ? err.message : "Screening failed";
-    res.status(400).json({ detail: msg });
-  }
-});
-
-screenRouter.post("/stream", upload.single("csv"), async (req, res) => {
-  if (!req.file) {
-    res.status(400).json({ detail: "No CSV file provided" });
-    return;
-  }
-
-  if (!looksLikeCsvText(req.file.buffer)) {
-    res.status(400).json({ detail: "Uploaded file does not look like CSV text" });
-    return;
-  }
-
-  const csv = req.file.buffer.toString("utf-8");
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
-
-  const write = (payload: Record<string, unknown>) => {
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
-  };
-
-  try {
-    const result = await screenCsvContent(csv, req.file.originalname, (event) => {
-      write({ type: "screening_progress", ...event });
-    });
-    write({ type: "done", screeningResult: result });
-  } catch (err) {
-    write({ type: "error", detail: friendlyLlmError(err) });
-  }
-
-  res.end();
-});
 
 screenRouter.post("/explain", async (req, res) => {
   const body = req.body as Record<string, unknown>;

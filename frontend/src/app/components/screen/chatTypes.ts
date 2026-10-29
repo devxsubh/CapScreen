@@ -23,6 +23,13 @@ export type AssistantEvent =
         title: string;
       };
     }
+  | {
+      type: "approval_request";
+      runId: string;
+      calls: { name: string; input: unknown }[];
+      /** "skipped" = the user sent a new message instead of answering. */
+      status: "pending" | "approved" | "declined" | "skipped";
+    }
   | { type: "content"; text: string; isStreaming?: boolean };
 
 export interface ScreenerMessage {

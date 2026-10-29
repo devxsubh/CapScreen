@@ -46,7 +46,6 @@ function toProject(
         (startup.createdAt as Date),
     ).toISOString(),
     documents,
-    folders: [],
     csvs,
     screening_assets,
     document_count: documents.length,
@@ -55,23 +54,9 @@ function toProject(
   };
 }
 
-projectsRouter.post("/", async (req, res) => {
-  const userId = res.locals.userId as string;
-  const { name } = req.body as { name?: string };
-  if (!name?.trim()) {
-    res.status(400).json({ detail: "name is required" });
-    return;
-  }
-  const startup = await Startup.create({
-    name: name.trim(),
-    ownerId: userId,
-  });
-  res.status(201).json(toProject(startup.toObject() as Record<string, unknown>, []));
-});
-
 projectsRouter.get("/", async (req, res) => {
   const userId = res.locals.userId as string;
-  const startups = await Startup.find(await visibleStartupFilter(userId))
+  const startups = await Startup.find(visibleStartupFilter(userId))
     .sort({ createdAt: -1 })
     .lean();
   res.json(
@@ -105,46 +90,4 @@ projectsRouter.get("/:projectId", async (req, res) => {
       userId,
     ),
   );
-});
-
-projectsRouter.patch("/:projectId", async (req, res) => {
-  const userId = res.locals.userId as string;
-  const { name } = req.body as { name?: string };
-  if (!name?.trim()) {
-    res.status(400).json({ detail: "name is required" });
-    return;
-  }
-  const startup = (await Startup.findOneAndUpdate(
-    { _id: req.params.projectId, ownerId: userId },
-    { name: name.trim() },
-    { new: true },
-  ).lean()) as Record<string, unknown> | null;
-  if (!startup) {
-    res.status(404).json({ detail: "Project not found" });
-    return;
-  }
-  const docs = await StoredDocument.find({
-    ownerId: userId,
-    projectId: req.params.projectId,
-  }).lean();
-  res.json(
-    toProject(
-      startup,
-      docs.map((d) => toAppDocument(d as Record<string, unknown>)),
-    ),
-  );
-});
-
-projectsRouter.delete("/:projectId", async (req, res) => {
-  const userId = res.locals.userId as string;
-  const deleted = await Startup.findOneAndUpdate(
-    { _id: req.params.projectId, ownerId: userId },
-    { $set: { deletedAt: new Date() } },
-    { new: true },
-  ).lean();
-  if (!deleted) {
-    res.status(404).json({ detail: "Project not found" });
-    return;
-  }
-  res.status(204).send();
 });

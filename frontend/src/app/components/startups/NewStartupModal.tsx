@@ -10,7 +10,6 @@ import {
     Upload,
     X,
 } from "lucide-react";
-import { VersionChip } from "@/app/components/shared/VersionChip";
 import {
     analyzeCsv,
     createStartup,
@@ -442,7 +441,6 @@ export function NewStartupModal({ open, onClose, onCreated, initialCsv }: Props)
                                             <span className="shrink-0 text-gray-300 hidden sm:inline">
                                                 {formatFileSize(file.size)}
                                             </span>
-                                            <VersionChip n={1} />
                                             <span className="shrink-0 text-gray-300">
                                                 {formatToday()}
                                             </span>

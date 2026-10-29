@@ -5,12 +5,10 @@ metadata:
   type: project
 ---
 
-**At parity:** Chat-first UI, workflows modal, projects/startups, tool-calling agent, session context carryover.
+**At parity:** Chat-first UI, workflows (single built-in source), startups, LangGraph agent with approvals/plans/sub-agents, SSE streaming, persisted chats, document RAG, one chat route for assistant + startup page.
 
-**Partial:** Workflows not wired to screener backend; chat returns JSON not SSE; general assistant vs screener chat split.
-
-**Not started:** Document RAG (pgvector/Atlas), persisted chat threads per startup, streaming `doc_read` events, firm compliance doc library.
+**Open:** paused approval runs don't survive a restart (MemorySaver); tabular grid chat has no approval UI; no persistent agent memory beyond `.claude/agent-memory/`.
 
 **Why:** Target is full compliance-platform class agent/memory/RAG in a sanctions screening product.
 
-**How to apply:** Run `/compliance-parity-check` before planning sprints. Prioritize: (1) wire workflows to screen tools, (2) persist chats + lastScreeningResult, (3) Phase 1 RAG from `/compliance-rag-roadmap`.
+**How to apply:** Run `/compliance-parity-check` before planning sprints. Prioritize from the Open list.

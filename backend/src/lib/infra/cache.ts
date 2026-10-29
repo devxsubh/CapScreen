@@ -1,116 +1,34 @@
 import type { WatchmanMatch } from "../../types/screening";
 
-// ---------------------------------------------------------------------------
-// Shared async interface.
-// ---------------------------------------------------------------------------
+/**
+ * Watchman results per entity + query hints. Lists only change on Watchman's
+ * 12-hour refresh, so 5 minutes is safe and saves repeat lookups when the same
+ * names are screened again (re-screens, chat follow-ups, rosters).
+ */
+const TTL_MS = 5 * 60_000;
+const MAX_ENTRIES = 5_000;
 
-export interface AsyncCache<T> {
-  get(key: string): Promise<T | null>;
-  set(key: string, value: T, ttlMs: number): Promise<void>;
-  delete(key: string): Promise<void>;
-  /** Remove all live keys whose name starts with `prefix`. */
-  invalidatePrefix(prefix: string): Promise<void>;
+const entries = new Map<string, { value: WatchmanMatch[]; expiresAt: number }>();
+
+export function watchmanCacheKey(name: string, type: string, hintsSuffix = ""): string {
+  return `${name.toLowerCase().trim()}:${type}:${hintsSuffix}`;
 }
 
-// ---------------------------------------------------------------------------
-// In-memory cache.
-// ---------------------------------------------------------------------------
-
-interface MemEntry<T> {
-  value: T;
-  expiresAt: number;
-}
-
-class MemoryCache<T> implements AsyncCache<T> {
-  private store = new Map<string, MemEntry<T>>();
-  private readonly maxSize: number;
-  private timer: ReturnType<typeof setInterval>;
-
-  constructor(maxSize = 1000) {
-    this.maxSize = maxSize;
-    this.timer = setInterval(() => this.evict(), 60_000);
-    this.timer.unref();
-  }
-
-  async get(key: string): Promise<T | null> {
-    const e = this.store.get(key);
+export const watchmanCache = {
+  get(key: string): WatchmanMatch[] | null {
+    const e = entries.get(key);
     if (!e) return null;
-    if (Date.now() > e.expiresAt) { this.store.delete(key); return null; }
+    if (Date.now() > e.expiresAt) {
+      entries.delete(key);
+      return null;
+    }
     return e.value;
-  }
-
-  async set(key: string, value: T, ttlMs: number): Promise<void> {
-    if (this.store.size >= this.maxSize) {
-      const first = this.store.keys().next().value;
-      if (first !== undefined) this.store.delete(first);
+  },
+  set(key: string, value: WatchmanMatch[]): void {
+    if (entries.size >= MAX_ENTRIES) {
+      const oldest = entries.keys().next().value;
+      if (oldest !== undefined) entries.delete(oldest);
     }
-    this.store.set(key, { value, expiresAt: Date.now() + ttlMs });
-  }
-
-  async delete(key: string): Promise<void> {
-    this.store.delete(key);
-  }
-
-  async invalidatePrefix(prefix: string): Promise<void> {
-    for (const key of this.store.keys()) {
-      if (key.startsWith(prefix)) this.store.delete(key);
-    }
-  }
-
-  private evict(): void {
-    const now = Date.now();
-    for (const [k, e] of this.store) if (now > e.expiresAt) this.store.delete(k);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Factory — single desktop process, so an in-memory cache is always correct.
-// ---------------------------------------------------------------------------
-
-function createCache<T>(maxMemorySize = 1_000): AsyncCache<T> {
-  return new MemoryCache<T>(maxMemorySize);
-}
-
-// ---------------------------------------------------------------------------
-// TTL constants (ms).
-// ---------------------------------------------------------------------------
-
-export const TTL = {
-  /** Watchman Docker lists are static in-session — 5 min is safe. */
-  watchman: 5 * 60_000,
-  startupList: 30_000,
-  startupDetail: 30_000,
-  csvList: 30_000,
-  userProfile: 2 * 60_000,
-  chatList: 30_000,
-  workflowList: 60_000,
-} as const;
-
-// ---------------------------------------------------------------------------
-// Singleton caches — one per data domain, used across all routes.
-// ---------------------------------------------------------------------------
-
-export const watchmanCache = createCache<WatchmanMatch[]>(5_000);
-export const startupListCache = createCache<unknown[]>(500);
-export const startupDetailCache = createCache<unknown>(2_000);
-export const csvListCache = createCache<unknown[]>(2_000);
-export const userProfileCache = createCache<unknown>(500);
-export const chatListCache = createCache<unknown[]>(500);
-export const workflowListCache = createCache<unknown[]>(500);
-
-// ---------------------------------------------------------------------------
-// Key builders — keeps naming consistent across all callers.
-// ---------------------------------------------------------------------------
-
-export const cacheKey = {
-  startupList: (userId: string) => `startups:list:${userId}`,
-  startupDetail: (startupId: string, userId: string) =>
-    `startups:detail:${startupId}:${userId}`,
-  csvList: (startupId: string) => `csvs:list:${startupId}`,
-  userProfile: (userId: string) => `user:profile:${userId}`,
-  chatList: (userId: string) => `chats:list:${userId}`,
-  workflowList: (userId: string, userEmail: string, type?: string) =>
-    `workflows:list:${userId}:${userEmail}:${type ?? "all"}`,
-  watchman: (name: string, type: string, hintsSuffix = "") =>
-    `watchman:${name.toLowerCase().trim()}:${type}:${hintsSuffix}`,
-} as const;
+    entries.set(key, { value, expiresAt: Date.now() + TTL_MS });
+  },
+};

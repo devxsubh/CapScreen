@@ -10,6 +10,7 @@ import { TOOL_LABELS } from "@/app/lib/screenerApi";
 import { ScreeningProgressSteps } from "./ScreeningProgressSteps";
 import { parseMessageOptions } from "@/lib/parseMessageOptions";
 import { MessageOptionChips } from "@/app/components/shared/MessageOptionChips";
+import { ApprovalCard } from "@/app/components/assistant/ApprovalCard";
 import type { AssistantEvent } from "./chatTypes";
 
 function toolCallLabel(name: string): string {
@@ -60,6 +61,8 @@ interface Props {
   startupId?: string;
   showOptionChips?: boolean;
   onOptionSelect?: (value: string) => void;
+  /** Answers an approval card (Allow / Deny). */
+  onApprovalAnswer?: (runId: string, approved: boolean) => void;
 }
 
 export function ScreenerAssistantMessage({
@@ -71,6 +74,7 @@ export function ScreenerAssistantMessage({
   startupId,
   showOptionChips = false,
   onOptionSelect,
+  onApprovalAnswer,
 }: Props) {
   const status: StatusState = isError ? "error" : isStreaming ? "active" : null;
 
@@ -84,6 +88,11 @@ export function ScreenerAssistantMessage({
     | {
         kind: "content";
         event: Extract<AssistantEvent, { type: "content" }>;
+        index: number;
+      }
+    | {
+        kind: "approval";
+        event: Extract<AssistantEvent, { type: "approval_request" }>;
         index: number;
       };
 
@@ -103,6 +112,9 @@ export function ScreenerAssistantMessage({
       } else if (e.type === "document_created") {
         flushPre();
         groups.push({ kind: "document", event: e, index: i });
+      } else if (e.type === "approval_request") {
+        flushPre();
+        groups.push({ kind: "approval", event: e, index: i });
       } else {
         if (!current) current = { kind: "pre", events: [], indices: [] };
         current.events.push(e);
@@ -115,7 +127,7 @@ export function ScreenerAssistantMessage({
   const hasContentAfter = (groupIdx: number): boolean => {
     for (let i = groupIdx + 1; i < groups.length; i++) {
       const g = groups[i];
-      if (g.kind === "document") return true;
+      if (g.kind === "document" || g.kind === "approval") return true;
       if (g.kind === "content" && g.event.text.length > 0) return true;
     }
     return false;
@@ -224,6 +236,15 @@ export function ScreenerAssistantMessage({
                   <div key={`c-${g.index}`}>
                     {renderContentText(g.event.text, g.index)}
                   </div>
+                );
+              }
+              if (g.kind === "approval") {
+                return (
+                  <ApprovalCard
+                    key={`a-${g.index}`}
+                    request={g.event}
+                    onAnswer={onApprovalAnswer}
+                  />
                 );
               }
               if (g.kind === "document") {

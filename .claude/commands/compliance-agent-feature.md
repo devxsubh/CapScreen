@@ -20,14 +20,12 @@ Ask (or infer from `$ARGUMENTS`):
 
 ## Step 2 — Backend
 
-Edit `backend/src/lib/chatTools.ts`:
+1. Create `backend/src/lib/tools/{feature}Tool.ts` exporting a `ToolDefinition` (schema, handler, `routingHint`, `readOnly`, `needsApproval` if it sends data off the machine)
+2. Register it in `backend/src/lib/tools/index.ts` — call pure logic from `lib/`, never nest LLM calls inside tools unless explicitly requested
 
-1. Add entry to `SCREENER_TOOLS`
-2. Add `case` in `createToolExecutor()` — call pure logic from `lib/`, never nest LLM calls inside tools unless explicitly requested
+If the tool needs new domain logic, add unit-testable functions under `backend/src/lib/` and a test in `backend/test/`.
 
-If the tool needs new domain logic, add `backend/src/lib/{feature}.ts` and unit-testable functions.
-
-Update `backend/src/routes/chat.ts` system prompt if the tool needs special invocation rules.
+Prefer the tool's `routingHint` over editing the base prompt in `backend/src/routes/assistantChat.ts`.
 
 ---
 

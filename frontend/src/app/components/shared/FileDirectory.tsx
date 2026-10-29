@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import type { AppDocument, AppProject } from "./types";
 import { csvAssetId } from "@/lib/workflowAssetIds";
-import { VersionChip } from "./VersionChip";
 
 function formatDate(iso: string | null) {
     if (!iso) return null;
@@ -249,7 +248,6 @@ export function FileDirectory({
                             >
                                 {doc.filename}
                             </span>
-                            <VersionChip n={doc.latest_version_number} />
                             {doc.created_at && (
                                 <span className="shrink-0 text-gray-300">
                                     {formatDate(doc.created_at)}
@@ -349,11 +347,6 @@ export function FileDirectory({
                                                         >
                                                             {doc.filename}
                                                         </span>
-                                                        <VersionChip
-                                                            n={
-                                                                doc.latest_version_number
-                                                            }
-                                                        />
                                                         {doc.created_at && (
                                                             <span className="shrink-0 text-gray-300">
                                                                 {formatDate(

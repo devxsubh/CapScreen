@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { getAuthHeaders } from "@/lib/apiAuth";
 import { apiBase } from "@/lib/apiBase";
 
 /**
@@ -47,7 +46,6 @@ export function useFetchSingleDoc(
                 const response = await fetch(
                     `${base}/single-documents/${documentId}/display${qs}`,
                     {
-                        headers: await getAuthHeaders(),
                     },
                 );
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);

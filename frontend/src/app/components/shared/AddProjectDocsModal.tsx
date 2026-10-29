@@ -6,7 +6,6 @@ import { Check, Loader2, Search, Upload, X } from "lucide-react";
 import { getProject, uploadProjectDocument } from "@/app/lib/capScreenApi";
 import type { AppDocument } from "./types";
 import { DocFileIcon } from "./FileDirectory";
-import { VersionChip } from "./VersionChip";
 
 interface Props {
     open: boolean;
@@ -232,9 +231,6 @@ export function AddProjectDocsModal({
                                                 Already added
                                             </span>
                                         )}
-                                        <VersionChip
-                                            n={doc.latest_version_number}
-                                        />
                                         {doc.created_at && (
                                             <span className="shrink-0 text-gray-300">
                                                 {formatDate(doc.created_at)}

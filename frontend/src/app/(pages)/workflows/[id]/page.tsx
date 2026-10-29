@@ -3,17 +3,12 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { ChevronDown, Plus, Users, X } from "lucide-react";
+import { ChevronDown, Plus, X } from "lucide-react";
 import { getWorkflow, updateWorkflow } from "@/app/lib/capScreenApi";
-import { ShareWorkflowModal } from "@/app/components/workflows/ShareWorkflowModal";
 import { WFEditColumnModal } from "@/app/components/workflows/WFEditColumnModal";
 import { WFColumnViewModal } from "@/app/components/workflows/WFColumnViewModal";
 import { AddColumnModal } from "@/app/components/tabular/AddColumnModal";
 import type { ColumnConfig, AppWorkflow } from "@/app/components/shared/types";
-import {
-    BUILT_IN_IDS,
-    BUILT_IN_WORKFLOWS,
-} from "@/app/components/workflows/builtinWorkflows";
 import { formatIcon, formatLabel } from "@/app/components/tabular/columnFormat";
 import { RenameableTitle } from "@/app/components/shared/RenameableTitle";
 // dynamic import keeps Tiptap (browser-only) out of the SSR bundle
@@ -45,12 +40,8 @@ export default function WorkflowDetailPage({ params }: Props) {
     const [loading, setLoading] = useState(true);
     const [notFound, setNotFound] = useState(false);
 
-    const isBuiltin = BUILT_IN_IDS.has(id);
-    const readOnly =
-        isBuiltin ||
-        (workflow?.is_system ?? false) ||
-        workflow?.allow_edit === false;
-    const canShare = !readOnly && (workflow?.is_owner ?? true);
+    // Built-in workflows are read-only.
+    const readOnly = workflow?.is_system ?? false;
 
     // Editor state
     const [promptMd, setPromptMd] = useState("");
@@ -69,7 +60,6 @@ export default function WorkflowDetailPage({ params }: Props) {
     const [viewingColumn, setViewingColumn] = useState<ColumnConfig | null>(null);
 
     // Share popover
-    const [shareOpen, setShareOpen] = useState(false);
 
     // Column actions dropdown
     const [colActionsOpen, setColActionsOpen] = useState(false);
@@ -89,19 +79,6 @@ export default function WorkflowDetailPage({ params }: Props) {
     // Load workflow
     // ---------------------------------------------------------------------------
     useEffect(() => {
-        if (isBuiltin) {
-            const wf = BUILT_IN_WORKFLOWS.find((w) => w.id === id) ?? null;
-            if (!wf) {
-                setNotFound(true);
-            } else {
-                setWorkflow(wf);
-                setPromptMd(wf.prompt_md ?? "");
-                setColumns(wf.columns_config ?? []);
-            }
-            setLoading(false);
-            return;
-        }
-
         getWorkflow(id)
             .then((wf) => {
                 setWorkflow(wf);
@@ -114,7 +91,7 @@ export default function WorkflowDetailPage({ params }: Props) {
             })
             .catch(() => setNotFound(true))
             .finally(() => setLoading(false));
-    }, [id, isBuiltin]);
+    }, [id]);
 
     // ---------------------------------------------------------------------------
     // Debounced auto-save for prompt
@@ -278,24 +255,6 @@ export default function WorkflowDetailPage({ params }: Props) {
                               : ""}
                     </span>
 
-                    {/* Share button (custom workflows only) */}
-                    {canShare && (
-                        <button
-                            onClick={() => setShareOpen(true)}
-                            aria-label="Open workflow people"
-                            title="People"
-                            className="flex items-center text-gray-500 hover:text-gray-900 transition-colors"
-                        >
-                            <Users className="h-4 w-4" />
-                        </button>
-                    )}
-                    {shareOpen && (
-                        <ShareWorkflowModal
-                            workflowId={id}
-                            workflowName={workflow.title}
-                            onClose={() => setShareOpen(false)}
-                        />
-                    )}
                 </div>
             </div>
 

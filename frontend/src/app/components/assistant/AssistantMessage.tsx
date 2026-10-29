@@ -1,24 +1,21 @@
 "use client";
 
-import { useId, useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import remarkGfm from "remark-gfm";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
-import { Copy, Check, ChevronDown, Download, Loader2, ShieldAlert } from "lucide-react";
+import { Copy, Check, Download, Loader2, ShieldAlert } from "lucide-react";
 import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { displayCitationQuote, formatCitationPage } from "../shared/types";
 import type {
     AssistantEvent,
     AppCitationAnnotation,
-    AppEditAnnotation,
 } from "../shared/types";
-import { EditCard, applyOptimisticResolution } from "./EditCard";
 import { AgentPlan } from "./AgentPlan";
 import { ApprovalCard } from "./ApprovalCard";
 import { PreResponseWrapper } from "../shared/PreResponseWrapper";
-import { getAuthHeaders } from "@/lib/apiAuth";
 import type { ScreeningResult } from "@/lib/screenerTypes";
 import { parseMessageOptions } from "@/lib/parseMessageOptions";
 import { MessageOptionChips } from "@/app/components/shared/MessageOptionChips";
@@ -60,281 +57,6 @@ function toolCallDoneLabel(name: string): string {
     if (name === "update_plan") return "Updated plan";
     if (name === "delegate_task") return "Sub-agent finished";
     return name ? `Ran ${name}` : "Completed";
-}
-
-/**
- * Card rendered above the per-edit EditCards when a message produced
- * multiple tracked-change proposals. Lets the user resolve every pending
- * edit in one click by firing the per-edit accept/reject endpoint for each
- * pending annotation and forwarding each response to `onResolved` so the
- * parent can bump the viewer version, persist override URLs, etc.
- *
- * This intentionally doesn't apply the optimistic DOM mutation that
- * EditCard does — bulk operations touch many edits at once and the real
- * re-render from the latest version will reconcile within a second or so.
- */
-function BulkEditActions({
-    pending,
-    filenameByDocId,
-    onViewClick,
-    onResolveStart,
-    onResolved,
-    onError,
-}: {
-    pending: {
-        annotation: AppEditAnnotation;
-        filename: string;
-    }[];
-    filenameByDocId: Map<string, string>;
-    onViewClick?: (ann: AppEditAnnotation, filename: string) => void;
-    onResolveStart?: (args: {
-        editId: string;
-        documentId: string;
-        verb: "accept" | "reject";
-    }) => void;
-    onResolved?: (args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => void;
-    onError?: (args: {
-        editId: string;
-        documentId: string;
-        versionId: string | null;
-        message: string;
-    }) => void;
-}) {
-    const [busy, setBusy] = useState<"accept" | "reject" | null>(null);
-    const [progress, setProgress] = useState<{
-        done: number;
-        total: number;
-    } | null>(null);
-
-    if (pending.length === 0) return null;
-
-    const handleAll = async (verb: "accept" | "reject") => {
-        if (busy) return;
-        setBusy(verb);
-        setProgress({ done: 0, total: pending.length });
-        try {
-            const base = apiBase();
-
-            // Sequential so the per-document version counter advances in a
-            // predictable order and the viewer doesn't race between bumps.
-            let done = 0;
-            for (const { annotation } of pending) {
-                onResolveStart?.({
-                    editId: annotation.edit_id,
-                    documentId: annotation.document_id,
-                    verb,
-                });
-                // Optimistically mutate the DOM so the viewer reflects the
-                // resolution immediately. Revert if the backend call fails.
-                let revert: (() => void) | null = null;
-                try {
-                    revert = applyOptimisticResolution(annotation, verb);
-                } catch (e) {
-                    console.error(
-                        "[BulkEditActions] optimistic update threw",
-                        e,
-                    );
-                }
-                try {
-                    const resp = await fetch(
-                        `${base}/single-documents/${annotation.document_id}/edits/${annotation.edit_id}/${verb}`,
-                        {
-                            method: "POST",
-                            headers: {},
-                        },
-                    );
-                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                    const data = (await resp.json()) as {
-                        ok: boolean;
-                        status?: "accepted" | "rejected";
-                        version_id: string | null;
-                        download_url: string | null;
-                    };
-                    const nextStatus =
-                        data.status ??
-                        (verb === "accept" ? "accepted" : "rejected");
-                    onResolved?.({
-                        editId: annotation.edit_id,
-                        documentId: annotation.document_id,
-                        status: nextStatus,
-                        versionId: data.version_id,
-                        downloadUrl: data.download_url,
-                    });
-                } catch (e) {
-                    console.error("[BulkEditActions] resolve failed", e);
-                    try {
-                        revert?.();
-                    } catch (revertErr) {
-                        console.error(
-                            "[BulkEditActions] revert threw",
-                            revertErr,
-                        );
-                    }
-                    onError?.({
-                        editId: annotation.edit_id,
-                        documentId: annotation.document_id,
-                        versionId: annotation.version_id ?? null,
-                        message:
-                            verb === "accept"
-                                ? "Couldn't save one or more accepts."
-                                : "Couldn't save one or more rejects.",
-                    });
-                }
-                done++;
-                setProgress({ done, total: pending.length });
-            }
-        } finally {
-            setBusy(null);
-            setProgress(null);
-        }
-    };
-
-    // Optional: show a tiny "View first" action so bulk doesn't lose the
-    // in-viewer scroll-to behaviour entirely.
-    const first = pending[0];
-
-    return (
-        <div className="flex items-center gap-2">
-            <button
-                onClick={() => handleAll("accept")}
-                disabled={!!busy}
-                className="px-2 py-1 text-xs rounded border border-gray-900 bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-50 inline-flex items-center gap-1"
-            >
-                {busy === "accept" && (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                )}
-                Accept all
-            </button>
-            <button
-                onClick={() => handleAll("reject")}
-                disabled={!!busy}
-                className="px-2 py-1 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50 inline-flex items-center gap-1"
-            >
-                {busy === "reject" && (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                )}
-                Reject all
-            </button>
-            {progress && (
-                <span className="text-xs font-serif text-gray-500">
-                    {progress.done}/{progress.total}
-                </span>
-            )}
-            {onViewClick && first && (
-                <button
-                    onClick={() =>
-                        onViewClick(first.annotation, first.filename)
-                    }
-                    disabled={!!busy}
-                    className="ml-auto px-2 py-1 text-xs rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-50"
-                >
-                    View
-                </button>
-            )}
-        </div>
-    );
-}
-
-/**
- * Wraps the bulk accept/reject card and the per-edit EditCards in a single
- * minimisable container. The bulk actions and summary stay visible in the
- * header; the individual cards collapse via the chevron toggle.
- */
-function EditCardsSection({
-    pending,
-    filenameByDocId,
-    cards,
-    resolvedCount,
-    onViewClick,
-    onResolveStart,
-    onResolved,
-    onError,
-}: {
-    pending: {
-        annotation: AppEditAnnotation;
-        filename: string;
-    }[];
-    filenameByDocId: Map<string, string>;
-    cards: React.ReactNode[];
-    resolvedCount: number;
-    onViewClick?: (ann: AppEditAnnotation, filename: string) => void;
-    onResolveStart?: (args: {
-        editId: string;
-        documentId: string;
-        verb: "accept" | "reject";
-    }) => void;
-    onResolved?: (args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => void;
-    onError?: (args: {
-        editId: string;
-        documentId: string;
-        versionId: string | null;
-        message: string;
-    }) => void;
-}) {
-    const [isOpen, setIsOpen] = useState(true);
-    if (cards.length === 0) return null;
-
-    const docCount = filenameByDocId.size;
-    const summary =
-        pending.length > 0
-            ? docCount > 1
-                ? `${pending.length} tracked changes across ${docCount} documents`
-                : `${pending.length} tracked ${pending.length === 1 ? "change" : "changes"}`
-            : docCount > 1
-              ? `${resolvedCount} resolved tracked changes across ${docCount} documents`
-              : `${resolvedCount} resolved tracked ${resolvedCount === 1 ? "change" : "changes"}`;
-
-    return (
-        <div className="border border-gray-200 rounded-lg bg-white overflow-hidden">
-            {/* Row 1: summary + chevron */}
-            <div className="flex items-center gap-2 px-3 pt-3">
-                <p className="flex-1 min-w-0 text-sm font-serif text-gray-700 truncate">
-                    {summary}
-                </p>
-                <button
-                    onClick={() => setIsOpen((v) => !v)}
-                    aria-label={isOpen ? "Collapse edits" : "Expand edits"}
-                    className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors"
-                >
-                    <ChevronDown
-                        className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
-                    />
-                </button>
-            </div>
-            {/* Row 2: bulk action buttons */}
-            {pending.length > 0 && (
-                <div className="px-3 pt-3">
-                    <BulkEditActions
-                        pending={pending}
-                        filenameByDocId={filenameByDocId}
-                        onViewClick={onViewClick}
-                        onResolveStart={onResolveStart}
-                        onResolved={onResolved}
-                        onError={onError}
-                    />
-                </div>
-            )}
-            {/* Row 3: collapsible cards list */}
-            {isOpen && (
-                <div className="flex flex-col gap-2 px-3 pb-3 pt-3">
-                    {cards}
-                </div>
-            )}
-            {!isOpen && <div className="pb-3" />}
-        </div>
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -381,166 +103,6 @@ function ResponseStatus({ status }: { status: StatusState }) {
 // Event block components
 // ---------------------------------------------------------------------------
 
-const THINKING_PHRASES = [
-    "Thinking...",
-    "Pondering...",
-    "Analyzing...",
-    "Reviewing...",
-    "Reasoning...",
-];
-
-function ReasoningBlock({
-    text,
-    isStreaming,
-    showConnector,
-}: {
-    text: string;
-    isStreaming: boolean;
-    showConnector?: boolean;
-}) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [thinkingIndex, setThinkingIndex] = useState(0);
-
-    useEffect(() => {
-        if (!isStreaming) return;
-        const interval = setInterval(() => {
-            setThinkingIndex((i) => (i + 1) % THINKING_PHRASES.length);
-        }, 2000);
-        return () => clearInterval(interval);
-    }, [isStreaming]);
-
-    const showContent = isOpen || isStreaming;
-
-    return (
-        <div className="relative">
-            {showConnector && (
-                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gray-300 top-[13px] left-[2.5px] h-[calc(100%+11px)]" />
-            )}
-            <button
-                onClick={() => !isStreaming && setIsOpen((v) => !v)}
-                className="flex items-center text-sm font-serif text-gray-500 hover:text-gray-600 transition-colors"
-            >
-                {isStreaming ? (
-                    <div className="w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-                ) : (
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                )}
-                <span className="font-medium ml-2">
-                    {isStreaming
-                        ? THINKING_PHRASES[thinkingIndex]
-                        : "Thought process"}
-                </span>
-                {!isStreaming && (
-                    <ChevronDown
-                        size={10}
-                        className={`ml-1 self-center transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
-                    />
-                )}
-            </button>
-            {showContent && (
-                <div className="mt-2 ml-[14px] text-sm font-serif text-gray-400 prose prose-sm max-w-none [&>*]:text-gray-400 [&>*]:text-sm">
-                    <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                            code: ({ node, ...props }) => (
-                                <code
-                                    className="font-serif text-gray-600"
-                                    {...props}
-                                />
-                            ),
-                        }}
-                    >
-                        {text}
-                    </ReactMarkdown>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function DocReadBlock({
-    filename,
-    onClick,
-    showConnector,
-    isStreaming,
-}: {
-    filename: string;
-    onClick?: () => void;
-    showConnector?: boolean;
-    isStreaming?: boolean;
-}) {
-    return (
-        <div className="flex items-start text-sm font-serif text-gray-500 relative">
-            {showConnector && (
-                <div className="absolute bottom-0 w-[1px] bg-gray-300 top-[13px] left-[2.5px] h-[calc(100%+11px)]" />
-            )}
-            {isStreaming ? (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-            ) : (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-            )}
-            <div className="ml-2 min-w-0 flex-1 whitespace-normal break-words">
-                <span className="font-medium">
-                    {isStreaming ? "Reading" : "Read"}
-                </span>{" "}
-                {isStreaming ? (
-                    <span>{filename}...</span>
-                ) : onClick ? (
-                    <button
-                        onClick={onClick}
-                        className="text-left hover:text-gray-700 transition-colors cursor-pointer"
-                    >
-                        {filename}
-                    </button>
-                ) : (
-                    <span>{filename}</span>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function DocFindBlock({
-    filename,
-    query,
-    totalMatches,
-    isStreaming,
-    showConnector,
-}: {
-    filename: string;
-    query: string;
-    totalMatches: number;
-    isStreaming?: boolean;
-    showConnector?: boolean;
-}) {
-    const label = isStreaming ? "Finding" : "Found";
-    const matchSuffix = isStreaming
-        ? ""
-        : ` (${totalMatches} ${totalMatches === 1 ? "match" : "matches"})`;
-    return (
-        <div className="flex items-start text-sm font-serif text-gray-500 relative">
-            {showConnector && (
-                <div className="absolute bottom-0 w-[1px] bg-gray-300 top-[13px] left-[2.5px] h-[calc(100%+11px)]" />
-            )}
-            {isStreaming ? (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-            ) : (
-                <div
-                    className={`mt-2 w-1.5 h-1.5 rounded-full shrink-0 ${totalMatches > 0 ? "bg-green-400" : "bg-gray-300"}`}
-                />
-            )}
-            <div className="ml-2 min-w-0 flex-1 whitespace-normal break-words">
-                <span className="font-medium">{label}</span>{" "}
-                <span>
-                    &ldquo;{query}&rdquo;{matchSuffix}
-                    <span className="ml-1 text-gray-400">in {filename}</span>
-                    {isStreaming && "..."}
-                </span>
-            </div>
-        </div>
-    );
-}
-
 function DocCreatedBlock({
     filename,
     showConnector,
@@ -565,49 +127,6 @@ function DocCreatedBlock({
                     {isStreaming ? "Creating" : "Created"}
                 </span>{" "}
                 <span>{isStreaming ? `${filename}...` : filename}</span>
-            </div>
-        </div>
-    );
-}
-
-function DocReplicatedBlock({
-    filename,
-    count,
-    showConnector,
-    isStreaming,
-    hasError,
-}: {
-    filename: string;
-    /**
-     * How many consecutive replicates of this same source got collapsed
-     * into this block. ≥ 1; only rendered when > 1.
-     */
-    count: number;
-    showConnector?: boolean;
-    isStreaming?: boolean;
-    hasError?: boolean;
-}) {
-    const label = isStreaming ? "Replicating" : "Replicated";
-    const suffix =
-        !isStreaming && count > 1 ? ` ${count} times` : isStreaming ? "..." : "";
-    return (
-        <div className="flex items-start text-sm font-serif text-gray-500 relative">
-            {showConnector && (
-                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gray-300 top-[13px] left-[2.5px] h-[calc(100%+11px)]" />
-            )}
-            {isStreaming ? (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-            ) : (
-                <div
-                    className={`mt-2 w-1.5 h-1.5 rounded-full shrink-0 ${hasError ? "bg-red-400" : "bg-green-400"}`}
-                />
-            )}
-            <div className="ml-2 min-w-0 flex-1 whitespace-normal break-words">
-                <span className="font-medium">{label}</span>{" "}
-                <span>
-                    {filename}
-                    {suffix}
-                </span>
             </div>
         </div>
     );
@@ -668,7 +187,7 @@ function DocDownloadBlock({
         if (busy || isReloading || !href) return;
         setBusy(true);
         try {
-            const resp = await fetch(href, { headers: await getAuthHeaders() });
+            const resp = await fetch(href);
             if (!resp.ok) {
                 throw new Error(
                     resp.status === 404
@@ -880,43 +399,6 @@ function WorkflowAppliedBlock({
                 ) : (
                     <span>{title}</span>
                 )}
-            </div>
-        </div>
-    );
-}
-
-function DocEditedBlock({
-    filename,
-    showConnector,
-    isStreaming,
-    hasError,
-}: {
-    filename: string;
-    showConnector?: boolean;
-    isStreaming?: boolean;
-    hasError?: boolean;
-}) {
-    return (
-        <div className="flex items-start text-sm font-serif text-gray-500 relative">
-            {showConnector && (
-                <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gray-300 top-[13px] left-[2.5px] h-[calc(100%+11px)]" />
-            )}
-            {isStreaming ? (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-            ) : hasError ? (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
-            ) : (
-                <div className="mt-2 w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-            )}
-            <div className="ml-2 min-w-0 flex-1 whitespace-normal break-words">
-                <span className="font-medium">
-                    {isStreaming
-                        ? "Editing"
-                        : hasError
-                          ? "Edit failed"
-                          : "Edited"}
-                </span>{" "}
-                <span>{isStreaming ? `${filename}...` : filename}</span>
             </div>
         </div>
     );
@@ -1140,7 +622,6 @@ interface Props {
     onWorkflowClick?: (workflowId: string) => void;
     /** Answers an approval card (Allow / Deny) for a paused assistant run. */
     onApprovalAnswer?: (runId: string, approved: boolean) => void;
-    onEditViewClick?: (ann: AppEditAnnotation, filename: string) => void;
     /**
      * Opens the editor panel for a document without auto-highlighting any
      * specific edit. Used by the download card click — opening a doc to
@@ -1156,44 +637,6 @@ interface Props {
     }) => void;
     /** Opens the screening results tab in the side panel (graph + risk table). */
     onOpenScreening?: (result?: ScreeningResult | null) => void;
-    /**
-     * Fires immediately when the user clicks Accept / Reject (single card
-     * or the bulk "Accept all" / "Reject all"), before the backend call.
-     * Parents use this to flip download cards / editor viewers into a
-     * "saving" state for the duration of the round-trip.
-     */
-    onEditResolveStart?: (args: {
-        editId: string;
-        documentId: string;
-        verb: "accept" | "reject";
-    }) => void;
-    onEditResolved?: (args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => void;
-    onEditError?: (args: {
-        editId: string;
-        documentId: string;
-        versionId: string | null;
-        message: string;
-    }) => void;
-    isDocReloading?: (documentId: string) => boolean;
-    /**
-     * True while an accept/reject request for this specific edit is in
-     * flight. Used to disable just that edit's Accept/Reject controls
-     * (sibling edits on the same doc stay clickable).
-     */
-    isEditReloading?: (editId: string) => boolean;
-    /**
-     * External override for individual edit statuses. When present, an
-     * EditCard looks up its edit_id here and treats the mapped value
-     * ("accepted" / "rejected") as authoritative — used so bulk-resolved
-     * edits flip their per-card UI without per-card clicks.
-     */
-    resolvedEditStatuses?: Record<string, "accepted" | "rejected">;
     /** When true, numbered lists in the last content block render as clickable MCQ options. */
     showOptionChips?: boolean;
     onOptionSelect?: (value: string) => void;
@@ -1210,44 +653,13 @@ export function AssistantMessage({
     minHeight = "0px",
     onWorkflowClick,
     onApprovalAnswer,
-    onEditViewClick,
     onOpenDocument,
     onOpenScreening,
-    onEditResolveStart,
-    onEditResolved,
-    onEditError,
-    isDocReloading,
-    isEditReloading,
-    resolvedEditStatuses,
     showOptionChips = false,
     onOptionSelect,
 }: Props) {
-    const messageKey = useId();
     const contentDivRef = useRef<HTMLDivElement | null>(null);
     const [isCopied, setIsCopied] = useState(false);
-    // Per-document override of the download URL, set as Accept/Reject resolves
-    // each tracked change and produces a new version.
-    const [resolvedOverrides, setResolvedOverrides] = useState<
-        Record<string, string>
-    >({});
-
-    const handleEditResolved = (args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => {
-        console.log("[AssistantMessage] handleEditResolved", args);
-        if (args.downloadUrl) {
-            setResolvedOverrides((prev) => ({
-                ...prev,
-                [args.documentId]: args.downloadUrl as string,
-            }));
-        }
-        onEditResolved?.(args);
-    };
-
     const status: StatusState = isError
         ? "error"
         : isStreaming
@@ -1401,16 +813,6 @@ export function AssistantMessage({
                 </div>
             );
         }
-        if (event.type === "reasoning") {
-            return (
-                <ReasoningBlock
-                    key={globalIdx}
-                    text={event.text}
-                    isStreaming={!!event.isStreaming}
-                    showConnector={showConnector}
-                />
-            );
-        }
         if (event.type === "tool_call_start") {
             const toolStreaming = !!event.isStreaming && isStreaming;
             return (
@@ -1448,34 +850,6 @@ export function AssistantMessage({
                 </div>
             );
         }
-        if (event.type === "doc_read") {
-            const ann = annotations.find((a) => a.filename === event.filename);
-            return (
-                <DocReadBlock
-                    key={globalIdx}
-                    filename={event.filename}
-                    isStreaming={event.isStreaming}
-                    onClick={
-                        !event.isStreaming && ann && onCitationClick
-                            ? () => onCitationClick(ann)
-                            : undefined
-                    }
-                    showConnector={showConnector}
-                />
-            );
-        }
-        if (event.type === "doc_find") {
-            return (
-                <DocFindBlock
-                    key={globalIdx}
-                    filename={event.filename}
-                    query={event.query}
-                    totalMatches={event.total_matches}
-                    isStreaming={!!event.isStreaming}
-                    showConnector={showConnector}
-                />
-            );
-        }
         if (event.type === "screening_complete") {
             if (!event.isStreaming) return null;
             return (
@@ -1499,32 +873,6 @@ export function AssistantMessage({
                     key={globalIdx}
                     filename={event.filename}
                     isStreaming={event.isStreaming}
-                    showConnector={showConnector}
-                />
-            );
-        }
-        if (event.type === "doc_replicated") {
-            // The backend now does N copies in one tool call and reports
-            // count + copies on a single event, so no consecutive-event
-            // aggregation needed.
-            return (
-                <DocReplicatedBlock
-                    key={globalIdx}
-                    filename={event.filename}
-                    count={event.count}
-                    isStreaming={!!event.isStreaming}
-                    hasError={!!event.error}
-                    showConnector={showConnector}
-                />
-            );
-        }
-        if (event.type === "doc_edited") {
-            return (
-                <DocEditedBlock
-                    key={globalIdx}
-                    filename={event.filename}
-                    isStreaming={event.isStreaming}
-                    hasError={!!event.error}
                     showConnector={showConnector}
                 />
             );
@@ -1621,97 +969,6 @@ export function AssistantMessage({
                                 </PreResponseWrapper>
                             );
                         })}
-                        {/* Bulk accept/reject + per-edit cards — below the
-                            response content, only after streaming stops,
-                            rendered above the download card. */}
-                        {!isStreaming &&
-                            (() => {
-                                const editedEvents = events.filter(
-                                    (e) =>
-                                        e.type === "doc_edited" &&
-                                        !e.isStreaming,
-                                ) as Extract<
-                                    AssistantEvent,
-                                    { type: "doc_edited" }
-                                >[];
-                                const pending: {
-                                    annotation: AppEditAnnotation;
-                                    filename: string;
-                                }[] = [];
-                                const filenameByDocId = new Map<
-                                    string,
-                                    string
-                                >();
-                                // Effective status = external override if any, else the annotation's DB status.
-                                const statusOf = (ann: AppEditAnnotation) =>
-                                    resolvedEditStatuses?.[ann.edit_id] ??
-                                    ann.status;
-                                for (const e of editedEvents) {
-                                    filenameByDocId.set(
-                                        e.document_id,
-                                        e.filename,
-                                    );
-                                    for (const ann of e.annotations) {
-                                        if (statusOf(ann) === "pending") {
-                                            pending.push({
-                                                annotation: ann,
-                                                filename: e.filename,
-                                            });
-                                        }
-                                    }
-                                }
-                                const cards = editedEvents.flatMap((e) =>
-                                    e.annotations.map((ann) => (
-                                        <EditCard
-                                            key={`editcard-${ann.edit_id}`}
-                                            annotation={ann}
-                                            resolvedStatus={
-                                                resolvedEditStatuses?.[
-                                                    ann.edit_id
-                                                ]
-                                            }
-                                            isReloading={
-                                                isEditReloading?.(
-                                                    ann.edit_id,
-                                                ) ?? false
-                                            }
-                                            onViewClick={(a) =>
-                                                onEditViewClick?.(a, e.filename)
-                                            }
-                                            onResolveStart={onEditResolveStart}
-                                            onResolved={handleEditResolved}
-                                            onError={onEditError}
-                                        />
-                                    )),
-                                );
-                                const resolvedCount = editedEvents.reduce(
-                                    (acc, e) =>
-                                        acc +
-                                        e.annotations.filter(
-                                            (a) => statusOf(a) !== "pending",
-                                        ).length,
-                                    0,
-                                );
-                                // If there's only one edit total, skip the
-                                // minimisable wrapper / bulk-actions UI and
-                                // render the bare EditCard — no value in
-                                // bulk controls for a single item.
-                                if (cards.length <= 1) {
-                                    return cards;
-                                }
-                                return (
-                                    <EditCardsSection
-                                        pending={pending}
-                                        filenameByDocId={filenameByDocId}
-                                        cards={cards}
-                                        resolvedCount={resolvedCount}
-                                        onViewClick={onEditViewClick}
-                                        onResolveStart={onEditResolveStart}
-                                        onResolved={handleEditResolved}
-                                        onError={onEditError}
-                                    />
-                                );
-                            })()}
                     </div>
                 ) : fallbackProcessed ? (
                     <MarkdownContent
@@ -1729,69 +986,6 @@ export function AssistantMessage({
                         </span>
                     </div>
                 )}
-
-                {/* Download card for each edited doc — only after streaming
-                    stops, and deduped per document (keep the latest edit). */}
-                {events &&
-                    !isStreaming &&
-                    (() => {
-                        const edited = events.filter(
-                            (
-                                e,
-                            ): e is Extract<
-                                AssistantEvent,
-                                { type: "doc_edited" }
-                            > =>
-                                e.type === "doc_edited" &&
-                                !e.isStreaming &&
-                                !!e.download_url,
-                        );
-                        const latestByDoc = new Map<
-                            string,
-                            (typeof edited)[number]
-                        >();
-                        for (const e of edited)
-                            latestByDoc.set(e.document_id, e);
-                        return Array.from(latestByDoc.values()).map((e) => (
-                            <div
-                                key={`edited-download-${e.document_id}`}
-                                className="flex flex-col gap-2 mt-2 mb-3"
-                            >
-                                <DocDownloadBlock
-                                    filename={e.filename}
-                                    download_url={
-                                        resolvedOverrides[e.document_id] ??
-                                        e.download_url
-                                    }
-                                    versionNumber={e.version_number ?? null}
-                                    onOpen={
-                                        onOpenDocument
-                                            ? () =>
-                                                  onOpenDocument({
-                                                      documentId: e.document_id,
-                                                      filename: e.filename,
-                                                      versionId:
-                                                          e.version_id ?? null,
-                                                      versionNumber:
-                                                          e.version_number ??
-                                                          null,
-                                                  })
-                                            : onEditViewClick &&
-                                                e.annotations[0]
-                                              ? () =>
-                                                    onEditViewClick(
-                                                        e.annotations[0],
-                                                        e.filename,
-                                                    )
-                                              : undefined
-                                    }
-                                    isReloading={
-                                        isDocReloading?.(e.document_id) ?? false
-                                    }
-                                />
-                            </div>
-                        ));
-                    })()}
 
                 {/* Screening results card — opens graph + risk table in side panel */}
                 {events &&

@@ -19,17 +19,17 @@ You are a VC compliance engineering specialist focused on **sanctions screening*
 ## Core responsibilities
 
 1. Implement and debug screening pipeline (`runScreening.ts`, `parseCapTable.ts`, `graph.ts`, `watchman.ts`)
-2. Extend `SCREENER_TOOLS` with correct executor semantics
+2. Add or extend agent tools in `backend/src/lib/tools/` with correct semantics
 3. Ensure UI shows ownership graph, risk table, and analyst cards accurately
 4. Guard language: **screening aid, not a legal determination**
 
 ## Key files
 
 ```
-backend/src/lib/runScreening.ts
-backend/src/lib/chatTools.ts
-backend/src/lib/graph.ts
-backend/src/lib/watchman.ts
+backend/src/lib/screening/runScreening.ts
+backend/src/lib/tools/index.ts
+backend/src/lib/screening/graph.ts
+backend/src/lib/screening/watchman.ts
 backend/src/lib/classify.ts
 backend/src/lib/explain.ts
 frontend/src/app/components/screen/

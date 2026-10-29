@@ -10,7 +10,4 @@ node_modules/
 dist/
 sample-data/
 scripts/
-atlas-indexes/
 docs/
-Dockerfile
-nixpacks.toml

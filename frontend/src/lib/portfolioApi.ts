@@ -1,16 +1,13 @@
-import { getAuthHeaders } from "@/lib/apiAuth";
 import { apiBase } from "@/lib/apiBase";
 
 const API_BASE = apiBase();
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const authHeaders = await getAuthHeaders();
   const { headers: initHeaders, ...restInit } = init ?? {};
   const resp = await fetch(`${API_BASE}${path}`, {
     ...restInit,
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders,
       ...(initHeaders as Record<string, string> | undefined),
     },
   });

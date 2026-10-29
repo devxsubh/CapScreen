@@ -13,7 +13,6 @@ import { useGenerateChatTitle } from "./useGenerateChatTitle";
 import type {
     AgentPlanStep,
     AssistantEvent,
-    AppCitationAnnotation,
     AppMessage,
 } from "@/app/components/shared/types";
 import type { ScreeningResult } from "@/lib/screenerTypes";
@@ -93,7 +92,6 @@ export function useAssistantChat({
 
     const [messages, setMessages] = useState<AppMessage[]>(initialMessages);
     const [isResponseLoading, setIsResponseLoading] = useState(false);
-    const [isLoadingCitations, setIsLoadingCitations] = useState(false);
     const [screeningResult, setScreeningResult] =
         useState<ScreeningResult | null>(null);
     const [startupHandoff, setStartupHandoff] =
@@ -191,27 +189,6 @@ export function useAssistantChat({
     // If the model transitions from reasoning into content/tool without a
     // reasoning_block_end (or the events arrive out of order), the prior
     // reasoning event would otherwise stay flagged isStreaming forever.
-    const finalizeStreamingReasoning = () => {
-        const events = eventsRef.current;
-        const last = events[events.length - 1];
-        if (last?.type !== "reasoning" || !last.isStreaming) return;
-        eventsRef.current = [
-            ...events.slice(0, -1),
-            { type: "reasoning", text: last.text },
-        ];
-        const snapshot = [...eventsRef.current];
-        setMessages((prev) => {
-            const updated = [...prev];
-            const lastMsg = updated[updated.length - 1];
-            if (lastMsg?.role === "assistant") {
-                updated[updated.length - 1] = {
-                    ...lastMsg,
-                    events: snapshot,
-                };
-            }
-            return updated;
-        });
-    };
 
     const startDrip = () => {
         if (dripIntervalRef.current !== null) return;
@@ -261,7 +238,6 @@ export function useAssistantChat({
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
             setIsResponseLoading(false);
-            setIsLoadingCitations(false);
         }
     };
 
@@ -359,29 +335,8 @@ export function useAssistantChat({
         });
     };
 
-    const pushThinkingPlaceholder = () => {
-        const events = eventsRef.current;
-        const last = events[events.length - 1];
-        // Don't stack placeholders back-to-back; one "Thinking…" line is plenty.
-        if (last && isStreamingPlaceholder(last)) return;
-        eventsRef.current = [
-            ...events,
-            { type: "thinking" as const, isStreaming: true },
-        ];
-        const snapshot = [...eventsRef.current];
-        setMessages((prev) => {
-            const updated = [...prev];
-            const lastMsg = updated[updated.length - 1];
-            if (lastMsg?.role === "assistant") {
-                updated[updated.length - 1] = { ...lastMsg, events: snapshot };
-            }
-            return updated;
-        });
-    };
-
     const pushEvent = (event: AssistantEvent) => {
         finalizeStreamingContent();
-        finalizeStreamingReasoning();
         // A real event, or a more specific placeholder such as
         // tool_call_start, should replace any generic "Thinking..." line.
         const next = eventsRef.current.filter(
@@ -451,7 +406,10 @@ export function useAssistantChat({
                 if (!trimmed || !trimmed.startsWith("data:")) continue;
 
                 const dataStr = trimmed.slice(5).trim();
-                if (dataStr === "[DONE]") continue;
+                if (dataStr === "[DONE]") {
+                    clearStreamingPlaceholders();
+                    continue;
+                }
 
                 try {
                     const data = JSON.parse(dataStr);
@@ -463,11 +421,6 @@ export function useAssistantChat({
                         continue;
                     }
 
-                    if (data.type === "content_done") {
-                        setIsLoadingCitations(true);
-                        continue;
-                    }
-
                     if (data.type === "content_delta") {
                         const text = data.text as string;
 
@@ -476,7 +429,6 @@ export function useAssistantChat({
                         // finalize any in-flight reasoning block so it
                         // doesn't get stuck rendering as streaming.
                         clearStreamingPlaceholders();
-                        finalizeStreamingReasoning();
 
                         // Ensure a streaming content event exists. If
                         // the last event isn't already a streaming
@@ -516,84 +468,6 @@ export function useAssistantChat({
                         }
 
                         startDrip();
-                        continue;
-                    }
-
-                    if (data.type === "reasoning_delta") {
-                        const text = data.text as string;
-                        let events = eventsRef.current;
-                        const last = events[events.length - 1];
-                        if (
-                            last?.type === "reasoning" &&
-                            last.isStreaming
-                        ) {
-                            eventsRef.current = [
-                                ...events.slice(0, -1),
-                                {
-                                    type: "reasoning" as const,
-                                    text: last.text + text,
-                                    isStreaming: true,
-                                },
-                            ];
-                        } else {
-                            // New reasoning block — finalize any in-flight
-                            // content event first so the next content_delta
-                            // starts a fresh block at the correct position.
-                            finalizeStreamingContent();
-                            clearStreamingPlaceholders();
-                            events = eventsRef.current;
-                            eventsRef.current = [
-                                ...events,
-                                {
-                                    type: "reasoning" as const,
-                                    text,
-                                    isStreaming: true,
-                                },
-                            ];
-                        }
-                        const snapshot = [...eventsRef.current];
-                        setMessages((prev) => {
-                            const updated = [...prev];
-                            const last = updated[updated.length - 1];
-                            if (last?.role === "assistant") {
-                                updated[updated.length - 1] = {
-                                    ...last,
-                                    events: snapshot,
-                                };
-                            }
-                            return updated;
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "reasoning_block_end") {
-                        const events = eventsRef.current;
-                        const last = events[events.length - 1];
-                        if (
-                            last?.type === "reasoning" &&
-                            last.isStreaming
-                        ) {
-                            eventsRef.current = [
-                                ...events.slice(0, -1),
-                                {
-                                    type: "reasoning" as const,
-                                    text: last.text,
-                                },
-                            ];
-                        }
-                        const snapshot = [...eventsRef.current];
-                        setMessages((prev) => {
-                            const updated = [...prev];
-                            const last = updated[updated.length - 1];
-                            if (last?.role === "assistant") {
-                                updated[updated.length - 1] = {
-                                    ...last,
-                                    events: snapshot,
-                                };
-                            }
-                            return updated;
-                        });
-                        pushThinkingPlaceholder();
                         continue;
                     }
 
@@ -704,121 +578,6 @@ export function useAssistantChat({
                         continue;
                     }
 
-                    if (data.type === "doc_read_start") {
-                        pushEvent({
-                            type: "doc_read",
-                            filename: data.filename as string,
-                            isStreaming: true,
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "doc_read") {
-                        updateMatchingEvent(
-                            (e) =>
-                                e.type === "doc_read" &&
-                                e.filename === data.filename &&
-                                !!e.isStreaming,
-                            (e) => ({ ...e, isStreaming: false }),
-                        );
-                        pushThinkingPlaceholder();
-                        continue;
-                    }
-
-                    if (data.type === "doc_find_start") {
-                        pushEvent({
-                            type: "doc_find",
-                            filename: data.filename as string,
-                            query: (data.query as string) ?? "",
-                            total_matches: 0,
-                            isStreaming: true,
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "doc_find") {
-                        updateMatchingEvent(
-                            (e) =>
-                                e.type === "doc_find" &&
-                                e.filename === data.filename &&
-                                e.query === (data.query as string) &&
-                                !!e.isStreaming,
-                            (e) => ({
-                                ...e,
-                                isStreaming: false,
-                                total_matches:
-                                    typeof data.total_matches === "number"
-                                        ? (data.total_matches as number)
-                                        : (
-                                              e as {
-                                                  type: "doc_find";
-                                                  total_matches: number;
-                                              }
-                                          ).total_matches,
-                            }),
-                        );
-                        pushThinkingPlaceholder();
-                        continue;
-                    }
-
-                    if (data.type === "doc_created_start") {
-                        pushEvent({
-                            type: "doc_created",
-                            filename: data.filename as string,
-                            download_url: "",
-                            isStreaming: true,
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "doc_download") {
-                        pushEvent({
-                            type: "doc_download",
-                            filename: data.filename as string,
-                            download_url: data.download_url as string,
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "doc_created") {
-                        updateMatchingEvent(
-                            (e) =>
-                                e.type === "doc_created" &&
-                                e.filename === data.filename &&
-                                !!e.isStreaming,
-                            (e) => {
-                                const next: Extract<
-                                    AssistantEvent,
-                                    { type: "doc_created" }
-                                > = {
-                                    type: "doc_created",
-                                    filename: (e as { filename: string })
-                                        .filename,
-                                    download_url:
-                                        data.download_url as string,
-                                    isStreaming: false,
-                                };
-                                if (typeof data.document_id === "string") {
-                                    next.document_id =
-                                        data.document_id as string;
-                                }
-                                if (typeof data.version_id === "string") {
-                                    next.version_id =
-                                        data.version_id as string;
-                                }
-                                if (
-                                    typeof data.version_number === "number"
-                                ) {
-                                    next.version_number =
-                                        data.version_number as number;
-                                }
-                                return next;
-                            },
-                        );
-                        pushThinkingPlaceholder();
-                        continue;
-                    }
-
                     // Startup screening documents (IC memo / analysis).
                     if (data.type === "document_created" && data.document) {
                         const doc = data.document as {
@@ -844,99 +603,6 @@ export function useAssistantChat({
                             startup_id: doc.startupId,
                             isStreaming: false,
                         });
-                        continue;
-                    }
-
-                    if (data.type === "doc_replicate_start") {
-                        pushEvent({
-                            type: "doc_replicated",
-                            filename: data.filename as string,
-                            count:
-                                typeof data.count === "number"
-                                    ? (data.count as number)
-                                    : 1,
-                            isStreaming: true,
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "doc_replicated") {
-                        updateMatchingEvent(
-                            (e) =>
-                                e.type === "doc_replicated" &&
-                                e.filename === data.filename &&
-                                !!e.isStreaming,
-                            () => ({
-                                type: "doc_replicated",
-                                filename: data.filename as string,
-                                count:
-                                    typeof data.count === "number"
-                                        ? (data.count as number)
-                                        : Array.isArray(data.copies)
-                                          ? (data.copies as unknown[])
-                                                .length
-                                          : 1,
-                                copies: Array.isArray(data.copies)
-                                    ? (data.copies as {
-                                          new_filename: string;
-                                          document_id: string;
-                                          version_id: string;
-                                      }[])
-                                    : undefined,
-                                error:
-                                    typeof data.error === "string"
-                                        ? (data.error as string)
-                                        : undefined,
-                                isStreaming: false,
-                            }),
-                        );
-                        pushThinkingPlaceholder();
-                        continue;
-                    }
-
-                    if (data.type === "doc_edited_start") {
-                        pushEvent({
-                            type: "doc_edited",
-                            filename: data.filename as string,
-                            document_id: "",
-                            version_id: "",
-                            download_url: "",
-                            annotations: [],
-                            isStreaming: true,
-                        });
-                        continue;
-                    }
-
-                    if (data.type === "doc_edited") {
-                        updateMatchingEvent(
-                            (e) =>
-                                e.type === "doc_edited" &&
-                                e.filename === data.filename &&
-                                !!e.isStreaming,
-                            () => ({
-                                type: "doc_edited",
-                                filename: data.filename as string,
-                                document_id:
-                                    (data.document_id as string) ?? "",
-                                version_id:
-                                    (data.version_id as string) ?? "",
-                                version_number:
-                                    typeof data.version_number === "number"
-                                        ? (data.version_number as number)
-                                        : null,
-                                download_url:
-                                    (data.download_url as string) ?? "",
-                                annotations: Array.isArray(data.annotations)
-                                    ? (data.annotations as import("@/app/components/shared/types").AppEditAnnotation[])
-                                    : [],
-                                error:
-                                    typeof data.error === "string"
-                                        ? (data.error as string)
-                                        : undefined,
-                                isStreaming: false,
-                            }),
-                        );
-                        pushThinkingPlaceholder();
                         continue;
                     }
 
@@ -970,26 +636,6 @@ export function useAssistantChat({
                         continue;
                     }
 
-                    if (data.type === "citations") {
-                        // End-of-stream signal — scrub any lingering
-                        // placeholders so they don't persist into the
-                        // finalised message.
-                        clearStreamingPlaceholders();
-                        const incoming = (data.citations ??
-                            []) as AppCitationAnnotation[];
-                        setMessages((prev) => {
-                            const updated = [...prev];
-                            const last = updated[updated.length - 1];
-                            if (last?.role === "assistant") {
-                                updated[updated.length - 1] = {
-                                    ...last,
-                                    annotations: incoming,
-                                };
-                            }
-                            return updated;
-                        });
-                        continue;
-                    }
                 } catch (e) {
                     console.warn(
                         "[useAssistantChat] failed to parse SSE line:",
@@ -1106,9 +752,7 @@ export function useAssistantChat({
             streamedChatId = await readAgentStream(response);
 
             flushDrip();
-            finalizeStreamingReasoning();
             setIsResponseLoading(false);
-            setIsLoadingCitations(false);
 
             const latestScreening = screeningResultRef.current;
             if (
@@ -1241,7 +885,6 @@ export function useAssistantChat({
             }
 
             setIsResponseLoading(false);
-            setIsLoadingCitations(false);
             return null;
         } finally {
             abortControllerRef.current = null;
@@ -1287,7 +930,6 @@ export function useAssistantChat({
             }
             await readAgentStream(response);
             flushDrip();
-            finalizeStreamingReasoning();
             if (chatId) {
                 void saveChatMessages(chatId, stripClientOnlyFields(messagesRef.current));
             }
@@ -1309,7 +951,6 @@ export function useAssistantChat({
             }
         } finally {
             setIsResponseLoading(false);
-            setIsLoadingCitations(false);
             abortControllerRef.current = null;
         }
     };
@@ -1337,7 +978,6 @@ export function useAssistantChat({
         messages,
         isResponseLoading,
         setIsResponseLoading,
-        isLoadingCitations,
         screeningResult,
         startupHandoff,
         clearStartupHandoff,

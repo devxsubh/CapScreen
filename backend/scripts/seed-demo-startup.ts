@@ -1,5 +1,5 @@
 /**
- * Seed a full NexaFlow demo startup into MongoDB:
+ * Seed a full NexaFlow demo startup into the local database:
  * - Extended cap-table CSV + co-investor / vendor rosters
  * - Live Watchman screening results
  * - Entity tabular review (all graph nodes) + sanctions triage queue
@@ -7,7 +7,8 @@
  *
  * Prerequisites:
  *   docker compose -f docker-compose.dev.yml up   # Watchman
- *   MONGODB_URI in repo root .env
+ *   Data goes to ~/.capscreen (or CAPSCREEN_DATA_DIR — point it at the app's
+ *   data folder to seed the desktop app while it is closed)
  *
  * Usage:
  *   cd backend && npx tsx scripts/seed-demo-startup.ts

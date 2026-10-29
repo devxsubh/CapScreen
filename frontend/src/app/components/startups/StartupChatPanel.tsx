@@ -18,6 +18,7 @@ interface Props {
     isResponseLoading: boolean;
     handleChat: (message: ScreenerMessage, csvContent?: string | null) => void;
     cancel: () => void;
+    onApprovalAnswer: (runId: string, approved: boolean) => void;
     startupName?: string;
     startupId?: string;
 }
@@ -27,6 +28,7 @@ export function StartupChatPanel({
     isResponseLoading,
     handleChat,
     cancel,
+    onApprovalAnswer,
     startupName,
     startupId,
 }: Props) {
@@ -108,6 +110,7 @@ export function StartupChatPanel({
                                         isError={!!msg.error}
                                         minHeight="0px"
                                         startupId={startupId}
+                                        onApprovalAnswer={onApprovalAnswer}
                                         showOptionChips={shouldShowMessageOptions(
                                             i,
                                             messages,
@@ -147,6 +150,7 @@ export function StartupChatPanel({
                     isLoading={isResponseLoading}
                     startupId={startupId}
                     projectName={startupName}
+                    showProviderMenu
                 />
             </div>
         </div>

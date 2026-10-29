@@ -376,12 +376,6 @@ export function parseWithMapping(
   }
   if (errors.length > 0) return { records, errors };
 
-  const usedEntityTypeDefault = !mapping.entity_type;
-  const usedOwnerTypeDefault = !mapping.owner_type;
-  if (usedEntityTypeDefault) {
-    // warning handled at ingest layer
-  }
-
   for (let i = 0; i < table.rows.length; i++) {
     const rowNum = i + 2;
     const cells = table.rows[i];

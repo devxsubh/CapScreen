@@ -19,33 +19,30 @@
 
 | Capability | CapScreen status | Where / next step |
 |---|---|---|
-| Chat-first assistant UI | ✅ Restored | `frontend/.../assistant/`, `InitialView`, `ChatView`, workflows modal |
-| Agent tool-calling loop | ✅ Partial | `backend/src/lib/llm/agent.ts`, `chatTools.ts`, `POST /api/chat` |
-| Workflows (prompt library) | ✅ UI only | `frontend/.../workflows/`, `builtinWorkflows.ts` — wire to screener backend |
-| Projects / deal folders | ✅ Startups | `backend/src/routes/startups.ts`, `frontend/.../projects/` |
+| Chat-first assistant UI | ✅ | `frontend/.../assistant/`, `InitialView`, `ChatView`, workflows modal |
+| Agent tool-calling loop | ✅ LangGraph | `backend/src/lib/agent/`, `lib/tools/`, `POST /chat` (`docs/AGENT_HARNESS.md`) |
+| Workflows (prompt + tabular) | ✅ | `backend/src/lib/workflows/builtinWorkflows.ts` (single source), `read_workflow` tool |
+| Startups / deal workspaces | ✅ | `backend/src/routes/startups/`, `frontend/.../startups/` |
 | Session memory (chat context) | ✅ Per-request | Client sends `messages` + `screeningResult` + `csvContent` each turn |
 | Persistent agent memory | 🔲 Scaffolded | `.claude/agent-memory/` — use `/init-memory`, `/make-agent` |
-| Document RAG | 🔲 Planned | See `/compliance-rag-roadmap` — index policies, prior memos, side letters |
-| Streaming SSE chat | 🔲 Planned | Target: stream tool events; today returns single JSON response |
-| Auth + multi-tenant | 🔲 Optional | Supabase in frontend; preview mode when env empty |
+| Document RAG | ✅ | `backend/src/lib/rag/` (local or cloud embeddings, keyword fallback) |
+| Streaming SSE chat | ✅ | Tool, screening-progress, plan and approval events |
+| Auth | ✅ Desktop sign-in | Hosted auth service + PKCE; single local data owner |
 
 ---
 
 ## Agent system (runtime)
 
 ```
-User message (+ optional CSV attach)
-  → POST /api/chat { messages, screeningResult, csvContent }
-  → runAgentWithTools (Claude Sonnet)
-      → tool: screen_cap_table      → runScreening (graph + Watchman + explain)
-      → tool: get_screening_summary
-      → tool: get_entity_details
-      → tool: list_entities
-  → { content, screeningResult, toolActivity }
-  → Frontend: PreResponseWrapper + CapScreenIcon + markdown (assistant event model)
+User message (+ optional CSV attach, startup_id, @-mentions, workflow)
+  → POST /chat (SSE)
+  → runAgent (LangGraph: callModel ⇄ runTools, approvals for web_search)
+      → screen_cap_table → runScreening (graph + Watchman + exposure + explain)
+      → query_screening_data, generate_document, search_* , web_search, plans, sub-agents …
+  → events: content_delta, tool_call_start, screening_progress/result, plan_updated, approval_required
 ```
 
-**Extend tools:** add definitions in `SCREENER_TOOLS` + cases in `createToolExecutor()` in `backend/src/lib/chatTools.ts`. Mirror UI events in `AssistantEvent` types on the frontend.
+**Extend tools:** create the tool in `backend/src/lib/tools/` and register it in `lib/tools/index.ts`. Mirror any new UI event in `AssistantEvent` (`frontend/src/app/components/shared/types.ts`).
 
 ---
 
@@ -100,7 +97,7 @@ Roadmap: `.claude/commands/compliance-rag-roadmap.md`.
 
 ## Conventions when editing this codebase
 
-- **Backend:** Express + TypeScript strict; tools in `chatTools.ts`; screening orchestration in `runScreening.ts`.
+- **Backend:** Express + TypeScript strict; tools in `lib/tools/` (registered in `lib/tools/index.ts`); screening orchestration in `lib/screening/runScreening.ts`.
 - **Frontend:** Assistant UI under `assistant/`, `workflows/`, `shared/` — preserve compliance shell features unless asked to remove.
 - **Types:** Screener domain types in `frontend/src/lib/screenerTypes.ts`; assistant types in `shared/types.ts` (`App*` prefix).
-- **Env:** Local — Watchman via `docker-compose.dev.yml`; production — EC2 compose stack + Vercel frontend. `ANTHROPIC_API_KEY` on EC2 only.
+- **Env:** Desktop app — models and keys in the AI Control Center; browser-only dev — root `.env` + Watchman via `docker-compose.dev.yml`.

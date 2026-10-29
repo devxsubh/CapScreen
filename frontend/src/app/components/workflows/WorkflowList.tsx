@@ -20,13 +20,11 @@ import {
     unhideWorkflow,
 } from "@/app/lib/capScreenApi";
 import type { AppWorkflow } from "../shared/types";
-import { BUILT_IN_WORKFLOWS, BUILT_IN_IDS } from "./builtinWorkflows";
 import { DisplayWorkflowModal } from "./DisplayWorkflowModal";
 import { NewWorkflowModal } from "./NewWorkflowModal";
 import { ToolbarTabs } from "../shared/ToolbarTabs";
 import { RowActions } from "../shared/RowActions";
 import { CapScreenIcon } from "@/components/chat/capscreen-icon";
-import { useAuth } from "@/contexts/AuthContext";
 
 type Tab = "all" | "builtin" | "custom" | "hidden";
 
@@ -42,7 +40,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 export function WorkflowList() {
     const router = useRouter();
-    const { user } = useAuth();
+    const [builtins, setBuiltins] = useState<AppWorkflow[]>([]);
     const [custom, setCustom] = useState<AppWorkflow[]>([]);
     const [loading, setLoading] = useState(true);
     const [selected, setSelected] = useState<AppWorkflow | null>(null);
@@ -63,13 +61,10 @@ export function WorkflowList() {
     const typeFilterRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        Promise.all([
-            listWorkflows("assistant"),
-            listWorkflows("tabular"),
-            listHiddenWorkflows(),
-        ])
-            .then(([assistant, tabular, hidden]) => {
-                setCustom([...assistant, ...tabular]);
+        Promise.all([listWorkflows(), listHiddenWorkflows()])
+            .then(([workflows, hidden]) => {
+                setBuiltins(workflows.filter((wf) => wf.is_system));
+                setCustom(workflows.filter((wf) => !wf.is_system));
                 setHiddenBuiltinIds(hidden);
             })
             .catch(() => setCustom([]))
@@ -113,10 +108,10 @@ export function WorkflowList() {
         return () => document.removeEventListener("mousedown", handleClick);
     }, []);
 
-    const hiddenBuiltins = BUILT_IN_WORKFLOWS.filter((wf) =>
+    const hiddenBuiltins = builtins.filter((wf) =>
         hiddenBuiltinIds.includes(wf.id),
     );
-    const visibleBuiltins = BUILT_IN_WORKFLOWS.filter(
+    const visibleBuiltins = builtins.filter(
         (wf) => !hiddenBuiltinIds.includes(wf.id),
     );
     const all = [...visibleBuiltins, ...custom];
@@ -172,8 +167,9 @@ export function WorkflowList() {
         const ids = [...selectedIds];
         setActionsOpen(false);
         setSelectedIds([]);
-        const builtinIds = ids.filter((id) => BUILT_IN_IDS.has(id));
-        const customIds = ids.filter((id) => !BUILT_IN_IDS.has(id));
+        const isBuiltin = (id: string) => builtins.some((wf) => wf.id === id);
+        const builtinIds = ids.filter(isBuiltin);
+        const customIds = ids.filter((id) => !isBuiltin(id));
         if (builtinIds.length > 0) {
             setHiddenBuiltinIds((prev) => [
                 ...prev,
@@ -543,17 +539,10 @@ export function WorkflowList() {
                                             <CapScreenIcon size={14} />
                                             CapScreen
                                         </span>
-                                    ) : wf.user_id === user?.id ? (
+                                    ) : (
                                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600">
                                             <User className="h-3.5 w-3.5 text-gray-500" />
                                             Myself
-                                        </span>
-                                    ) : (
-                                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 truncate max-w-full">
-                                            <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
-                                            <span className="truncate">
-                                                {wf.shared_by_name ?? "Shared"}
-                                            </span>
                                         </span>
                                     )}
                                 </div>
@@ -575,7 +564,7 @@ export function WorkflowList() {
                                                 }
                                             />
                                         )
-                                    ) : wf.is_owner === false ? null : (
+                                    ) : (
                                         <RowActions
                                             onDelete={async () => {
                                                 await deleteWorkflow(wf.id);

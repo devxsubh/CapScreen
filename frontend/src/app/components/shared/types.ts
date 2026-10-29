@@ -2,16 +2,6 @@
 
 import type { ScreeningResult } from "@/lib/screenerTypes";
 
-export interface AppFolder {
-  id: string;
-  project_id: string;
-  user_id: string;
-  name: string;
-  parent_folder_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface AppCapTableCsvMeta {
   id: string;
   filename: string;
@@ -45,7 +35,6 @@ export interface AppProject {
   created_at: string;
   updated_at: string;
   documents?: AppDocument[];
-  folders?: AppFolder[];
   csvs?: AppCapTableCsvMeta[];
   screening_assets?: AppScreeningAsset[];
   document_count?: number;
@@ -88,51 +77,18 @@ export interface AppChat {
   created_at: string;
 }
 
-export interface AppEditAnnotation {
-  type?: "edit_data";
-  kind?: "edit";
-  edit_id: string;
-  document_id: string;
-  version_id: string;
-  /** Per-document monotonic Vn for the edit's target version. */
-  version_number?: number | null;
-  change_id: string;
-  del_w_id?: string;
-  ins_w_id?: string;
-  deleted_text: string;
-  inserted_text: string;
-  context_before?: string;
-  context_after?: string;
-  reason?: string;
-  status: "pending" | "accepted" | "rejected";
-}
-
 export interface AgentPlanStep {
   title: string;
   status: "pending" | "in_progress" | "done";
 }
 
 export type AssistantEvent =
-  | { type: "reasoning"; text: string; isStreaming?: boolean }
   | {
         type: "tool_call_start";
         name: string;
         isStreaming?: boolean;
     }
   | { type: "thinking"; isStreaming?: boolean }
-  | {
-        type: "doc_read";
-        filename: string;
-        document_id?: string;
-        isStreaming?: boolean;
-    }
-  | {
-        type: "doc_find";
-        filename: string;
-        query: string;
-        total_matches: number;
-        isStreaming?: boolean;
-    }
   | {
         type: "doc_created";
         filename: string;
@@ -143,22 +99,6 @@ export type AssistantEvent =
         startup_id?: string;
         version_id?: string;
         version_number?: number | null;
-        isStreaming?: boolean;
-    }
-  | { type: "doc_download"; filename: string; download_url: string }
-  | {
-        type: "doc_replicated";
-        /** Source document filename. */
-        filename: string;
-        /** How many copies were produced in this single tool call. */
-        count: number;
-        /** One entry per new copy. Empty while streaming. */
-        copies?: {
-            new_filename: string;
-            document_id: string;
-            version_id: string;
-        }[];
-        error?: string;
         isStreaming?: boolean;
     }
   | {
@@ -182,18 +122,6 @@ export type AssistantEvent =
         calls: { name: string; input: unknown }[];
         /** "skipped" = the user sent a new message instead of answering. */
         status: "pending" | "approved" | "declined" | "skipped";
-    }
-  | {
-        type: "doc_edited";
-        filename: string;
-        document_id: string;
-        version_id: string;
-        /** Per-document monotonic Vn written at emit time. */
-        version_number?: number | null;
-        download_url: string;
-        annotations: AppEditAnnotation[];
-        error?: string;
-        isStreaming?: boolean;
     }
   | { type: "content"; text: string; isStreaming?: boolean };
 
@@ -343,9 +271,6 @@ export interface AppWorkflow {
   is_system: boolean;
   created_at: string;
   practice?: string | null;
-  shared_by_name?: string | null;
-  allow_edit?: boolean;
-  is_owner?: boolean;
 }
 
 // API helpers

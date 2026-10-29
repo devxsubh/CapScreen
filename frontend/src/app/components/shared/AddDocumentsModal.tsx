@@ -5,8 +5,6 @@ import { createPortal } from "react-dom";
 import { X, Upload, Search, Loader2 } from "lucide-react";
 import {
     uploadStandaloneDocument,
-    uploadProjectDocument,
-    addDocumentToProject,
     deleteDocument,
 } from "@/app/lib/capScreenApi";
 import type { AppDocument } from "./types";
@@ -33,7 +31,6 @@ interface Props {
     onSelectCsvFile?: (file: File) => void;
     breadcrumb: string[];
     allowMultiple?: boolean;
-    projectId?: string;
 }
 
 export function AddDocumentsModal({
@@ -43,7 +40,6 @@ export function AddDocumentsModal({
     onSelectCsvFile,
     breadcrumb,
     allowMultiple = true,
-    projectId,
 }: Props) {
     const { loading, standaloneDocuments, projects } = useDirectoryData(open);
     const { user } = useAuth();
@@ -83,7 +79,6 @@ export function AddDocumentsModal({
         : allStandalone;
 
     const filteredProjects = projects
-        .filter((p) => p.id !== projectId)
         .map((p) => ({
             ...p,
             documents: (p.documents || []).filter(
@@ -106,32 +101,6 @@ export function AddDocumentsModal({
 
     async function handleConfirm() {
         const selected = allDocs.filter((d) => selectedIds.has(d.id));
-
-        if (projectId) {
-            const toAssign = selected.filter((d) => d.project_id !== projectId);
-            const alreadyHere = selected.filter(
-                (d) => d.project_id === projectId,
-            );
-            if (toAssign.length > 0) {
-                setUploading(true);
-                try {
-                    const assigned = await Promise.all(
-                        toAssign.map((d) =>
-                            addDocumentToProject(projectId, d.id),
-                        ),
-                    );
-                    onSelect([...alreadyHere, ...assigned], projectId);
-                } catch (err) {
-                    console.error("Failed to assign documents:", err);
-                } finally {
-                    setUploading(false);
-                }
-            } else {
-                onSelect(alreadyHere, projectId);
-            }
-            onClose();
-            return;
-        }
 
         const projectIds = new Set(
             selected.map((d) => d.project_id).filter(Boolean),
@@ -205,11 +174,7 @@ export function AddDocumentsModal({
         setUploading(true);
         try {
             const uploaded = await Promise.all(
-                docFiles.map((f) =>
-                    projectId
-                        ? uploadProjectDocument(projectId, f)
-                        : uploadStandaloneDocument(f),
-                ),
+                docFiles.map((f) => uploadStandaloneDocument(f)),
             );
             invalidateDirectoryCache();
             setExtraUploadedDocs((prev) => [...uploaded, ...prev]);

@@ -1,9 +1,7 @@
 import { Resend } from "resend";
 import {
   buildPasswordResetEmail,
-  buildReviewInviteEmail,
   buildVerificationEmail,
-  buildWorkflowInviteEmail,
 } from "./emailTemplates";
 import {
   emailConfigured,
@@ -80,59 +78,5 @@ export async function sendPasswordResetEmail(
     text,
     devLogLabel: "Password reset link",
     devLogLink: `${getFrontendUrl()}/reset-password?token=${encodeURIComponent(token)}`,
-  });
-}
-
-export async function sendWorkflowInviteEmail(params: {
-  to: string;
-  inviterLabel: string;
-  workflowTitle: string;
-  workflowId: string;
-  allowEdit: boolean;
-}): Promise<void> {
-  const { html, text } = buildWorkflowInviteEmail({
-    inviterLabel: params.inviterLabel,
-    workflowTitle: params.workflowTitle,
-    workflowId: params.workflowId,
-    allowEdit: params.allowEdit,
-  });
-  await dispatchEmail({
-    to: params.to,
-    subject: `${params.inviterLabel} shared a workflow with you`,
-    html,
-    text,
-    devLogLabel: "Workflow invite",
-  });
-}
-
-export async function sendReviewInviteEmail(params: {
-  to: string;
-  inviterLabel: string;
-  reviewTitle: string;
-  reviewId: string;
-  projectId?: string | null;
-}): Promise<void> {
-  const { html, text } = buildReviewInviteEmail({
-    inviterLabel: params.inviterLabel,
-    reviewTitle: params.reviewTitle,
-    reviewId: params.reviewId,
-    projectId: params.projectId,
-  });
-  await dispatchEmail({
-    to: params.to,
-    subject: `${params.inviterLabel} invited you to a tabular review`,
-    html,
-    text,
-    devLogLabel: "Review invite",
-  });
-}
-
-/** Fire-and-forget helper — never blocks the HTTP response on email failure. */
-export function sendEmailSafe(task: () => Promise<void>): void {
-  void task().catch((err) => {
-    console.error(
-      "[email] send failed:",
-      err instanceof Error ? err.message : String(err),
-    );
   });
 }

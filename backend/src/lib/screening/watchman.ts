@@ -7,7 +7,7 @@ import type {
 } from "../../types/screening";
 import { getScreeningThresholds } from "./screeningConfig";
 import { screeningLog, screeningWarn } from "./screeningLog";
-import { watchmanCache, TTL, cacheKey } from "../infra/cache";
+import { watchmanCache, watchmanCacheKey } from "../infra/cache";
 import { dedup } from "../infra/requestDedup";
 
 export type {
@@ -168,8 +168,8 @@ export async function searchWatchman(
   options: WatchmanSearchOptions = {},
 ): Promise<WatchmanMatch[]> {
   const suffix = hintsCacheSuffix(options);
-  const key = cacheKey.watchman(name, type, suffix);
-  const cached = await watchmanCache.get(key);
+  const key = watchmanCacheKey(name, type, suffix);
+  const cached = watchmanCache.get(key);
   if (cached !== null) {
     screeningLog("Watchman cache hit", {
       entity: name,
@@ -285,7 +285,7 @@ async function fetchFromWatchman(
           requestId: options.requestId,
         });
       }
-      await watchmanCache.set(key, matches, TTL.watchman);
+      watchmanCache.set(key, matches);
       return matches;
     } catch (err) {
       screeningWarn("Watchman request failed", {

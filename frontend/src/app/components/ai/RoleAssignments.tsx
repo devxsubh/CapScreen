@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Loader2, Wrench, Zap } from "lucide-react";
+import { Check, ChevronDown, Loader2, Wrench, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { aiApi, ROLE_INFO, type AiHealth, type AiState, type LlmRole, type ProviderView } from "@/lib/aiControlCenterApi";
@@ -16,7 +16,7 @@ function usableProviders(state: AiState, role: LlmRole): ProviderView[] {
     );
 }
 
-function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state: AiState; health: AiHealth; onSaved: () => void }) {
+export function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state: AiState; health: AiHealth; onSaved: () => void }) {
     const inherits = role === "utility" && !state.roles.utility && !!state.roles.agent;
     const current = state.roles[role] ?? (role === "utility" ? state.roles.agent : undefined);
     const roleHealth = health.roles[role];
@@ -227,26 +227,83 @@ function RoleRow({ role, state, health, onSaved }: { role: LlmRole; state: AiSta
     );
 }
 
-export function RoleAssignments({ state, health, onChange }: { state: AiState; health: AiHealth; onChange: () => void }) {
+function roleKey(state: AiState, role: LlmRole): string {
+    const b = state.roles[role];
+    return `${role}:${b?.provider}:${b?.model}:${b?.supportsTools}`;
+}
+
+/** Primary chat / agent model — shown first on the Control Center. */
+export function ChatModelSection({ state, health, onChange }: { state: AiState; health: AiHealth; onChange: () => void }) {
     return (
         <section>
-            <h2 className="text-xl font-medium">Model for each task</h2>
-            <p className="text-sm text-gray-500 mb-1">Guided setup picks these for you. Change them here to mix models — e.g. a cloud model for chat, an on-device one for document search.</p>
-            <div>
-                {(["agent", "utility", "embedding"] as LlmRole[]).map((role) => {
-                    const b = state.roles[role];
-                    // Remount when the saved binding changes so the form resets to it.
-                    return (
+            <h2 className="text-xl font-medium">Chat model</h2>
+            <p className="mb-1 text-sm text-gray-500">
+                The model the compliance assistant uses. You can also switch it from the chat window.
+            </p>
+            <RoleRow
+                key={roleKey(state, "agent")}
+                role="agent"
+                state={state}
+                health={health}
+                onSaved={onChange}
+            />
+        </section>
+    );
+}
+
+/** Utility + embedding — quieter secondary section, collapsed by default. */
+export function OtherTasksSection({
+    state,
+    health,
+    onChange,
+    forceOpen = false,
+}: {
+    state: AiState;
+    health: AiHealth;
+    onChange: () => void;
+    forceOpen?: boolean;
+}) {
+    // Parent remounts with forceOpen when a fix action targets this section.
+    const [open, setOpen] = useState(forceOpen);
+    return (
+        <section className="border-t border-gray-100 pt-6">
+            <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                aria-expanded={open}
+                className="flex w-full items-center justify-between text-left"
+            >
+                <span>
+                    <span className="block text-xl font-medium">Other tasks</span>
+                    <span className="block text-sm text-gray-500">
+                        Background narratives and document search — usually the same as chat, or a smaller local model.
+                    </span>
+                </span>
+                <ChevronDown className={`h-5 w-5 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
+            </button>
+            {open && (
+                <div className="mt-2">
+                    {(["utility", "embedding"] as LlmRole[]).map((role) => (
                         <RoleRow
-                            key={`${role}:${b?.provider}:${b?.model}:${b?.supportsTools}`}
+                            key={roleKey(state, role)}
                             role={role}
                             state={state}
                             health={health}
                             onSaved={onChange}
                         />
-                    );
-                })}
-            </div>
+                    ))}
+                </div>
+            )}
         </section>
+    );
+}
+
+/** @deprecated Prefer ChatModelSection + OtherTasksSection. */
+export function RoleAssignments({ state, health, onChange }: { state: AiState; health: AiHealth; onChange: () => void }) {
+    return (
+        <>
+            <ChatModelSection state={state} health={health} onChange={onChange} />
+            <OtherTasksSection state={state} health={health} onChange={onChange} />
+        </>
     );
 }

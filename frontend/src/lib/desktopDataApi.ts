@@ -1,8 +1,19 @@
 import { apiBase } from "@/lib/apiBase";
 
+export type ScreeningSettings = {
+  watchmanMinMatch: number;
+  reviewMinScore: number;
+  flaggedMinScore: number;
+  beneficialOwnerPct: number;
+  ofacOwnershipRulePct: number;
+  watchmanResultLimit: number;
+};
+
 export type AppSettings = {
   backgroundScreening: { enabled: boolean; intervalHours: number };
   sanctionsLists: string[];
+  /** Null = firm defaults (`screeningDefaults`). */
+  screening: ScreeningSettings | null;
 };
 
 export type SanctionsInfo = {
@@ -46,7 +57,12 @@ async function download(path: string, init?: RequestInit): Promise<{ data: Array
 
 export const desktopDataApi = {
   settings: () =>
-    request<{ settings: AppSettings; availableLists: Array<{ id: string; label: string }>; databaseFile: string }>("/settings"),
+    request<{
+      settings: AppSettings;
+      availableLists: Array<{ id: string; label: string }>;
+      databaseFile: string;
+      screeningDefaults: ScreeningSettings;
+    }>("/settings"),
   saveSettings: (patch: Partial<AppSettings>) =>
     request<{ settings: AppSettings }>("/settings", { method: "PUT", body: JSON.stringify(patch) }),
   sanctions: () => request<SanctionsInfo>("/sanctions"),

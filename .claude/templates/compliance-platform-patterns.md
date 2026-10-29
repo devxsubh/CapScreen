@@ -23,15 +23,15 @@ while stop_reason == tool_use:
 return final text (+ structured artifacts)
 ```
 
-CapScreen implementation: `backend/src/lib/llm/agent.ts` + `createToolExecutor()`.
+CapScreen implementation: `backend/src/lib/agent/` (LangGraph) + `backend/src/lib/tools/`.
 
 **When adding a tool:**
 
-1. Add Anthropic `Tool` schema in `chatTools.ts`
-2. Implement executor branch (pure functions in `lib/`, no LLM inside tools)
+1. Add a `ToolDefinition` in `backend/src/lib/tools/` and register it in `lib/tools/index.ts`
+2. Implement the handler (pure functions in `lib/`, no LLM inside tools)
 3. Return JSON the model can reason over; update `screeningResult` in context if needed
 4. Frontend: emit `AssistantEvent` (`tool_call_start`, domain-specific blocks later)
-5. Rate-limit expensive tools (`screen_cap_table` → existing `screenLimiter`)
+5. Mark tools that send data off the machine `needsApproval`
 
 ---
 

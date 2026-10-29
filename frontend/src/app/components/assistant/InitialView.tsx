@@ -80,6 +80,7 @@ export function InitialView({ onSubmit }: InitialViewProps) {
                         onCancel={() => {}}
                         isLoading={false}
                         onStartupsClick={() => setStartupModalOpen(true)}
+                        showProviderMenu
                     />
 
                     <div className="text-center">

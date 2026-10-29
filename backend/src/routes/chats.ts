@@ -2,13 +2,7 @@ import express from "express";
 import mongoose from "mongoose";
 import { connectDb } from "../lib/infra/db";
 import { requireAuth } from "../middleware/requireAuth";
-import {
-  findAccessibleAssistantChat,
-  isWritableChat,
-  visibleAssistantChatFilter,
-} from "../lib/sample/sampleAssets";
 import { AssistantChat } from "../models";
-import { chatListCache, TTL, cacheKey } from "../lib/infra/cache";
 
 export const chatsRouter = express.Router();
 
@@ -21,6 +15,11 @@ chatsRouter.use(async (_req, _res, next) => {
     next(err);
   }
 });
+
+async function findChat(id: string, userId: string): Promise<Record<string, unknown> | null> {
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  return AssistantChat.findOne({ _id: id, userId }).lean() as Promise<Record<string, unknown> | null>;
+}
 
 function deriveTitle(message: string): string {
   const compact = message.replace(/\s+/g, " ").trim();
@@ -46,20 +45,12 @@ chatsRouter.get("/", async (req, res) => {
     100,
   );
 
-  const key = cacheKey.chatList(userId);
-  const cached = await chatListCache.get(key);
-  if (cached !== null) {
-    res.json(cached.slice(0, limit));
-    return;
-  }
-
-  const docs = await AssistantChat.find(await visibleAssistantChatFilter(userId))
+  const docs = await AssistantChat.find({ userId })
     .sort({ updatedAt: -1 })
     .limit(100)
     .lean();
 
   const result = docs.map((d) => toChat(d as Record<string, unknown>));
-  await chatListCache.set(key, result, TTL.chatList);
   res.json(result.slice(0, limit));
 });
 
@@ -74,8 +65,6 @@ chatsRouter.post("/", async (req, res) => {
     title: null,
     messages: [],
   });
-
-  await chatListCache.delete(cacheKey.chatList(userId));
   res.status(201).json({ id: String(doc._id) });
 });
 
@@ -87,7 +76,7 @@ chatsRouter.get("/:id", async (req, res) => {
     return;
   }
 
-  const doc = await findAccessibleAssistantChat(req.params.id, userId);
+  const doc = await findChat(req.params.id, userId);
 
   if (!doc) {
     res.status(404).json({ detail: "Chat not found" });
@@ -109,8 +98,8 @@ chatsRouter.patch("/:id", async (req, res) => {
     return;
   }
 
-  const existing = await findAccessibleAssistantChat(req.params.id, userId);
-  if (!existing || !isWritableChat(existing, userId)) {
+  const existing = await findChat(req.params.id, userId);
+  if (!existing) {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
@@ -125,8 +114,6 @@ chatsRouter.patch("/:id", async (req, res) => {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
-
-  await chatListCache.delete(cacheKey.chatList(userId));
   res.json(toChat(doc as Record<string, unknown>));
 });
 
@@ -139,8 +126,8 @@ chatsRouter.put("/:id/messages", async (req, res) => {
     return;
   }
 
-  const existing = await findAccessibleAssistantChat(req.params.id, userId);
-  if (!existing || !isWritableChat(existing, userId)) {
+  const existing = await findChat(req.params.id, userId);
+  if (!existing) {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
@@ -165,8 +152,8 @@ chatsRouter.post("/:id/generate-title", async (req, res) => {
   const { message } = req.body as { message?: string };
   const title = deriveTitle(message ?? "");
 
-  const existing = await findAccessibleAssistantChat(req.params.id, userId);
-  if (!existing || !isWritableChat(existing, userId)) {
+  const existing = await findChat(req.params.id, userId);
+  if (!existing) {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
@@ -181,16 +168,14 @@ chatsRouter.post("/:id/generate-title", async (req, res) => {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
-
-  await chatListCache.delete(cacheKey.chatList(userId));
   res.json({ title });
 });
 
 // DELETE /api/chats/:id
 chatsRouter.delete("/:id", async (req, res) => {
   const userId = res.locals.userId as string;
-  const existing = await findAccessibleAssistantChat(req.params.id, userId);
-  if (!existing || !isWritableChat(existing, userId)) {
+  const existing = await findChat(req.params.id, userId);
+  if (!existing) {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
@@ -203,6 +188,5 @@ chatsRouter.delete("/:id", async (req, res) => {
     res.status(404).json({ detail: "Chat not found" });
     return;
   }
-  await chatListCache.delete(cacheKey.chatList(userId));
   res.status(204).send();
 });

@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import rateLimit from "express-rate-limit";
 import { logRagStartupWarnings } from "./lib/rag/embed";
 import { logWebSearchStartupWarnings } from "./lib/infra/webSearchConfig";
 import {
@@ -12,7 +11,6 @@ import {
 } from "./routes/documents/singleDocuments";
 import { projectsRouter } from "./routes/projects/index";
 import { screenRouter } from "./routes/screen";
-import { chatRouter } from "./routes/chat";
 import { assistantChatRouter } from "./routes/assistantChat";
 import { workflowsRouter } from "./routes/workflows";
 import { startupsRouter } from "./routes/startups/index";
@@ -21,7 +19,6 @@ import { chatsRouter } from "./routes/chats";
 import { configRouter } from "./routes/config";
 import { tabularReviewRouter } from "./routes/tabularReview";
 import { portfolioRouter } from "./routes/portfolioMonitoring";
-import { userRouter } from "./routes/user";
 import { describeLlmConfig } from "./lib/llm/providers";
 import { validateLlmLive } from "./lib/llm/validateLlm";
 import { checkWatchmanHealth } from "./lib/screening/watchman";
@@ -29,10 +26,6 @@ import { startRescreenScheduler } from "./lib/portfolio/rescreenScheduler";
 import { disconnectDb } from "./lib/infra/db";
 import { startupDocumentDownloadRouter } from "./routes/documents/startupDocumentDownload";
 import { requireAuth } from "./middleware/requireAuth";
-import {
-  assistantChatLimiter,
-  screenerChatLimiter,
-} from "./lib/infra/chatRateLimits";
 import { desktopToken } from "./middleware/desktopToken";
 import { aiControlCenterRouter } from "./routes/aiControlCenter";
 import { desktopDataRouter } from "./routes/desktopData";
@@ -43,32 +36,6 @@ import { connectDb } from "./lib/infra/db";
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 const isProduction = process.env.NODE_ENV === "production";
-
-function envInt(name: string, fallback: number): number {
-  const raw = process.env[name];
-  if (!raw) return fallback;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function minutes(value: number): number {
-  return value * 60 * 1000;
-}
-
-const generalLimiter = rateLimit({
-  windowMs: minutes(envInt("RATE_LIMIT_GENERAL_WINDOW_MINUTES", 15)),
-  max: envInt("RATE_LIMIT_GENERAL_MAX", 300),
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.method === "OPTIONS",
-  message: { detail: "Too many requests. Please try again later." },
-});
-
-const screenLimiter = rateLimit({
-  windowMs: minutes(15),
-  max: 20,
-  message: { detail: "Too many screening requests. Please try again later." },
-});
 
 app.disable("x-powered-by");
 app.set("trust proxy", false); // loopback desktop API — no reverse proxy
@@ -96,16 +63,12 @@ app.use(
 );
 
 app.use(desktopToken);
-app.use(generalLimiter);
 app.use(cookieParser());
 app.use(express.json({ limit: "10mb" }));
 
-app.post("/api/screen", screenLimiter);
 app.use("/api/screen", screenRouter);
 
-// Separate per-user rate buckets — screener and assistant do not share limits.
-app.use("/api/chat", requireAuth, screenerChatLimiter, chatRouter);
-app.use("/chat", requireAuth, assistantChatLimiter, assistantChatRouter);
+app.use("/chat", requireAuth, assistantChatRouter);
 
 app.use("/workflows", workflowsRouter);
 app.use("/single-documents", singleDocumentsRouter);
@@ -122,7 +85,6 @@ app.use("/tabular-review", tabularReviewRouter);
 app.use("/api/ai", requireAuth, aiControlCenterRouter);
 app.use("/api/desktop", requireAuth, desktopDataRouter);
 app.use("/api/files", fileDownloadRouter);
-app.use("/user", userRouter);
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 

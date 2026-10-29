@@ -1,7 +1,11 @@
 import { randomUUID } from "crypto";
 import express from "express";
-import type { LlmMessage } from "../lib/llm/providers";
-import { assistantRegistry, type ToolContext } from "../lib/tools";
+import type { LlmMessage, LlmToolChoice } from "../lib/llm/providers";
+import {
+  assistantRegistry,
+  SCREEN_CAP_TABLE_TOOL_NAME,
+  type ToolContext,
+} from "../lib/tools";
 import { buildSystemPrompt } from "../lib/chat/buildSystemPrompt";
 import {
   isWaitingForApproval,
@@ -32,13 +36,14 @@ export const assistantChatRouter = express.Router();
 
 const BASE_SYSTEM =
   `You are CapScreen's compliance assistant for venture capital teams. ` +
-  `You help users screen cap-table CSVs against Watchman sanctions lists, interpret results, and follow structured workflows.\n\n` +
+  `You help users screen cap-table CSVs and uploaded documents against Watchman sanctions lists, interpret results, answer questions about document content, and follow structured workflows.\n\n` +
   `When a user message includes a workflow selection, immediately call read_workflow with that workflow's id before other tools, then follow the workflow instructions.\n\n` +
   `When the user @-mentions a startup (e.g. @AcmeAI), their saved screening is injected into the system prompt — use list_mentioned_startups and pass startup_id to tools for portfolio questions.\n\n` +
   `After screen_cap_table completes, reply in 2–4 sentences with aggregate counts only (flagged / review / clear). ` +
   `Do NOT list individual entities, match scores, or ownership chains in chat — the UI opens an interactive side panel with the ownership graph and entity risk table. ` +
   `Use query_screening_data only when the user asks about a specific entity.\n\n` +
-  `Be concise and professional. Never conclude guilt or confirm sanctions violations.\n` +
+  `Be concise and professional. Recommend human expert verification for final decisions. Never conclude guilt or confirm sanctions violations.\n` +
+  `Never invent match scores, entity names, or screening data — always call a tool to look up facts.\n` +
   `For questions about current news, company background, or public sanctions activity that are NOT in screening data, call web_search — it works in any conversation, not only after a cap-table screen.\n` +
   `Use numbered markdown lists (1. … 2. …) ONLY when the user must pick between 2–5 mutually exclusive paths (e.g. screen now vs. ask a question). The UI renders these as clickable chips. Do NOT add numbered option lists on greetings, acknowledgments, simple factual answers, or when the user already stated what they want. Prefer a short direct reply; if you need clarification, ask one follow-up question in plain prose.\n` +
   `When you call web_search, you MUST include every source URL from the results as a markdown hyperlink [title](url) in your response. Never summarise web results without citing links.\n\n` +
@@ -169,7 +174,7 @@ assistantChatRouter.post("/", async (req, res) => {
 
   const chatId = chat_id?.trim() || randomUUID();
   await connectDb();
-  const workflowStore = await buildWorkflowStore(userId, userEmail);
+  const workflowStore = await buildWorkflowStore(userId);
 
   const mentionTokens = extractMentionsFromMessages(validMessages);
   const mentionedStartups = await resolveStartupMentions(mentionTokens, userId);
@@ -212,8 +217,20 @@ assistantChatRouter.post("/", async (req, res) => {
     }
   }
 
+  // Force screen_cap_table on the first turn when a CSV is attached and no
+  // prior result exists — small models don't route this case reliably
+  // (backend/docs/tool-routing-analysis.md).
+  const toolChoice: LlmToolChoice | undefined =
+    ctx.csvContent && !ctx.screeningResult
+      ? { type: "tool", name: SCREEN_CAP_TABLE_TOOL_NAME }
+      : undefined;
+
   await streamAssistantTurn(res, { userId, chatId, ctx }, (deps, signal) =>
-    runAgent({ systemPrompt: system, messages: toLlmMessages(validMessages) }, deps, signal),
+    runAgent(
+      { systemPrompt: system, messages: toLlmMessages(validMessages) },
+      { ...deps, toolChoice },
+      signal,
+    ),
   );
 });
 
@@ -286,7 +303,7 @@ assistantChatRouter.post("/runs/:runId/resume", async (req, res) => {
     ...run.context,
     userId,
     userEmail,
-    workflowStore: await buildWorkflowStore(userId, userEmail),
+    workflowStore: await buildWorkflowStore(userId),
   };
 
   // Compliance record: who allowed (or blocked) which tool, with what input.
@@ -342,6 +359,7 @@ async function streamAssistantTurn(
   const deps: AgentDeps = {
     registry: assistantRegistry,
     write,
+    maxTokens: 8192,
     askBeforeSensitiveTools: true,
     executeTool: async (name, input) => {
       const toolResult = await assistantRegistry.execute(name, input, ctx);

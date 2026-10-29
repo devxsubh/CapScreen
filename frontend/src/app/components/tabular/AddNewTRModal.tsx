@@ -13,7 +13,6 @@ import {
     uploadStandaloneDocument,
 } from "@/app/lib/capScreenApi";
 import { FileDirectory } from "../shared/FileDirectory";
-import { BUILT_IN_WORKFLOWS } from "../workflows/builtinWorkflows";
 
 interface Props {
     open: boolean;
@@ -75,12 +74,9 @@ export function AddNewTRModal({
         if (!open) return;
 
         setLoadingWorkflows(true);
-        const builtinTabular = BUILT_IN_WORKFLOWS.filter(
-            (w) => w.type === "tabular",
-        );
         listWorkflows("tabular")
-            .then((custom) => setWorkflows([...builtinTabular, ...custom]))
-            .catch(() => setWorkflows(builtinTabular))
+            .then(setWorkflows)
+            .catch(() => setWorkflows([]))
             .finally(() => setLoadingWorkflows(false));
 
         if (isProjectMode) {

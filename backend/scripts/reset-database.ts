@@ -1,5 +1,6 @@
 /**
- * Interactive MongoDB reset for interview / clean-slate prep.
+ * Interactive database reset for interview / clean-slate prep. Targets the
+ * local SQLite file (~/.capscreen, or CAPSCREEN_DATA_DIR) unless CAPSCREEN_DB=mongodb.
  *
  * Modes:
  *   1) Complete erase — empty every collection (including users)
@@ -15,7 +16,7 @@
 import { createInterface } from "readline";
 import { config } from "dotenv";
 import { resolve } from "path";
-import { connectDb, disconnectDb } from "../src/lib/infra/db";
+import { connectDb, databaseFile, disconnectDb } from "../src/lib/infra/db";
 import {
   countAllDocuments,
   eraseAllData,
@@ -166,9 +167,8 @@ Options:
     process.exit(0);
   }
 
-  const uri = process.env.MONGODB_URI ?? "mongodb://localhost:27017/vc-screener";
-  const safeUri = uri.replace(/\/\/([^:]+):([^@]+)@/, "//***:***@");
-  console.log(`\nTarget: ${safeUri}`);
+  const target = process.env.CAPSCREEN_DB === "mongodb" ? "MongoDB (MONGODB_URI)" : databaseFile();
+  console.log(`\nTarget: ${target}`);
 
   await printPreview(mode);
 

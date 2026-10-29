@@ -1,38 +1,11 @@
-/**
- * CapScreen API client — all requests to the Node.js backend.
- * Runs in preview mode backed by MongoDB; no auth token required.
- */
+/** CapScreen API client — requests to the local backend (single local user, no auth header). */
 
-import { getAuthHeaders } from "@/lib/apiAuth";
 import { normalizeAppMessages } from "@/lib/normalizeAppMessages";
-import { UI_PREVIEW_MODE, PREVIEW_PROFILE } from "@/lib/uiPreview";
-import {
-    listStartups,
-    createStartup,
-    getStartup,
-    renameStartup,
-    deleteStartup,
-    type StartupRecord,
-} from "@/lib/startupsApi";
-
-function startupToProject(s: StartupRecord): AppProject {
-    return {
-        id: s.id,
-        name: s.name,
-        user_id: "preview-user",
-        is_owner: true,
-        cm_number: null,
-        shared_with: [],
-        created_at: s.createdAt,
-        updated_at: s.createdAt,
-    };
-}
 import type {
     AssistantEvent,
     AppChat,
     AppChatDetailOut,
     AppDocument,
-    AppFolder,
     AppMessage,
     AppProject,
     AppWorkflow,
@@ -45,7 +18,6 @@ const API_BASE =
     apiBase();
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-    const authHeaders = await getAuthHeaders();
     const { headers: initHeaders, ...restInit } = init ?? {};
     const response = await fetch(`${API_BASE}${path}`, {
         cache: "no-store",
@@ -53,7 +25,6 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
         ...restInit,
         headers: {
             Accept: "application/json",
-            ...authHeaders,
             ...(initHeaders as Record<string, string> | undefined),
         },
     });
@@ -77,295 +48,29 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
 // Projects
 // ---------------------------------------------------------------------------
 
+/** Startups seen as projects (with their documents, CSVs and screenings). */
 export async function listProjects(): Promise<AppProject[]> {
-    if (UI_PREVIEW_MODE) return (await listStartups()).map(startupToProject);
     return apiRequest<AppProject[]>("/projects");
 }
 
-export async function createProject(
-    name: string,
-    cm_number?: string,
-    shared_with?: string[],
-): Promise<AppProject> {
-    if (UI_PREVIEW_MODE) return startupToProject(await createStartup(name));
-    return apiRequest<AppProject>("/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, cm_number, shared_with }),
-    });
-}
-
-export async function deleteAccount(): Promise<void> {
-    return apiRequest<void>("/user/account", { method: "DELETE" });
-}
-
-export interface UserProfile {
-    displayName: string | null;
-    organisation: string | null;
-    apiKeyStatus: ApiKeyStatus;
-}
-
-export async function getUserProfile(): Promise<UserProfile> {
-    if (UI_PREVIEW_MODE) return PREVIEW_PROFILE as unknown as UserProfile;
-    return apiRequest<UserProfile>("/user/profile");
-}
-
-export async function updateUserProfile(payload: {
-    displayName?: string | null;
-    organisation?: string | null;
-}): Promise<UserProfile> {
-    return apiRequest<UserProfile>("/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-    });
-}
-
-export type ApiKeyProvider = "claude" | "gemini" | "openai";
-export type ApiKeySource = "user" | "env" | null;
-export type ApiKeyState = Record<
-    ApiKeyProvider,
-    {
-        configured: boolean;
-        source: ApiKeySource;
-    }
->;
-
-export type ApiKeyStatus = Record<ApiKeyProvider, boolean> & {
-    sources?: Partial<Record<ApiKeyProvider, ApiKeySource>>;
-};
-
-export async function getApiKeyStatus(): Promise<ApiKeyStatus> {
-    return apiRequest<ApiKeyStatus>("/user/api-keys");
-}
-
-export async function saveApiKey(
-    provider: ApiKeyProvider,
-    apiKey: string | null,
-): Promise<ApiKeyStatus> {
-    return apiRequest<ApiKeyStatus>(`/user/api-keys/${provider}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: apiKey }),
-    });
-}
-
 export async function getProject(projectId: string): Promise<AppProject> {
-    if (UI_PREVIEW_MODE)
-        return startupToProject(await getStartup(projectId));
     return apiRequest<AppProject>(`/projects/${projectId}`);
-}
-
-export async function updateProject(
-    projectId: string,
-    payload: {
-        name?: string;
-        cm_number?: string;
-        shared_with?: string[];
-    },
-): Promise<AppProject> {
-    if (UI_PREVIEW_MODE) {
-        if (payload.name)
-            return startupToProject(await renameStartup(projectId, payload.name));
-        return getProject(projectId);
-    }
-    return apiRequest<AppProject>(`/projects/${projectId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-    });
-}
-
-export async function deleteProject(projectId: string): Promise<void> {
-    if (UI_PREVIEW_MODE) {
-        await deleteStartup(projectId);
-        return;
-    }
-    await apiRequest(`/projects/${projectId}`, { method: "DELETE" });
-}
-
-export interface ProjectPeople {
-    owner: {
-        user_id: string;
-        email: string | null;
-        display_name: string | null;
-    };
-    members: { email: string; display_name: string | null }[];
-}
-
-export async function getProjectPeople(
-    projectId: string,
-): Promise<ProjectPeople> {
-    return apiRequest<ProjectPeople>(`/projects/${projectId}/people`);
 }
 
 // ---------------------------------------------------------------------------
 // Documents
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Folders
-// ---------------------------------------------------------------------------
-
-export async function createProjectFolder(
-    projectId: string,
-    name: string,
-    parentFolderId?: string | null,
-): Promise<AppFolder> {
-    return apiRequest<AppFolder>(`/projects/${projectId}/folders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            name,
-            parent_folder_id: parentFolderId ?? null,
-        }),
-    });
-}
-
-export async function renameProjectFolder(
-    projectId: string,
-    folderId: string,
-    name: string,
-): Promise<AppFolder> {
-    return apiRequest<AppFolder>(
-        `/projects/${projectId}/folders/${folderId}`,
-        {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name }),
-        },
-    );
-}
-
-export async function deleteProjectFolder(
-    projectId: string,
-    folderId: string,
-): Promise<void> {
-    await apiRequest(`/projects/${projectId}/folders/${folderId}`, {
-        method: "DELETE",
-    });
-}
-
-export async function moveSubfolderToFolder(
-    projectId: string,
-    folderId: string,
-    parentFolderId: string | null,
-): Promise<AppFolder> {
-    return apiRequest<AppFolder>(
-        `/projects/${projectId}/folders/${folderId}`,
-        {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ parent_folder_id: parentFolderId }),
-        },
-    );
-}
-
-export async function moveDocumentToFolder(
-    projectId: string,
-    documentId: string,
-    folderId: string | null,
-): Promise<AppDocument> {
-    return apiRequest<AppDocument>(
-        `/projects/${projectId}/documents/${documentId}/folder`,
-        {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ folder_id: folderId }),
-        },
-    );
-}
-
-export async function renameProjectDocument(
-    projectId: string,
-    documentId: string,
-    filename: string,
-): Promise<AppDocument> {
-    return apiRequest<AppDocument>(
-        `/projects/${projectId}/documents/${documentId}`,
-        {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filename }),
-        },
-    );
-}
-
-export async function addDocumentToProject(
-    projectId: string,
-    documentId: string,
-): Promise<AppDocument> {
-    return apiRequest<AppDocument>(
-        `/projects/${projectId}/documents/${documentId}`,
-        { method: "POST" },
-    );
-}
-
-export interface AppDocumentVersion {
-    id: string;
-    version_number: number | null;
-    source: string;
-    created_at: string;
-    display_name: string | null;
-}
-
-export async function listDocumentVersions(documentId: string): Promise<{
-    current_version_id: string | null;
-    versions: AppDocumentVersion[];
-}> {
-    return apiRequest(`/single-documents/${documentId}/versions`);
-}
-
-export async function uploadDocumentVersion(
-    documentId: string,
-    file: File,
-    displayName?: string,
-): Promise<AppDocumentVersion> {
-
-    const authHeaders = await getAuthHeaders();
-    const form = new FormData();
-    form.append("file", file);
-    if (displayName) form.append("display_name", displayName);
-    const response = await fetch(
-        `${API_BASE}/single-documents/${documentId}/versions`,
-        {
-            method: "POST",
-            headers: authHeaders,
-            body: form,
-        },
-    );
-    if (!response.ok) throw new Error(await response.text());
-    return response.json() as Promise<AppDocumentVersion>;
-}
-
-export async function renameDocumentVersion(
-    documentId: string,
-    versionId: string,
-    displayName: string | null,
-): Promise<AppDocumentVersion> {
-    return apiRequest<AppDocumentVersion>(
-        `/single-documents/${documentId}/versions/${versionId}`,
-        {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ display_name: displayName }),
-        },
-    );
-}
-
 export async function uploadProjectDocument(
     projectId: string,
     file: File,
 ): Promise<AppDocument> {
-
-    const authHeaders = await getAuthHeaders();
     const form = new FormData();
     form.append("file", file);
     const response = await fetch(
         `${API_BASE}/projects/${projectId}/documents`,
         {
             method: "POST",
-            headers: authHeaders,
             body: form,
         },
     );
@@ -376,13 +81,10 @@ export async function uploadProjectDocument(
 export async function uploadStandaloneDocument(
     file: File,
 ): Promise<AppDocument> {
-
-    const authHeaders = await getAuthHeaders();
     const form = new FormData();
     form.append("file", file);
     const response = await fetch(`${API_BASE}/single-documents`, {
         method: "POST",
-        headers: authHeaders,
         body: form,
     });
     if (!response.ok) throw new Error(await response.text());
@@ -403,27 +105,6 @@ export async function getDocumentUrl(
 ): Promise<{ url: string; filename: string; version_id: string | null }> {
     const qs = versionId ? `?version_id=${encodeURIComponent(versionId)}` : "";
     return apiRequest(`/single-documents/${documentId}/url${qs}`);
-}
-
-export async function downloadDocumentsZip(
-    documentIds: string[],
-): Promise<Blob> {
-
-    const authHeaders = await getAuthHeaders();
-    const response = await fetch(`${API_BASE}/single-documents/download-zip`, {
-        method: "POST",
-        cache: "no-store",
-        headers: {
-            "Content-Type": "application/json",
-            ...authHeaders,
-        },
-        body: JSON.stringify({ document_ids: documentIds }),
-    });
-    if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(detail || `API error: ${response.status}`);
-    }
-    return response.blob();
 }
 
 // ---------------------------------------------------------------------------
@@ -520,14 +201,12 @@ export async function streamChat(payload: {
     signal?: AbortSignal;
 }): Promise<Response> {
     const { signal, ...body } = payload;
-    const authHeaders = await getAuthHeaders();
 
     return fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Accept: "text/event-stream",
-            ...authHeaders,
         },
         body: JSON.stringify(body),
         signal,
@@ -543,13 +222,11 @@ export async function resumeAgentRun(
     approved: boolean,
     signal?: AbortSignal,
 ): Promise<Response> {
-    const authHeaders = await getAuthHeaders();
     return fetch(`${API_BASE}/chat/runs/${encodeURIComponent(runId)}/resume`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Accept: "text/event-stream",
-            ...authHeaders,
         },
         body: JSON.stringify({ approved }),
         signal,
@@ -575,14 +252,12 @@ export async function streamProjectChat(payload: {
     signal?: AbortSignal;
 }): Promise<Response> {
     const { projectId, signal, ...body } = payload;
-    const authHeaders = await getAuthHeaders();
 
     return fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             Accept: "text/event-stream",
-            ...authHeaders,
         },
         body: JSON.stringify({
             ...body,
@@ -631,7 +306,6 @@ export async function updateTabularReview(
         columns_config?: { index: number; name: string; prompt: string }[];
         document_ids?: string[];
         project_id?: string | null;
-        shared_with?: string[];
     },
 ): Promise<TabularReview> {
     return apiRequest<TabularReview>(`/tabular-review/${reviewId}`, {
@@ -639,12 +313,6 @@ export async function updateTabularReview(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
     });
-}
-
-export async function getTabularReviewPeople(
-    reviewId: string,
-): Promise<ProjectPeople> {
-    return apiRequest<ProjectPeople>(`/tabular-review/${reviewId}/people`);
 }
 
 export async function generateTabularColumnPrompt(
@@ -694,11 +362,8 @@ export async function deleteTabularReview(reviewId: string): Promise<void> {
 export async function streamTabularGeneration(
     reviewId: string,
 ): Promise<Response> {
-
-    const authHeaders = await getAuthHeaders();
     return fetch(`${API_BASE}/tabular-review/${reviewId}/generate`, {
         method: "POST",
-        headers: authHeaders,
     });
 }
 
@@ -709,11 +374,9 @@ export async function streamTabularChat(
     signal?: AbortSignal,
     context?: { reviewTitle?: string | null; projectName?: string | null },
 ): Promise<Response> {
-
-    const authHeaders = await getAuthHeaders();
     return fetch(`${API_BASE}/tabular-review/${reviewId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             messages,
             chat_id: chat_id ?? undefined,
@@ -842,10 +505,11 @@ export async function clearTabularCells(
 
 type WorkflowType = AppWorkflow["type"];
 
+/** Built-in workflows (is_system) followed by the user's own. */
 export async function listWorkflows(
-    type: WorkflowType,
+    type?: WorkflowType,
 ): Promise<AppWorkflow[]> {
-    return apiRequest<AppWorkflow[]>(`/workflows?type=${type}`);
+    return apiRequest<AppWorkflow[]>(type ? `/workflows?type=${type}` : "/workflows");
 }
 
 export async function getWorkflow(workflowId: string): Promise<AppWorkflow> {
@@ -900,35 +564,4 @@ export async function hideWorkflow(workflowId: string): Promise<void> {
 
 export async function unhideWorkflow(workflowId: string): Promise<void> {
     await apiRequest(`/workflows/hidden/${workflowId}`, { method: "DELETE" });
-}
-
-export async function shareWorkflow(
-    workflowId: string,
-    payload: { emails: string[]; allow_edit: boolean },
-): Promise<void> {
-    await apiRequest<void>(`/workflows/${workflowId}/share`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-    });
-}
-
-export async function listWorkflowShares(workflowId: string): Promise<
-    {
-        id: string;
-        shared_with_email: string;
-        allow_edit: boolean;
-        created_at: string;
-    }[]
-> {
-    return apiRequest(`/workflows/${workflowId}/shares`);
-}
-
-export async function deleteWorkflowShare(
-    workflowId: string,
-    shareId: string,
-): Promise<void> {
-    await apiRequest(`/workflows/${workflowId}/shares/${shareId}`, {
-        method: "DELETE",
-    });
 }

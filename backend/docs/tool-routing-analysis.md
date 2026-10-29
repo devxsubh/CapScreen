@@ -2,6 +2,8 @@
 
 ## Problem
 
+> The screener route (`/api/chat`) has since been merged into `POST /chat` (`routes/assistantChat.ts`); the forced first-turn `tool_choice` below lives there now, and the three summary/list/detail tools became `query_screening_data`.
+
 The Claude agent in `/api/chat` was not reliably selecting the correct tool based on user intent. The agent would sometimes respond with prose from the attached CSV instead of running Watchman screening, and would conflate `get_screening_summary` with `list_entities` for ambiguous queries.
 
 ---

@@ -55,7 +55,7 @@ export function LocalModels({
     if (!local) {
         return (
             <section>
-                <h2 className="text-xl font-medium">On-device models</h2>
+                <h2 className="text-xl font-medium">On this computer</h2>
                 <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">
                     <Loader2 className="h-4 w-4 animate-spin" /> Checking this computer…
                 </div>
@@ -172,7 +172,7 @@ export function LocalModels({
 
     return (
         <section>
-            <h2 className="text-xl font-medium">On-device models</h2>
+            <h2 className="text-xl font-medium">On this computer</h2>
             <p className="text-sm text-gray-500">Run models on this computer with Ollama — nothing is sent anywhere.</p>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">

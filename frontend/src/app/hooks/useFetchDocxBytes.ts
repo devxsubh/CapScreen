@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuthHeaders } from "@/lib/apiAuth";
 import { apiBase } from "@/lib/apiBase";
 
 export interface FetchDocxResult {
@@ -87,7 +86,7 @@ export function useFetchDocxBytes(
         const pending =
             inFlight.get(key) ??
             (async () => {
-                const bin = await fetch(url, { headers: await getAuthHeaders() });
+                const bin = await fetch(url);
                 if (!bin.ok) throw new Error(`HTTP ${bin.status}`);
                 const buf = await bin.arrayBuffer();
                 bytesCache.set(key, buf);

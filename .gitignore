@@ -11,7 +11,6 @@ dist
 out
 build
 .next
-.open-next
 
 # Environment — never commit secrets
 .env

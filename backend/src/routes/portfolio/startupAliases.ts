@@ -9,7 +9,7 @@ export const portfolioStartupAliasesRouter = Router();
 
 portfolioStartupAliasesRouter.get("/screening-summary", async (req, res) => {
   const userId = res.locals.userId as string;
-  const list = await Startup.find(await visibleStartupFilter(userId))
+  const list = await Startup.find(visibleStartupFilter(userId))
     .sort({ createdAt: -1 })
     .lean();
   res.json(list.map(toScreeningSummary));

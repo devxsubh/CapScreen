@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { PanelLeft } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { ChatHistoryProvider } from "@/app/contexts/ChatHistoryContext";
 import { SidebarContext } from "@/app/contexts/SidebarContext";
 import { OnboardingTourProvider } from "@/app/contexts/OnboardingTourContext";
 import { AppSidebar } from "@/app/components/shared/AppSidebar";
-import { UI_PREVIEW_MODE } from "@/lib/uiPreview";
 import { DesktopShell } from "@/app/components/shared/DesktopShell";
 
 export default function CapScreenLayout({
@@ -16,8 +13,6 @@ export default function CapScreenLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { isAuthenticated, authLoading } = useAuth();
-    const router = useRouter();
 
     const [isSidebarOpenDesktop, setIsSidebarOpenDesktop] = useState(() => {
         if (typeof window !== "undefined") {
@@ -77,23 +72,6 @@ export default function CapScreenLayout({
         }),
         [isSidebarOpen, setSidebarOpen, toggleSidebar],
     );
-
-    useEffect(() => {
-        if (UI_PREVIEW_MODE) return;
-        if (!authLoading && !isAuthenticated) {
-            router.push("/login");
-        }
-    }, [authLoading, isAuthenticated, router]);
-
-    if (authLoading) {
-        return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-700" />
-            </div>
-        );
-    }
-
-    if (!isAuthenticated) return null;
 
     return (
         <ChatHistoryProvider>

@@ -1,146 +1,19 @@
-export type WatchmanHitSource = "sdn" | "altName" | "v2";
+/**
+ * Screening domain types. The shared contract lives in the backend
+ * (backend/src/types/screening.ts) and is re-exported here — type-only, so
+ * nothing from the backend is bundled into the UI.
+ */
+export type * from "../../../backend/src/types/screening";
 
-export interface WatchmanAddress {
-  line1?: string;
-  line2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
-}
+import type {
+  ColumnMapping,
+  CsvKind,
+  ParseError,
+  ParseSource,
+  ParseStatus,
+} from "../../../backend/src/types/screening";
 
-export interface WatchmanScorePiece {
-  pieceType: string;
-  score: number;
-  weight: number;
-  matched: boolean;
-  required?: boolean;
-  exact?: boolean;
-  fieldsCompared?: number;
-}
-
-export interface WatchmanMatch {
-  sdnName: string;
-  sdnType: string;
-  match: number;
-  programs: string[];
-  remarks?: string;
-  hitSource?: WatchmanHitSource;
-  entityID?: string;
-  matchedName?: string;
-  title?: string;
-  alternateID?: string;
-  alternateType?: string;
-  alternateName?: string;
-  alternateRemarks?: string;
-  callSign?: string;
-  vesselType?: string;
-  tonnage?: string;
-  grossRegisteredTonnage?: string;
-  vesselFlag?: string;
-  vesselOwner?: string;
-  sourceList?: string;
-  sourceID?: string;
-  entityType?: string;
-  secondarySanctions?: boolean;
-  addresses?: WatchmanAddress[];
-  affiliations?: string[];
-  cryptoAddresses?: string[];
-  matchDetails?: WatchmanScorePiece[];
-}
-
-export interface WatchmanListInfo {
-  lists: Record<string, number>;
-  listHashes?: Record<string, string>;
-  startedAt?: string;
-  endedAt?: string;
-  version?: string;
-  fetchedAt: string;
-}
-
-export interface EntityScreeningQuery {
-  altNames?: string[];
-  birthDate?: string;
-  address?: string;
-  country?: string;
-  registrationId?: string;
-  requestId?: string;
-}
-
-export type OwnershipRuleFlag = "ofac_50" | "ubo_25";
-
-export interface OwnershipPathStep {
-  name: string;
-  edgePct: number | null;
-}
-
-export interface EntityResult {
-  name: string;
-  type: "person" | "company";
-  riskLevel: "clear" | "review" | "flagged";
-  topScore: number | null;
-  matches: WatchmanMatch[];
-  ownershipPath: string[];
-  indirectOwnershipPct?: number | null;
-  ownershipPathSteps?: OwnershipPathStep[];
-  ownershipRuleFlags?: OwnershipRuleFlag[];
-  exposureStatement?: string;
-  role?: string;
-  isUltimateOwner?: boolean;
-  ultimateOwner?: string;
-  explanation?: string;
-  screeningQuery?: EntityScreeningQuery;
-}
-
-export interface OwnershipEdge {
-  from: string;
-  to: string;
-  pct: number;
-}
-
-export type CsvKind =
-  | "ownership_cap_table"
-  | "entity_roster"
-  | "reference_metadata"
-  | "unknown";
-export type ParseSource = "strict" | "heuristic" | "ai";
-export type ScreeningMode = "ownership_graph" | "entity_roster";
-export type RosterPurpose =
-  | "cap_table"
-  | "co_investor"
-  | "vendor"
-  | "entity_roster";
-
-export interface ColumnMapping {
-  entity?: string;
-  entity_type?: string;
-  owner?: string;
-  owner_type?: string;
-  ownership_pct?: string;
-  name?: string;
-  type?: string;
-}
-
-export interface ScreeningResult {
-  totalEntities: number;
-  flaggedCount: number;
-  reviewCount: number;
-  clearCount: number;
-  entities: EntityResult[];
-  edges: OwnershipEdge[];
-  startupName?: string;
-  maxSanctionedExposurePct?: number | null;
-  sanctionedExposureSummary?: string;
-  screenedAt?: string;
-  csvId?: string;
-  screeningMode?: ScreeningMode;
-  csvKind?: CsvKind;
-  dataSourceAvailable?: boolean;
-  screeningConfidence?: number;
-  watchmanListInfo?: WatchmanListInfo;
-  watchmanSearchLimit?: number;
-}
-
+/** Mirrors GraphPreview in backend/src/lib/screening/screeningPreview.ts. */
 export interface GraphPreview {
   entityCount: number;
   edgeCount: number;
@@ -150,8 +23,7 @@ export interface GraphPreview {
   circularOwnershipCount: number;
 }
 
-export type ParseStatus = "pending" | "valid" | "invalid" | "needs_review";
-
+/** Response of POST /api/startups/:id/csvs/analyze (toIngestApiResponse + preview). */
 export interface CsvIngestAnalysis {
   csvKind: CsvKind;
   parseSource: ParseSource;
@@ -170,12 +42,8 @@ export interface CsvIngestAnalysis {
   estimatedScreenSeconds?: number;
 }
 
-export type ScreeningStage =
-  | "parse"
-  | "graph"
-  | "screen"
-  | "explain"
-  | "exposure";
+/** Mirrors backend/src/lib/screening/screeningProgress.ts. */
+export type ScreeningStage = "parse" | "graph" | "screen" | "explain" | "exposure";
 
 export interface ScreeningProgressEvent {
   stage: ScreeningStage;
@@ -183,11 +51,4 @@ export interface ScreeningProgressEvent {
   detail?: string;
   current?: number;
   total?: number;
-}
-export type ReviewStatus = "pending" | "cleared" | "escalated" | "blocked";
-
-export interface ParseError {
-  row: number;
-  field?: string;
-  message: string;
 }

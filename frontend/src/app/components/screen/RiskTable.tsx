@@ -14,12 +14,6 @@ interface RiskTableProps {
   onEntitySelect?: (entity: EntityResult) => void;
 }
 
-const RISK_LABEL: Record<string, string> = {
-  flagged: "Flagged",
-  review: "Review",
-  clear: "Clear",
-};
-
 const REVIEW_STATUS_LABEL: Record<EntityReview["status"], string> = {
   pending: "—",
   cleared: "Cleared",

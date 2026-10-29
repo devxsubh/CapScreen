@@ -35,7 +35,7 @@ const schema = new mongoose.Schema(
     default: "pending",
   },
   portfolioReviewNotes: { type: String, default: null },
-  /** Global demo workspace — visible to all users; per-user hide via HiddenSampleAsset. */
+  /** Global demo workspace (read-only). Deleting it soft-deletes like any startup. */
   isSample: { type: Boolean, default: false, index: true },
   },
   { timestamps: true },

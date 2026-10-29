@@ -31,7 +31,7 @@ STORAGE (pick one for CapScreen)
 
 QUERY (on chat turn)
   User question → embed query → hybrid retrieve (vector + lexical)
-  → top-K chunks → inject into /api/chat system prompt OR new tool retrieve_compliance_docs
+  → top-K chunks → inject into the POST /chat system prompt OR new tool retrieve_compliance_docs
   → Claude cites with [N] markers → server validates quote ⊆ chunk text
 ```
 
@@ -69,7 +69,7 @@ backend/src/
     retrieval.ts
     citationValidate.ts
   routes/complianceDocs.ts
-  lib/chatTools.ts      — add retrieve_compliance_context tool
+  lib/tools/            — add retrieve_compliance_context tool (register in index.ts)
 
 frontend/src/
   app/lib/screenerApi.ts

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { getAuthHeaders } from "@/lib/apiAuth";
 import { CapScreenIcon } from "@/components/chat/capscreen-icon";
 import { useFetchDocxBytes } from "@/app/hooks/useFetchDocxBytes";
 import {
@@ -9,7 +8,6 @@ import {
     highlightDocxQuote,
 } from "./highlightDocxQuote";
 import type { CitationQuote } from "./types";
-import { apiBase } from "@/lib/apiBase";
 
 interface Props {
     documentId: string;
@@ -19,25 +17,6 @@ interface Props {
      * scrolling to a particular tracked change after a re-render.
      */
     onReady?: () => void;
-    /**
-     * Tracked-change to scroll to + briefly flash after each render. The
-     * `key` is used to re-trigger scrolling when the same edit is clicked
-     * twice in a row.
-     */
-    highlightEdit?: {
-        key: string;
-        inserted_text?: string;
-        deleted_text?: string;
-        /**
-         * Numeric w:id values of the <w:ins>/<w:del> wrappers in
-         * document.xml. Preferred over text matching — uniquely identifies
-         * the right DOM element even when multiple edits share identical
-         * inserted/deleted text. `docx-preview` drops these during parsing,
-         * so we re-tag each rendered <ins>/<del> with data-w-id after load.
-         */
-        ins_w_id?: string | null;
-        del_w_id?: string | null;
-    } | null;
     /**
      * Forces a byte re-fetch when it changes, even if documentId/versionId
      * are stable. Used after accept/reject: the backend overwrites bytes at
@@ -75,115 +54,6 @@ interface Props {
     bordered?: boolean;
 }
 
-function findEditElement(
-    root: HTMLElement,
-    tag: "ins" | "del",
-    opts: { w_id?: string | null; text?: string },
-): HTMLElement | null {
-    if (opts.w_id) {
-        const byId = root.querySelector(
-            `${tag}[data-w-id="${CSS.escape(opts.w_id)}"]`,
-        ) as HTMLElement | null;
-        if (byId) return byId;
-    }
-    const text = opts.text ?? "";
-    const normalize = (s: string) => s.replace(/\s+/g, " ").trim();
-    const target = normalize(text);
-    if (!target) return null;
-    const candidates = Array.from(root.querySelectorAll(tag)) as HTMLElement[];
-    return (
-        candidates.find((el) => normalize(el.textContent ?? "") === target) ??
-        candidates.find((el) =>
-            normalize(el.textContent ?? "").includes(target),
-        ) ??
-        null
-    );
-}
-
-function scrollToHighlight(
-    container: HTMLElement,
-    scrollEl: HTMLElement,
-    edit: {
-        inserted_text?: string;
-        deleted_text?: string;
-        ins_w_id?: string | null;
-        del_w_id?: string | null;
-    },
-) {
-    const insEl = findEditElement(container, "ins", {
-        w_id: edit.ins_w_id,
-        text: edit.inserted_text,
-    });
-    const delEl = findEditElement(container, "del", {
-        w_id: edit.del_w_id,
-        text: edit.deleted_text,
-    });
-    const anchor = insEl ?? delEl;
-    if (!anchor) return;
-
-    const scrollRect = scrollEl.getBoundingClientRect();
-    const targetRect = anchor.getBoundingClientRect();
-    const offset = targetRect.top - scrollRect.top + scrollEl.scrollTop - 80;
-    scrollEl.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
-
-    const flashed = [insEl, delEl].filter((el): el is HTMLElement => !!el);
-    flashed.forEach((el) => el.classList.add("docx-edit-flash"));
-    window.setTimeout(() => {
-        flashed.forEach((el) => el.classList.remove("docx-edit-flash"));
-    }, 2000);
-}
-
-/**
- * Fetch the ordered list of w:ids for every w:ins/w:del in the current
- * version and tag each rendered <ins>/<del> with data-w-id. The backend
- * returns ids in document order, and docx-preview emits <ins>/<del>
- * in the same order, so we can align by index.
- */
-async function tagWIdsOnRenderedDom(
-    container: HTMLElement,
-    documentId: string,
-    versionId: string | null | undefined,
-): Promise<void> {
-    try {
-        const base = apiBase();
-        const qs = versionId
-            ? `?version_id=${encodeURIComponent(versionId)}`
-            : "";
-        const resp = await fetch(
-            `${base}/single-documents/${documentId}/tracked-change-ids${qs}`,
-            { headers: await getAuthHeaders() },
-        );
-        if (!resp.ok) {
-            console.warn(
-                "[DocxView] tracked-change-ids fetch failed",
-                resp.status,
-            );
-            return;
-        }
-        const data = (await resp.json()) as {
-            ids: { kind: "ins" | "del"; w_id: string }[];
-        };
-        const domEls = Array.from(
-            container.querySelectorAll("ins, del"),
-        ) as HTMLElement[];
-        const ids = data.ids ?? [];
-        let tagged = 0;
-        let mismatched = 0;
-        for (let i = 0; i < Math.min(domEls.length, ids.length); i++) {
-            const el = domEls[i];
-            const info = ids[i];
-            if (el.tagName.toLowerCase() !== info.kind) {
-                mismatched++;
-                continue;
-            }
-            el.setAttribute("data-w-id", info.w_id);
-            tagged++;
-        }
-    } catch (e) {
-        console.warn("[DocxView] tagWIdsOnRenderedDom failed", e);
-    }
-}
-
 /**
  * Renders a .docx in the browser using `docx-preview`. Tracked changes
  * (`w:ins` / `w:del`) show up automatically with coloured strike/underline
@@ -194,7 +64,6 @@ export function DocxView({
     documentId,
     versionId,
     onReady,
-    highlightEdit,
     refetchKey,
     quotes,
     warning,
@@ -208,14 +77,12 @@ export function DocxView({
     const containerRef = useRef<HTMLDivElement>(null);
     const lastScrollTopRef = useRef(0);
     const renderKeyRef = useRef(0);
-    // Ref-stabilize onReady and highlightEdit so the render effect only
+    // Ref-stabilize onReady so the render effect only
     // re-fires when `bytes` actually change. Without this, any parent
     // re-render (e.g. clicking a new highlight) creates a new onReady
     // identity, triggers a full re-render, and snaps scroll back to top.
     const onReadyRef = useRef(onReady);
     onReadyRef.current = onReady; // eslint-disable-line react-hooks/refs
-    const highlightEditRef = useRef(highlightEdit);
-    highlightEditRef.current = highlightEdit; // eslint-disable-line react-hooks/refs
     const quotesRef = useRef(quotes);
     quotesRef.current = quotes; // eslint-disable-line react-hooks/refs
     const initialScrollTopRef = useRef(initialScrollTop ?? null);
@@ -367,12 +234,6 @@ export function DocxView({
                     experimental: true,
                 });
                 if (cancelled) return;
-                await tagWIdsOnRenderedDom(
-                    containerEl,
-                    documentId,
-                    versionId ?? null,
-                );
-                if (cancelled) return;
                 // Scale to fit before scrolling so offsets are computed
                 // against the post-zoom layout.
                 applyDocxScale();
@@ -382,21 +243,9 @@ export function DocxView({
                         thisRender !== renderKeyRef.current
                     )
                         return;
-                    const pendingHighlight = highlightEditRef.current;
                     const pendingQuotes = quotesRef.current;
                     const pendingInitialScroll = initialScrollTopRef.current;
-                    if (pendingHighlight) {
-                        scrollToHighlight(
-                            containerEl,
-                            scrollRef.current,
-                            pendingHighlight,
-                        );
-                        // Highlight quotes too, but don't override the edit scroll
-                        if (pendingQuotes?.length) {
-                            for (const q of pendingQuotes)
-                                highlightDocxQuote(containerEl, q.quote);
-                        }
-                    } else if (
+                    if (
                         pendingQuotes &&
                         applyQuoteHighlights(
                             containerEl,
@@ -421,18 +270,6 @@ export function DocxView({
             cancelled = true;
         };
     }, [bytes]);
-
-    // Re-scroll/highlight if the target edit changes without a re-render
-    // (e.g. same doc, different edit clicked).
-    useEffect(() => {
-        if (!highlightEdit || !containerRef.current || !scrollRef.current)
-            return;
-        scrollToHighlight(
-            containerRef.current,
-            scrollRef.current,
-            highlightEdit,
-        );
-    }, [highlightEdit?.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Re-apply quote highlights when the quote list changes without a full
     // re-render (e.g. clicking a different citation on the same doc).

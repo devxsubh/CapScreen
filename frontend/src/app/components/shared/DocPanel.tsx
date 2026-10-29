@@ -1,9 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { getAuthHeaders } from "@/lib/apiAuth";
-import { applyOptimisticResolution } from "../assistant/EditCard";
 import { DocView } from "./DocView";
 import { DocxView } from "./DocxView";
 import { StartupDocumentView } from "./StartupDocumentView";
@@ -15,7 +13,6 @@ import {
 import type {
     CitationQuote,
     AppCitationAnnotation,
-    AppEditAnnotation,
 } from "./types";
 import { apiBase } from "@/lib/apiBase";
 
@@ -28,39 +25,10 @@ function isDocxFilename(name: string): boolean {
  * Discriminated-union describing what the panel is showing above the viewer.
  *   - "document":  no header card, no label — just the viewer.
  *   - "citation":  "Citation Quote" card with the quoted text and page ref.
- *   - "edit":      "Tracked Change" card with the diff + Accept/Reject.
  */
 export type DocPanelMode =
     | { kind: "document" }
-    | { kind: "citation"; citation: AppCitationAnnotation }
-    | {
-          kind: "edit";
-          edit: AppEditAnnotation;
-          /**
-           * True while an accept/reject request for this exact edit is in
-           * flight. Scoped per-edit (not per-document) so sibling edits on
-           * the same doc stay clickable.
-           */
-          isEditReloading?: boolean;
-          onResolveStart?: (args: {
-              editId: string;
-              documentId: string;
-              verb: "accept" | "reject";
-          }) => void;
-          onResolved?: (args: {
-              editId: string;
-              documentId: string;
-              status: "accepted" | "rejected";
-              versionId: string | null;
-              downloadUrl: string | null;
-          }) => void;
-          onError?: (args: {
-              editId: string;
-              documentId: string;
-              versionId: string | null;
-              message: string;
-          }) => void;
-      };
+    | { kind: "citation"; citation: AppCitationAnnotation };
 
 interface Props {
     documentId: string;
@@ -99,10 +67,8 @@ export function DocPanel({
     onScrollChange,
 }: Props) {
     // Pick the viewer from the filename only, not from mode. Switching
-    // headers (citation ↔ edit ↔ document) for the same document must
-    // not unmount and remount the body — otherwise the user sees a full
-    // re-fetch every time they toggle. Tracked-change rendering still
-    // only lives in DocxView, which is fine because edits are DOCX-only.
+    // headers (citation ↔ document) for the same document must not unmount
+    // and remount the body — otherwise the user sees a full re-fetch.
     const useDocxView = isDocxFilename(filename);
 
     const quotes: CitationQuote[] | undefined = useMemo(() => {
@@ -110,30 +76,11 @@ export function DocPanel({
         return expandCitationToEntries(mode.citation);
     }, [mode]);
 
-    const highlightEdit = useMemo(() => {
-        if (mode.kind !== "edit") return null;
-        return {
-            key: `${mode.edit.edit_id}`,
-            inserted_text: mode.edit.inserted_text,
-            deleted_text: mode.edit.deleted_text,
-            ins_w_id: mode.edit.ins_w_id ?? null,
-            del_w_id: mode.edit.del_w_id ?? null,
-        };
-    }, [mode]);
-
     return (
         <div className="flex h-full flex-col px-3 pb-3">
             {mode.kind === "citation" ? (
                 <CitationHeader
                     citation={mode.citation}
-                    documentId={documentId}
-                    versionId={versionId}
-                    filename={filename}
-                    isReloading={isReloading}
-                />
-            ) : mode.kind === "edit" ? (
-                <TrackedChangeHeader
-                    mode={mode}
                     documentId={documentId}
                     versionId={versionId}
                     filename={filename}
@@ -173,7 +120,6 @@ export function DocPanel({
                     documentId={documentId}
                     versionId={versionId ?? undefined}
                     quotes={quotes}
-                    highlightEdit={highlightEdit}
                     warning={warning ?? null}
                     onWarningDismiss={onWarningDismiss}
                     initialScrollTop={initialScrollTop ?? null}
@@ -242,203 +188,6 @@ function CitationHeader({
     );
 }
 
-function TrackedChangeHeader({
-    mode,
-    documentId,
-    versionId,
-    filename,
-    isReloading,
-}: {
-    mode: Extract<DocPanelMode, { kind: "edit" }>;
-    documentId: string;
-    versionId: string | null;
-    filename: string;
-    isReloading: boolean;
-}) {
-    const { edit, isEditReloading, onResolveStart, onResolved, onError } = mode;
-    return (
-        <div className="pt-2 pb-3">
-            <div className="flex items-center gap-2 mb-2">
-                <SectionLabel>Tracked Change</SectionLabel>
-                <div className="ml-auto flex items-center gap-2 shrink-0">
-                    <EditResolveButtons
-                        edit={edit}
-                        isReloading={isEditReloading}
-                        onResolveStart={onResolveStart}
-                        onResolved={onResolved}
-                        onError={onError}
-                    />
-                    <DownloadButton
-                        documentId={documentId}
-                        versionId={versionId}
-                        filename={filename}
-                        isReloading={isReloading}
-                    />
-                </div>
-            </div>
-            {edit.reason && (
-                <p className="mb-2 text-xs text-gray-500">{edit.reason}</p>
-            )}
-            <div className="w-full rounded-md bg-gray-50 border border-gray-200 px-2 py-2">
-                <div className="text-sm leading-relaxed font-serif">
-                    {edit.inserted_text && (
-                        <span className="text-green-700">
-                            {edit.inserted_text}
-                        </span>
-                    )}
-                    {edit.deleted_text && (
-                        <span className="text-red-600 line-through">
-                            {edit.deleted_text}
-                        </span>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ---------------------------------------------------------------------------
-// Accept / Reject controls
-// ---------------------------------------------------------------------------
-
-function EditResolveButtons({
-    edit,
-    isReloading,
-    onResolveStart,
-    onResolved,
-    onError,
-}: {
-    edit: AppEditAnnotation;
-    /**
-     * True while an accept/reject for any edit on this document is in
-     * flight (triggered from here, the inline EditCard, the bulk bar, or
-     * elsewhere). Disables both buttons so the user can't double-submit
-     * while a resolution is racing to change the status.
-     */
-    isReloading?: boolean;
-    onResolveStart?: (args: {
-        editId: string;
-        documentId: string;
-        verb: "accept" | "reject";
-    }) => void;
-    onResolved?: (args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => void;
-    onError?: (args: {
-        editId: string;
-        documentId: string;
-        versionId: string | null;
-        message: string;
-    }) => void;
-}) {
-    const [busy, setBusy] = useState(false);
-    const [status, setStatus] = useState<"pending" | "accepted" | "rejected">(
-        edit.status,
-    );
-    // Sync with the prop when this edit is resolved elsewhere (bulk
-    // accept/reject, inline per-edit card, another open panel for the same
-    // edit). Skips while our own request is in flight so we don't flicker.
-    useEffect(() => {
-        if (busy) return;
-        setStatus(edit.status);
-    }, [edit.status, edit.edit_id, busy]);
-    const resolved = status !== "pending";
-
-    const handle = useCallback(
-        async (verb: "accept" | "reject") => {
-            if (busy || resolved) return;
-            setBusy(true);
-            onResolveStart?.({
-                editId: edit.edit_id,
-                documentId: edit.document_id,
-                verb,
-            });
-            // Optimistically mutate the DOM in the open viewer so the
-            // change reflects immediately. Revert if the backend errors.
-            let revert: (() => void) | null = null;
-            try {
-                revert = applyOptimisticResolution(edit, verb);
-            } catch (e) {
-                console.error(
-                    "[DocPanel] optimistic update threw",
-                    e,
-                );
-            }
-            try {
-                const base = apiBase();
-                const resp = await fetch(
-                    `${base}/single-documents/${edit.document_id}/edits/${edit.edit_id}/${verb}`,
-                    { method: "POST", headers: {} },
-                );
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                const data = (await resp.json()) as {
-                    ok: boolean;
-                    status?: "accepted" | "rejected";
-                    version_id: string | null;
-                    download_url: string | null;
-                };
-                const nextStatus =
-                    data.status ??
-                    (verb === "accept" ? "accepted" : "rejected");
-                setStatus(nextStatus);
-                onResolved?.({
-                    editId: edit.edit_id,
-                    documentId: edit.document_id,
-                    status: nextStatus,
-                    versionId: data.version_id,
-                    downloadUrl: data.download_url,
-                });
-            } catch (e) {
-                console.error("[DocPanel] resolve failed", e);
-                try {
-                    revert?.();
-                } catch (revertErr) {
-                    console.error(
-                        "[DocPanel] revert threw",
-                        revertErr,
-                    );
-                }
-                onError?.({
-                    editId: edit.edit_id,
-                    documentId: edit.document_id,
-                    versionId: edit.version_id ?? null,
-                    message:
-                        verb === "accept"
-                            ? "Couldn't save accept — please retry."
-                            : "Couldn't save reject — please retry.",
-                });
-            } finally {
-                setBusy(false);
-            }
-        },
-        [busy, resolved, edit, onResolveStart, onResolved, onError],
-    );
-
-    const inFlight = busy || !!isReloading;
-    return (
-        <div className="flex items-center gap-2">
-            <button
-                onClick={() => handle("accept")}
-                disabled={inFlight || resolved}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-900 bg-gray-900 px-2 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {status === "accepted" ? "Accepted" : "Accept"}
-            </button>
-            <button
-                onClick={() => handle("reject")}
-                disabled={inFlight || resolved}
-                className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {status === "rejected" ? "Rejected" : "Reject"}
-            </button>
-        </div>
-    );
-}
-
 // ---------------------------------------------------------------------------
 // Download button
 // ---------------------------------------------------------------------------
@@ -471,7 +220,6 @@ function DownloadButton({
                           : ""
                   }`;
             const resp = await fetch(`${base}${path}`, {
-                headers: await getAuthHeaders(),
             });
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const blob = await resp.blob();

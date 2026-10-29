@@ -420,7 +420,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                             className={`flex items-center transition-colors w-full px-3.5 py-4 border-t border-gray-200 ${
                                 !isOpen ? "hidden md:flex" : ""
                             } ${
-                                pathname === "/account" || isDropdownOpen
+                                pathname.startsWith("/settings") || isDropdownOpen
                                     ? "bg-gray-100"
                                     : "hover:bg-gray-100"
                             }`}
@@ -452,13 +452,13 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                             <div className="absolute bottom-full left-0 m-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1 z-50 w-62 whitespace-nowrap">
                                 <button
                                     onClick={() => {
-                                        router.push("/account");
+                                        router.push("/settings/account");
                                         setIsDropdownOpen(false);
                                     }}
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 rounded-md"
                                 >
                                     <User className="h-4 w-4" />
-                                    Account Settings
+                                    Settings
                                 </button>
                                 <button
                                     onClick={() => {
@@ -468,7 +468,7 @@ export function AppSidebar({ isOpen, onToggle }: AppSidebarProps) {
                                     className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 rounded-md"
                                 >
                                     <Database className="h-4 w-4" />
-                                    Data &amp; Backup
+                                    Backup &amp; Audit
                                 </button>
                             </div>
                         )}

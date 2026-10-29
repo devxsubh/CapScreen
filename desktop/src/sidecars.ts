@@ -265,7 +265,7 @@ export async function startBackend(opts: {
     FRONTEND_URL: opts.frontendOrigin,
   };
   // Never let a developer's cloud .env leak into the desktop runtime.
-  for (const k of ["MONGODB_URI", "UPSTASH_REDIS_REST_URL", "R2_ACCESS_KEY_ID", "RESEND_API_KEY"]) delete env[k];
+  for (const k of ["CAPSCREEN_DB", "MONGODB_URI", "RESEND_API_KEY", "LLM_CONFIG_FILE"]) delete env[k];
 
   const launch = async () => {
     let proc: Proc;

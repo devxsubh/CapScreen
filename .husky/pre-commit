@@ -4,6 +4,9 @@ set -e
 echo ">>> [pre-commit] Backend type check..."
 pnpm -w run typecheck
 
+echo ">>> [pre-commit] Backend tests..."
+pnpm -w run test
+
 echo ">>> [pre-commit] Frontend lint..."
 pnpm -w run lint
 

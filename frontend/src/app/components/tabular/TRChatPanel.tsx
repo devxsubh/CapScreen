@@ -30,8 +30,6 @@ import type {
 } from "../shared/types";
 import { PreResponseWrapper } from "../shared/PreResponseWrapper";
 
-const USE_SERVER_CLAUDE = true;
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -67,84 +65,9 @@ const THINKING_PHRASES = [
     "Reasoning...",
 ];
 
-function ReasoningBlock({
-    text,
-    isStreaming,
-}: {
-    text: string;
-    isStreaming: boolean;
-}) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [phraseIdx, setPhraseIdx] = useState(0);
-
-    useEffect(() => {
-        if (!isStreaming) return;
-        const interval = setInterval(
-            () => setPhraseIdx((i) => (i + 1) % THINKING_PHRASES.length),
-            2000,
-        );
-        return () => clearInterval(interval);
-    }, [isStreaming]);
-
-    return (
-        <div className="ml-1">
-            <button
-                onClick={() => !isStreaming && setIsOpen((v) => !v)}
-                className="flex items-center text-sm text-gray-400 hover:text-gray-500 transition-colors"
-            >
-                {isStreaming ? (
-                    <div className="w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-                ) : (
-                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 shrink-0" />
-                )}
-                <span className="font-medium ml-2">
-                    {isStreaming
-                        ? THINKING_PHRASES[phraseIdx]
-                        : "Thought process"}
-                </span>
-                {!isStreaming && (
-                    <ChevronDown
-                        size={10}
-                        className={`ml-1.5 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"}`}
-                    />
-                )}
-            </button>
-            {(isOpen || isStreaming) && (
-                <div className="mt-1.5 ml-[14px] text-sm text-gray-400 prose prose-sm max-w-none [&>*]:text-gray-400 [&>*]:text-sm">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {text}
-                    </ReactMarkdown>
-                </div>
-            )}
-        </div>
-    );
-}
-
 // ---------------------------------------------------------------------------
 // DocRead block
 // ---------------------------------------------------------------------------
-
-function DocReadBlock({
-    label,
-    isStreaming,
-}: {
-    label: string;
-    isStreaming?: boolean;
-}) {
-    return (
-        <div className="flex items-center text-sm text-gray-400 ml-1">
-            {isStreaming ? (
-                <div className="w-1.5 h-1.5 rounded-full border border-gray-400 border-t-transparent animate-spin shrink-0" />
-            ) : (
-                <div className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0" />
-            )}
-            <span className="font-medium ml-2">
-                {isStreaming ? "Reading" : "Read"}
-            </span>
-            <span className="ml-1 text-gray-500">{label}</span>
-        </div>
-    );
-}
 
 // ---------------------------------------------------------------------------
 // Citation preprocessing (matches AssistantMessage.tsx pattern)
@@ -268,24 +191,6 @@ function TRAssistantMessage({
     };
 
     const renderPreEvent = (event: AssistantEvent, key: number) => {
-        if (event.type === "reasoning") {
-            return (
-                <ReasoningBlock
-                    key={key}
-                    text={event.text}
-                    isStreaming={!!event.isStreaming && !!msg.isStreaming}
-                />
-            );
-        }
-        if (event.type === "doc_read") {
-            return (
-                <DocReadBlock
-                    key={key}
-                    label={event.filename}
-                    isStreaming={event.isStreaming}
-                />
-            );
-        }
         if (event.type === "thinking") {
             return (
                 <div
@@ -379,10 +284,7 @@ function TRAssistantMessage({
                         }
                         const subsequentContent = hasContentAfter(gIdx);
                         // "Working" while at least one event in *this*
-                        // wrapper is actively streaming. Gaps between real
-                        // events are bridged by `pushThinkingPlaceholder`
-                        // so this check stays continuously true through
-                        // the whole pre-content phase.
+                        // wrapper is actively streaming.
                         const wrapperIsStreaming = g.events.some(
                             (event) =>
                                 "isStreaming" in event && !!event.isStreaming,
@@ -860,68 +762,6 @@ export function TRChatPanel({
         });
     }
 
-    function pushThinkingPlaceholder() {
-        const events = eventsRef.current;
-        const last = events[events.length - 1];
-        // Don't stack placeholders back-to-back.
-        if (last && isStreamingPlaceholder(last)) return;
-        eventsRef.current = [
-            ...events,
-            { type: "thinking" as const, isStreaming: true },
-        ];
-        const snapshot = [...eventsRef.current];
-        setMessages((prev) => {
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last?.role === "assistant") {
-                updated[updated.length - 1] = { ...last, events: snapshot };
-            }
-            return updated;
-        });
-    }
-
-    function pushEvent(event: AssistantEvent) {
-        // Drop any in-flight placeholder unless we're pushing one ourselves.
-        let next = eventsRef.current;
-        if (event.type !== "thinking") {
-            next = next.filter((e) => !isStreamingPlaceholder(e));
-        }
-        eventsRef.current = [...next, event];
-        const snapshot = [...eventsRef.current];
-        setMessages((prev) => {
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last?.role === "assistant") {
-                updated[updated.length - 1] = { ...last, events: snapshot };
-            }
-            return updated;
-        });
-    }
-
-    function updateMatchingEvent(
-        predicate: (e: AssistantEvent) => boolean,
-        updater: (e: AssistantEvent) => AssistantEvent,
-    ) {
-        const events = eventsRef.current;
-        const idx = [...events]
-            .map((_, i) => i)
-            .reverse()
-            .find((i) => predicate(events[i]));
-        if (idx === undefined) return;
-        const newEvents = [...events];
-        newEvents[idx] = updater(events[idx]);
-        eventsRef.current = newEvents;
-        const snapshot = [...newEvents];
-        setMessages((prev) => {
-            const updated = [...prev];
-            const last = updated[updated.length - 1];
-            if (last?.role === "assistant") {
-                updated[updated.length - 1] = { ...last, events: snapshot };
-            }
-            return updated;
-        });
-    }
-
     // ---- chat actions ----
 
     function handleNewChat() {
@@ -1065,98 +905,6 @@ export function TRChatPanel({
                             continue;
                         }
 
-                        if (data.type === "chat_title") {
-                            const { chatId, title } = data as {
-                                chatId: string;
-                                title: string;
-                            };
-                            setChats((prev) =>
-                                prev.map((c) =>
-                                    c.id === chatId ? { ...c, title } : c,
-                                ),
-                            );
-                            setCurrentChatTitle(title);
-                            continue;
-                        }
-
-                        if (data.type === "reasoning_delta") {
-                            const text = data.text as string;
-                            const events = eventsRef.current;
-                            const last = events[events.length - 1];
-                            if (
-                                last?.type === "reasoning" &&
-                                last.isStreaming
-                            ) {
-                                eventsRef.current = [
-                                    ...events.slice(0, -1),
-                                    {
-                                        type: "reasoning" as const,
-                                        text: last.text + text,
-                                        isStreaming: true,
-                                    },
-                                ];
-                            } else {
-                                // New reasoning block — drop any bridging
-                                // placeholder before it so the wrapper
-                                // doesn't render both.
-                                const cleaned = events.filter(
-                                    (e) => !isStreamingPlaceholder(e),
-                                );
-                                eventsRef.current = [
-                                    ...cleaned,
-                                    {
-                                        type: "reasoning" as const,
-                                        text,
-                                        isStreaming: true,
-                                    },
-                                ];
-                            }
-                            const snapshot = [...eventsRef.current];
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === "assistant") {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        events: snapshot,
-                                    };
-                                }
-                                return updated;
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "reasoning_block_end") {
-                            const events = eventsRef.current;
-                            const last = events[events.length - 1];
-                            if (
-                                last?.type === "reasoning" &&
-                                last.isStreaming
-                            ) {
-                                eventsRef.current = [
-                                    ...events.slice(0, -1),
-                                    {
-                                        type: "reasoning" as const,
-                                        text: last.text,
-                                    },
-                                ];
-                            }
-                            const snapshot = [...eventsRef.current];
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === "assistant") {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        events: snapshot,
-                                    };
-                                }
-                                return updated;
-                            });
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
                         if (data.type === "content_delta") {
                             const text = data.text as string;
                             dripTargetRef.current += text;
@@ -1166,22 +914,10 @@ export function TRChatPanel({
                                 lastEvent?.type !== "content" ||
                                 !lastEvent.isStreaming
                             ) {
-                                // Finalize any still-streaming reasoning
-                                // event AND drop bridging placeholders so
-                                // the wrapper transitions cleanly into
-                                // content.
-                                const finalized = events
-                                    .filter((e) => !isStreamingPlaceholder(e))
-                                    .map((e) =>
-                                        e.type === "reasoning" && e.isStreaming
-                                            ? {
-                                                  type: "reasoning" as const,
-                                                  text: e.text,
-                                              }
-                                            : e,
-                                    );
+                                // Drop bridging placeholders so the wrapper
+                                // transitions cleanly into content.
                                 eventsRef.current = [
-                                    ...finalized,
+                                    ...events.filter((e) => !isStreamingPlaceholder(e)),
                                     {
                                         type: "content" as const,
                                         text: "",
@@ -1205,47 +941,6 @@ export function TRChatPanel({
                             continue;
                         }
 
-                        if (data.type === "doc_read_start") {
-                            pushEvent({
-                                type: "doc_read",
-                                filename: data.filename as string,
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_read") {
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "doc_read" &&
-                                    e.filename === data.filename &&
-                                    !!e.isStreaming,
-                                (e) => ({ ...e, isStreaming: false }),
-                            );
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        if (data.type === "citations") {
-                            // End-of-stream signal — scrub any lingering
-                            // placeholders so they don't persist into the
-                            // finalised message.
-                            clearStreamingPlaceholders();
-                            const incoming = (data.citations ??
-                                []) as TRCitationAnnotation[];
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === "assistant") {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        annotations: incoming,
-                                    };
-                                }
-                                return updated;
-                            });
-                            continue;
-                        }
                     } catch {
                         /* skip malformed */
                     }

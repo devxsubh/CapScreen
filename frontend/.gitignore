@@ -12,7 +12,6 @@ out
 !.env.local.example
 
 # Cloudflare / OpenNext
-.open-next
 .vercel
 cloudflare-env.d.ts
 

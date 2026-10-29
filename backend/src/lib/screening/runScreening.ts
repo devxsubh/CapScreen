@@ -31,7 +31,7 @@ import {
   type ScreeningProgressFn,
 } from "./screeningProgress";
 import { screeningLog } from "./screeningLog";
-import { getScreeningThresholds } from "./screeningConfig";
+import { getScreeningThresholds, screeningThresholdsSnapshot } from "./screeningConfig";
 import { wrapEntityName } from "../shared/promptDelimiters";
 import type {
   CsvIngestResult,
@@ -312,6 +312,7 @@ async function runRosterScreening(
     dataSourceAvailable: true,
     watchmanListInfo: screenCtx.watchmanListInfo ?? undefined,
     watchmanSearchLimit: getScreeningThresholds().watchmanResultLimit,
+    screeningThresholds: screeningThresholdsSnapshot(),
   });
 }
 
@@ -383,6 +384,7 @@ async function runOwnershipScreening(
     dataSourceAvailable: true,
     watchmanListInfo: screenCtx.watchmanListInfo ?? undefined,
     watchmanSearchLimit: getScreeningThresholds().watchmanResultLimit,
+    screeningThresholds: screeningThresholdsSnapshot(),
   });
 }
 

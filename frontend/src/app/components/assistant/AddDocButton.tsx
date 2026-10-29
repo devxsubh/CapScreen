@@ -48,29 +48,22 @@ function isCsvFile(file: File): boolean {
     );
 }
 
-interface Props {
+interface DocActionsProps {
     onSelectDoc: (doc: AppDocument) => void;
     onSelectCsvFile?: (file: File) => void;
     onBrowseAll: () => void;
-    selectedDocIds?: string[];
-    attachmentCount?: number;
-    /** When set, uploads go to startup RAG storage instead of standalone docs. */
     startupId?: string;
 }
 
-export function AddDocButton({
+/** Shared upload + menu items for the standalone button and the compact tools menu. */
+export function useAddDocActions({
     onSelectDoc,
     onSelectCsvFile,
     onBrowseAll,
-    selectedDocIds = [],
-    attachmentCount,
     startupId,
-}: Props) {
-    const [isOpen, setIsOpen] = useState(false);
+}: DocActionsProps) {
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    const count = attachmentCount ?? selectedDocIds.length;
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
@@ -104,16 +97,76 @@ export function AddDocButton({
         }
     };
 
+    const fileInput = (
+        <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.doc,.csv,text/csv"
+            multiple
+            className="hidden"
+            onChange={handleUpload}
+        />
+    );
+
+    const menuItems = (
+        <>
+            <DropdownMenuItem
+                className="cursor-pointer"
+                disabled={uploading}
+                onSelect={(e) => {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                }}
+            >
+                {uploading ? (
+                    <Loader2Icon className="h-4 w-4 mr-2 animate-spin text-gray-400" />
+                ) : (
+                    <Upload className="h-4 w-4 mr-2 text-gray-500" />
+                )}
+                <span className="text-sm">{uploading ? "Uploading…" : "Upload files"}</span>
+            </DropdownMenuItem>
+            {!startupId && (
+                <DropdownMenuItem className="cursor-pointer" onClick={onBrowseAll}>
+                    <LayoutGridIcon className="h-4 w-4 mr-2 text-gray-500" />
+                    <span className="text-sm">Browse all</span>
+                </DropdownMenuItem>
+            )}
+        </>
+    );
+
+    return { uploading, fileInput, menuItems, openFilePicker: () => fileInputRef.current?.click() };
+}
+
+interface Props {
+    onSelectDoc: (doc: AppDocument) => void;
+    onSelectCsvFile?: (file: File) => void;
+    onBrowseAll: () => void;
+    selectedDocIds?: string[];
+    attachmentCount?: number;
+    /** When set, uploads go to startup RAG storage instead of standalone docs. */
+    startupId?: string;
+}
+
+export function AddDocButton({
+    onSelectDoc,
+    onSelectCsvFile,
+    onBrowseAll,
+    selectedDocIds = [],
+    attachmentCount,
+    startupId,
+}: Props) {
+    const [isOpen, setIsOpen] = useState(false);
+    const { fileInput, menuItems } = useAddDocActions({
+        onSelectDoc,
+        onSelectCsvFile,
+        onBrowseAll,
+        startupId,
+    });
+    const count = attachmentCount ?? selectedDocIds.length;
+
     return (
         <>
-            <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.docx,.doc,.csv,text/csv"
-                multiple
-                className="hidden"
-                onChange={handleUpload}
-            />
+            {fileInput}
             <DropdownMenu onOpenChange={setIsOpen}>
                 <DropdownMenuTrigger asChild>
                     <button
@@ -137,37 +190,8 @@ export function AddDocButton({
                         )}
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                    className="w-44 z-50"
-                    side="bottom"
-                    align="start"
-                >
-                    <DropdownMenuItem
-                        className="cursor-pointer"
-                        disabled={uploading}
-                        onSelect={(e) => {
-                            e.preventDefault();
-                            fileInputRef.current?.click();
-                        }}
-                    >
-                        {uploading ? (
-                            <Loader2Icon className="h-4 w-4 mr-2 animate-spin text-gray-400" />
-                        ) : (
-                            <Upload className="h-4 w-4 mr-2 text-gray-500" />
-                        )}
-                        <span className="text-sm">
-                            {uploading ? "Uploading…" : "Upload files"}
-                        </span>
-                    </DropdownMenuItem>
-                    {!startupId && (
-                        <DropdownMenuItem
-                            className="cursor-pointer"
-                            onClick={onBrowseAll}
-                        >
-                            <LayoutGridIcon className="h-4 w-4 mr-2 text-gray-500" />
-                            <span className="text-sm">Browse all</span>
-                        </DropdownMenuItem>
-                    )}
+                <DropdownMenuContent className="w-44 z-50" side="bottom" align="start">
+                    {menuItems}
                 </DropdownMenuContent>
             </DropdownMenu>
         </>

@@ -25,11 +25,6 @@ import {
     getChat,
     getProject,
     uploadProjectDocument,
-    createProjectFolder,
-    renameProjectFolder,
-    deleteProjectFolder,
-    moveDocumentToFolder,
-    moveSubfolderToFolder,
 } from "@/app/lib/capScreenApi";
 import { useAssistantChat } from "@/app/hooks/useAssistantChat";
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
@@ -52,7 +47,6 @@ import type {
     CitationQuote,
     AppCitationAnnotation,
     AppDocument,
-    AppEditAnnotation,
     AppMessage,
     AppProject,
 } from "@/app/components/shared/types";
@@ -67,18 +61,8 @@ type DocTab = {
     filename: string;
     quotes?: CitationQuote[];
     versionId?: string | null;
-    refetchKey?: number;
     warning?: string | null;
     scrollTop?: number;
-};
-
-type EditScrollTarget = {
-    key: string;
-    documentId: string;
-    inserted_text?: string;
-    deleted_text?: string;
-    ins_w_id?: string | null;
-    del_w_id?: string | null;
 };
 
 function isDocxTab(filename: string) {
@@ -126,11 +110,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         null,
     );
     const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-    const [editScrollTarget, setEditScrollTarget] =
-        useState<EditScrollTarget | null>(null);
-    const [reloadingDocIds, setReloadingDocIds] = useState<Set<string>>(
-        () => new Set(),
-    );
 
     const activeTab = tabs.find((t) => t.documentId === activeTabId) ?? null;
     const tabBarRef = useRef<HTMLDivElement | null>(null);
@@ -173,48 +152,18 @@ export default function ProjectAssistantChatPage({ params }: Props) {
             .catch(() => {});
     }, [projectId]);
 
-    // Whenever the assistant mutates project documents — creating a new
-    // doc, creating a new version via edit_document, or replicating a doc —
-    // refresh the project so the explorer picks up the new/changed files
-    // without a manual reload. Keyed by completed mutation events only, so
-    // we refetch once the backend has finished persisting the change.
+    // When the assistant generates a document, refresh the project so the
+    // explorer picks it up without a manual reload.
     const projectMutationSignature = useMemo(() => {
         const created: string[] = [];
-        const replicated: string[] = [];
-        const editedPerDoc: Record<string, number> = {};
         for (const msg of messages) {
             for (const ev of msg.events ?? []) {
-                if ("isStreaming" in ev && ev.isStreaming) continue;
-                if (ev.type === "doc_created" && ev.document_id) {
-                    created.push(
-                        `${ev.document_id}:${ev.version_id ?? ""}:${ev.filename}`,
-                    );
-                    continue;
-                }
-                if (ev.type === "doc_replicated") {
-                    for (const c of ev.copies ?? []) {
-                        replicated.push(
-                            `${c.document_id}:${c.version_id}:${c.new_filename}`,
-                        );
-                    }
-                    continue;
-                }
-                if (ev.type === "doc_edited") {
-                    editedPerDoc[ev.document_id] = Math.max(
-                        editedPerDoc[ev.document_id] ?? 0,
-                        (ev.version_number as number | null | undefined) ?? 0,
-                    );
+                if (ev.type === "doc_created" && !ev.isStreaming && ev.document_id) {
+                    created.push(`${ev.document_id}:${ev.filename}`);
                 }
             }
         }
-        return [
-            `created=${created.sort().join(",")}`,
-            `replicated=${replicated.sort().join(",")}`,
-            `edited=${Object.entries(editedPerDoc)
-                .map(([k, v]) => `${k}=${v}`)
-                .sort()
-                .join(",")}`,
-        ].join("|");
+        return created.sort().join(",");
     }, [messages]);
 
     useEffect(() => {
@@ -404,32 +353,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         openTab(args.documentId, args.filename, undefined, args.versionId);
     };
 
-    const handleEditViewClick = (ann: AppEditAnnotation, filename: string) => {
-        openTab(ann.document_id, filename, undefined, ann.version_id ?? null);
-        setEditScrollTarget({
-            key: `${ann.edit_id}-${Date.now()}`,
-            documentId: ann.document_id,
-            inserted_text: ann.inserted_text,
-            deleted_text: ann.deleted_text,
-            ins_w_id: ann.ins_w_id ?? null,
-            del_w_id: ann.del_w_id ?? null,
-        });
-    };
-
-    const handleEditResolved = (_args: {
-        editId: string;
-        documentId: string;
-        status: "accepted" | "rejected";
-        versionId: string | null;
-        downloadUrl: string | null;
-    }) => {
-        // Re-render after accept/reject is disabled while we verify the
-        // client-side optimistic mutation works on its own. Re-enable by
-        // bumping versionId + refetchKey on the matching tab and marking
-        // it reloading like before.
-        void _args;
-    };
-
     const patchTab = (documentId: string, patch: Partial<DocTab>) => {
         setTabs((prev) =>
             prev.map((t) =>
@@ -438,25 +361,12 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         );
     };
 
-    const handleEditError = (args: { documentId: string; message: string }) => {
-        patchTab(args.documentId, { warning: args.message });
-    };
-
     const dismissTabWarning = (documentId: string) => {
         patchTab(documentId, { warning: null });
     };
 
     const handleTabScrollChange = (documentId: string, scrollTop: number) => {
         patchTab(documentId, { scrollTop });
-    };
-
-    const handleDocxReady = (documentId: string) => {
-        setReloadingDocIds((prev) => {
-            if (!prev.has(documentId)) return prev;
-            const next = new Set(prev);
-            next.delete(documentId);
-            return next;
-        });
     };
 
     const handleChatDrop = (e: React.DragEvent) => {
@@ -522,103 +432,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         if (files.length) {
             await uploadFiles(files);
         }
-        // Internal doc/folder moves are handled inside ProjectExplorer (stopPropagation)
-    };
-
-    // ── Folder handlers ───────────────────────────────────────────────────────
-    const handleCreateFolder = async (
-        parentId: string | null,
-        name: string,
-    ) => {
-        const folder = await createProjectFolder(
-            projectId,
-            name,
-            parentId ?? undefined,
-        );
-        setProject((prev) =>
-            prev
-                ? { ...prev, folders: [...(prev.folders ?? []), folder] }
-                : prev,
-        );
-    };
-
-    const handleRenameFolder = async (folderId: string, name: string) => {
-        await renameProjectFolder(projectId, folderId, name);
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      folders: (prev.folders ?? []).map((f) =>
-                          f.id === folderId ? { ...f, name } : f,
-                      ),
-                  }
-                : prev,
-        );
-    };
-
-    const handleDeleteFolder = async (folderId: string) => {
-        const toDelete = new Set<string>();
-        function collectIds(id: string) {
-            toDelete.add(id);
-            (project?.folders ?? [])
-                .filter((f) => f.parent_folder_id === id)
-                .forEach((f) => collectIds(f.id));
-        }
-        collectIds(folderId);
-        await deleteProjectFolder(projectId, folderId);
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      folders: (prev.folders ?? []).filter(
-                          (f) => !toDelete.has(f.id),
-                      ),
-                      documents: (prev.documents ?? []).map((d) =>
-                          d.folder_id && toDelete.has(d.folder_id)
-                              ? { ...d, folder_id: null }
-                              : d,
-                      ),
-                  }
-                : prev,
-        );
-    };
-
-    const handleMoveDoc = async (
-        docId: string,
-        targetFolderId: string | null,
-    ) => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      documents: (prev.documents ?? []).map((d) =>
-                          d.id === docId
-                              ? { ...d, folder_id: targetFolderId }
-                              : d,
-                      ),
-                  }
-                : prev,
-        );
-        await moveDocumentToFolder(projectId, docId, targetFolderId);
-    };
-
-    const handleMoveFolder = async (
-        folderId: string,
-        targetFolderId: string | null,
-    ) => {
-        setProject((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      folders: (prev.folders ?? []).map((f) =>
-                          f.id === folderId
-                              ? { ...f, parent_folder_id: targetFolderId }
-                              : f,
-                      ),
-                  }
-                : prev,
-        );
-        await moveSubfolderToFolder(projectId, folderId, targetFolderId);
     };
 
     const handleDeleteDoc = async (docId: string) => {
@@ -638,7 +451,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
             setActiveTabId(null);
             setActiveQuotes(null);
             setSelectedDocId(null);
-            setEditScrollTarget(null);
         }
     };
 
@@ -737,13 +549,9 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                             onDragOver={(e) => {
                                 e.preventDefault();
                                 // Only show the upload overlay for external file drags, not internal moves
-                                const isInternal =
-                                    Array.from(e.dataTransfer.types).includes(
-                                        "application/capscreen-doc",
-                                    ) ||
-                                    Array.from(e.dataTransfer.types).includes(
-                                        "application/capscreen-folder",
-                                    );
+                                const isInternal = Array.from(e.dataTransfer.types).includes(
+                                    "application/capscreen-doc",
+                                );
                                 if (!isInternal) setExplorerDragOver(true);
                             }}
                             onDragLeave={(e) => {
@@ -808,23 +616,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                 onDragOver={(e) => {
                                     e.preventDefault();
                                 }}
-                                onDrop={async (e) => {
-                                    e.preventDefault();
-                                    const docId = e.dataTransfer.getData(
-                                        "application/capscreen-doc",
-                                    );
-                                    const folderId = e.dataTransfer.getData(
-                                        "application/capscreen-folder",
-                                    );
-                                    if (docId) {
-                                        e.stopPropagation();
-                                        await handleMoveDoc(docId, null);
-                                    } else if (folderId) {
-                                        e.stopPropagation();
-                                        await handleMoveFolder(folderId, null);
-                                    }
-                                    // External file drops are not stopped — they bubble to handleExplorerFileDrop
-                                }}
                             >
                                 {explorerDragOver && (
                                     <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -836,15 +627,9 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                 <ProjectExplorer
                                     projectName={project?.name}
                                     documents={project?.documents ?? []}
-                                    folders={project?.folders ?? []}
                                     selectedDocId={selectedDocId}
                                     onDocClick={handleDocClick}
-                                    onCreateFolder={handleCreateFolder}
-                                    onRenameFolder={handleRenameFolder}
-                                    onDeleteFolder={handleDeleteFolder}
                                     onDeleteDoc={handleDeleteDoc}
-                                    onMoveDoc={handleMoveDoc}
-                                    onMoveFolder={handleMoveFolder}
                                 />
                             </div>
                         </div>
@@ -891,20 +676,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                         : ext === "doc" || ext === "docx"
                                           ? "text-blue-500"
                                           : "text-gray-400";
-                                // Pull the doc's latest_version_number out
-                                // of the project state so the tab shows V#
-                                // whenever the doc has been edited.
-                                const versionNumber = (
-                                    project?.documents ?? []
-                                ).find((d) => d.id === tab.documentId)
-                                    ?.latest_version_number as
-                                    | number
-                                    | null
-                                    | undefined;
-                                const showVersionBadge =
-                                    typeof versionNumber === "number" &&
-                                    Number.isFinite(versionNumber) &&
-                                    versionNumber > 1;
                                 return (
                                     <div
                                         key={tab.documentId}
@@ -930,17 +701,6 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                         >
                                             {tab.filename}
                                         </span>
-                                        {showVersionBadge && (
-                                            <span
-                                                className={`shrink-0 inline-flex items-center rounded border px-1 py-px text-[9px] font-medium ${
-                                                    isActive
-                                                        ? "border-gray-200 bg-white text-gray-600"
-                                                        : "border-gray-200 bg-gray-50 text-gray-500"
-                                                }`}
-                                            >
-                                                V{versionNumber}
-                                            </span>
-                                        )}
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -962,18 +722,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                     key={activeTab.documentId}
                                     documentId={activeTab.documentId}
                                     versionId={activeTab.versionId}
-                                    refetchKey={activeTab.refetchKey}
                                     quotes={activeQuotes ?? undefined}
-                                    highlightEdit={
-                                        editScrollTarget &&
-                                        editScrollTarget.documentId ===
-                                            activeTab.documentId
-                                            ? editScrollTarget
-                                            : null
-                                    }
-                                    onReady={() =>
-                                        handleDocxReady(activeTab.documentId)
-                                    }
                                     warning={activeTab.warning ?? null}
                                     onWarningDismiss={() =>
                                         dismissTabWarning(activeTab.documentId)
@@ -1101,15 +850,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                                     : "0px"
                                             }
                                             onApprovalAnswer={answerApproval}
-                                            onEditViewClick={
-                                                handleEditViewClick
-                                            }
                                             onOpenDocument={handleOpenDocument}
-                                            onEditResolved={handleEditResolved}
-                                            onEditError={handleEditError}
-                                            isDocReloading={(docId) =>
-                                                reloadingDocIds.has(docId)
-                                            }
                                             showOptionChips={shouldShowMessageOptions(
                                                 i,
                                                 messages,
