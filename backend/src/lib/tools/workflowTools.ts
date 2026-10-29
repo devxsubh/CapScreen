@@ -2,6 +2,7 @@ import type { ToolDefinition } from "./registry";
 
 export const listWorkflowsTool: ToolDefinition = {
   name: "list_workflows",
+  readOnly: true,
   schema: {
     name: "list_workflows",
     description:
@@ -20,6 +21,7 @@ export const listWorkflowsTool: ToolDefinition = {
 
 export const readWorkflowTool: ToolDefinition = {
   name: "read_workflow",
+  readOnly: true,
   schema: {
     name: "read_workflow",
     description:

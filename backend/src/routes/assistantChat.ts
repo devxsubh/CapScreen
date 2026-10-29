@@ -3,7 +3,16 @@ import express from "express";
 import type { LlmMessage } from "../lib/llm/providers";
 import { assistantRegistry, type ToolContext } from "../lib/tools";
 import { buildSystemPrompt } from "../lib/chat/buildSystemPrompt";
-import { runAgentStream } from "../lib/llm/streamAgent";
+import {
+  isWaitingForApproval,
+  resumeAgent,
+  runAgent,
+  type AgentDeps,
+  type AgentResult,
+  type ApprovalRequest,
+} from "../lib/agent/agentGraph";
+import { sseEvent } from "../lib/agent/types";
+import { isValidStartupObjectId } from "../lib/shared/startupId";
 import { friendlyLlmError } from "../lib/llm/friendlyError";
 import { connectDb } from "../lib/infra/db";
 import { buildWorkflowStore } from "../lib/workflows/workflowMemory";
@@ -17,7 +26,7 @@ import {
   formatProjectAssetsForPrompt,
   loadProjectAssets,
 } from "../lib/chat/projectAssets";
-import { Startup } from "../models";
+import { AuditLog, Startup } from "../models";
 
 export const assistantChatRouter = express.Router();
 
@@ -165,31 +174,17 @@ assistantChatRouter.post("/", async (req, res) => {
   const mentionTokens = extractMentionsFromMessages(validMessages);
   const mentionedStartups = await resolveStartupMentions(mentionTokens, userId);
 
-  const writeProgress = (event: {
-    stage: string;
-    status: string;
-    detail?: string;
-    current?: number;
-    total?: number;
-  }) => {
-    write(
-      `data: ${JSON.stringify({ type: "screening_progress", ...event })}\n\n`,
-    );
-  };
-
   const ctx: ToolContext = {
     csvContent: parsedCsv.content,
     screeningResult: parseScreeningResult(screeningBody),
     mentionedStartups,
     workflowStore,
-    onWorkflowApplied: undefined,
     userId,
     userEmail,
     startupId:
       (typeof startup_id === "string" && startup_id.trim()) ||
       (typeof project_id === "string" && project_id.trim()) ||
       (mentionedStartups.length === 1 ? mentionedStartups[0].id : undefined),
-    onScreeningProgress: writeProgress,
     attachedDocuments: parseDocumentRefs(attached_documents),
     displayedDocument: parseDocumentRef(displayed_doc) ?? undefined,
   };
@@ -217,6 +212,115 @@ assistantChatRouter.post("/", async (req, res) => {
     }
   }
 
+  await streamAssistantTurn(res, { userId, chatId, ctx }, (deps, signal) =>
+    runAgent({ systemPrompt: system, messages: toLlmMessages(validMessages) }, deps, signal),
+  );
+});
+
+// ── Approvals ────────────────────────────────────────────────────────────────
+
+/** The parts of ToolContext that are plain data, kept so a paused turn can be resumed. */
+type SavedContext = Pick<
+  ToolContext,
+  | "csvContent"
+  | "screeningResult"
+  | "startupId"
+  | "mentionedStartups"
+  | "attachedDocuments"
+  | "displayedDocument"
+>;
+
+/**
+ * Turns paused by the agent graph, waiting for the user's Allow / Deny.
+ * The graph keeps the conversation; this keeps who the run belongs to and
+ * the tool context as it was at the moment it paused.
+ */
+type WaitingRun = {
+  userId: string;
+  chatId: string;
+  context: SavedContext;
+  request: ApprovalRequest;
+};
+const waitingRuns = new Map<string, WaitingRun>();
+
+function rememberWaitingRun(runId: string, run: WaitingRun): void {
+  // Drop entries the graph has already forgotten (expired after 24 h).
+  for (const id of waitingRuns.keys()) {
+    if (!isWaitingForApproval(id)) waitingRuns.delete(id);
+  }
+  waitingRuns.set(runId, run);
+}
+
+/** Returns the run and removes it, so the same request can't be answered twice. */
+function takeWaitingRun(runId: string, userId: string): WaitingRun | null {
+  const run = waitingRuns.get(runId);
+  if (!run || run.userId !== userId || !isWaitingForApproval(runId)) return null;
+  waitingRuns.delete(runId);
+  return run;
+}
+
+/**
+ * Continues a turn that paused to ask before running a sensitive tool
+ * (e.g. web search). Body: { approved: boolean }. Streams the rest of the
+ * answer exactly like POST /.
+ */
+assistantChatRouter.post("/runs/:runId/resume", async (req, res) => {
+  const userId = res.locals.userId as string;
+  const userEmail = res.locals.userEmail as string;
+  const { runId } = req.params;
+  const { approved } = req.body as { approved?: unknown };
+
+  if (typeof approved !== "boolean") {
+    res.status(400).json({ detail: "'approved' must be true or false" });
+    return;
+  }
+
+  const run = takeWaitingRun(runId, userId);
+  if (!run) {
+    res.status(404).json({ detail: "This request expired or was already answered." });
+    return;
+  }
+
+  await connectDb();
+  const ctx: ToolContext = {
+    ...run.context,
+    userId,
+    userEmail,
+    workflowStore: await buildWorkflowStore(userId, userEmail),
+  };
+
+  // Compliance record: who allowed (or blocked) which tool, with what input.
+  await AuditLog.create({
+    startupId: isValidStartupObjectId(ctx.startupId) ? ctx.startupId : null,
+    eventType: "agent_tool_approval",
+    performedBy: userId,
+    performedByEmail: userEmail,
+    details: {
+      approved,
+      tools: run.request.calls.map((c) => c.name),
+      inputs: run.request.calls.map((c) => c.input),
+    },
+  }).catch(() => {});
+
+  await streamAssistantTurn(res, { userId, chatId: run.chatId, ctx }, (deps, signal) =>
+    resumeAgent(runId, approved, deps, signal),
+  );
+});
+
+// ── Streaming ────────────────────────────────────────────────────────────────
+
+/**
+ * Streams one assistant turn as Server-Sent Events. Shared by a new message
+ * and by an approval resume: sets up the stream, connects tool callbacks to
+ * it, runs the agent, and remembers the run if it pauses to ask the user.
+ */
+async function streamAssistantTurn(
+  res: express.Response,
+  turn: { userId: string; chatId: string; ctx: ToolContext },
+  run: (deps: AgentDeps, signal: AbortSignal) => Promise<AgentResult>,
+): Promise<void> {
+  const { ctx } = turn;
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -224,55 +328,63 @@ assistantChatRouter.post("/", async (req, res) => {
   res.flushHeaders();
 
   const write = (line: string) => res.write(line);
-  write(`data: ${JSON.stringify({ type: "chat_id", chatId })}\n\n`);
+  write(sseEvent("chat_id", { chatId: turn.chatId }));
 
-  ctx.onWorkflowApplied = (workflowId, title) => {
-    write(
-      `data: ${JSON.stringify({
-        type: "workflow_applied",
-        workflow_id: workflowId,
-        title,
-      })}\n\n`,
-    );
+  ctx.onScreeningProgress = (event) => write(sseEvent("screening_progress", event));
+  ctx.onWorkflowApplied = (workflowId, title) =>
+    write(sseEvent("workflow_applied", { workflow_id: workflowId, title }));
+  ctx.onPlanUpdated = (steps) => write(sseEvent("plan_updated", { steps }));
+
+  // Stop the agent if the user leaves or hits Stop.
+  const abort = new AbortController();
+  res.on("close", () => abort.abort());
+
+  const deps: AgentDeps = {
+    registry: assistantRegistry,
+    write,
+    askBeforeSensitiveTools: true,
+    executeTool: async (name, input) => {
+      const toolResult = await assistantRegistry.execute(name, input, ctx);
+      if (toolResult.screeningResult) {
+        ctx.screeningResult = toolResult.screeningResult;
+        write(sseEvent("screening_result", { screeningResult: toolResult.screeningResult }));
+      }
+      return { content: toolResult.content, document: toolResult.document };
+    },
   };
 
   try {
-    await runAgentStream({
-      systemPrompt: system,
-      messages: toLlmMessages(validMessages),
-      tools: assistantRegistry.getTools(),
-      write,
-      executeTool: async (name, input) => {
-        const result = await assistantRegistry.execute(name, input, ctx);
-        if (result.screeningResult) {
-          ctx.screeningResult = result.screeningResult;
-          write(
-            `data: ${JSON.stringify({
-              type: "screening_result",
-              screeningResult: result.screeningResult,
-            })}\n\n`,
-          );
-        }
-        return { content: result.content, document: result.document };
-      },
-    });
+    const result = await run(deps, abort.signal);
 
-    if (ctx.screeningResult) {
-      write(
-        `data: ${JSON.stringify({ type: "final_result", screeningResult: ctx.screeningResult })}\n\n`,
-      );
+    if (result.status === "needs_approval") {
+      rememberWaitingRun(result.runId, {
+        userId: turn.userId,
+        chatId: turn.chatId,
+        context: {
+          csvContent: ctx.csvContent,
+          screeningResult: ctx.screeningResult,
+          startupId: ctx.startupId,
+          mentionedStartups: ctx.mentionedStartups,
+          attachedDocuments: ctx.attachedDocuments,
+          displayedDocument: ctx.displayedDocument,
+        },
+        request: result.request,
+      });
+      write(sseEvent("approval_required", { runId: result.runId, calls: result.request.calls }));
     }
 
+    if (ctx.screeningResult) {
+      write(sseEvent("final_result", { screeningResult: ctx.screeningResult }));
+    }
     write("data: [DONE]\n\n");
   } catch (err) {
     console.error("[assistantChat] error:", err);
-    const message = friendlyLlmError(err);
-    write(`data: ${JSON.stringify({ type: "error", message })}\n\n`);
+    write(sseEvent("error", { message: friendlyLlmError(err) }));
     write("data: [DONE]\n\n");
   } finally {
     res.end();
   }
-});
+}
 
 // Minimal chat create for sidebar history in preview mode
 assistantChatRouter.post("/create", (_req, res) => {

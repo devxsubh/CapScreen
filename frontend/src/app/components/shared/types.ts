@@ -107,6 +107,11 @@ export interface AppEditAnnotation {
   status: "pending" | "accepted" | "rejected";
 }
 
+export interface AgentPlanStep {
+  title: string;
+  status: "pending" | "in_progress" | "done";
+}
+
 export type AssistantEvent =
   | { type: "reasoning"; text: string; isStreaming?: boolean }
   | {
@@ -168,6 +173,16 @@ export type AssistantEvent =
         isStreaming?: boolean;
     }
   | { type: "workflow_applied"; workflow_id: string; title: string }
+  /** The agent's step-by-step plan; replaced in place each time it updates. */
+  | { type: "plan"; steps: AgentPlanStep[] }
+  /** The agent paused to ask before running a sensitive tool (e.g. web search). */
+  | {
+        type: "approval_request";
+        runId: string;
+        calls: { name: string; input: unknown }[];
+        /** "skipped" = the user sent a new message instead of answering. */
+        status: "pending" | "approved" | "declined" | "skipped";
+    }
   | {
         type: "doc_edited";
         filename: string;

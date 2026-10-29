@@ -11,7 +11,7 @@ function AssistantPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const promptHandled = useRef(false);
-    const { messages, isResponseLoading, handleChat, handleNewChat, cancel, screeningResult, startupHandoff, clearStartupHandoff } =
+    const { messages, isResponseLoading, handleChat, handleNewChat, cancel, answerApproval, screeningResult, startupHandoff, clearStartupHandoff } =
         useAssistantChat();
 
     useEffect(() => {
@@ -45,6 +45,7 @@ function AssistantPageContent() {
             isResponseLoading={isResponseLoading}
             handleChat={handleChat}
             cancel={cancel}
+            onApprovalAnswer={answerApproval}
             screeningResult={screeningResult}
             startupHandoff={startupHandoff}
             onClearStartupHandoff={clearStartupHandoff}

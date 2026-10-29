@@ -150,8 +150,14 @@ export default function ProjectAssistantChatPage({ params }: Props) {
         saveChat,
     } = useChatHistoryContext();
     const [initialMessages] = useState<AppMessage[]>(newChatMessages ?? []);
-    const { messages, isResponseLoading, handleChat, setMessages, cancel } =
-        useAssistantChat({ initialMessages, chatId, projectId });
+    const {
+        messages,
+        isResponseLoading,
+        handleChat,
+        setMessages,
+        cancel,
+        answerApproval,
+    } = useAssistantChat({ initialMessages, chatId, projectId });
 
     const hasLoaded = useRef(false);
     const hasAutoSent = useRef(false);
@@ -1094,6 +1100,7 @@ export default function ProjectAssistantChatPage({ params }: Props) {
                                                     ? minHeight
                                                     : "0px"
                                             }
+                                            onApprovalAnswer={answerApproval}
                                             onEditViewClick={
                                                 handleEditViewClick
                                             }

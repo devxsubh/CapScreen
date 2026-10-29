@@ -170,6 +170,7 @@ async function handleSanctionedExposure(
 
 export const queryScreeningDataTool: ToolDefinition = {
   name: "query_screening_data",
+  readOnly: true,
   schema: {
     name: "query_screening_data",
     description:

@@ -534,6 +534,28 @@ export async function streamChat(payload: {
     });
 }
 
+/**
+ * Answers an approval request from the assistant ("may I search the web?")
+ * and returns the SSE stream with the rest of the reply.
+ */
+export async function resumeAgentRun(
+    runId: string,
+    approved: boolean,
+    signal?: AbortSignal,
+): Promise<Response> {
+    const authHeaders = await getAuthHeaders();
+    return fetch(`${API_BASE}/chat/runs/${encodeURIComponent(runId)}/resume`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+            ...authHeaders,
+        },
+        body: JSON.stringify({ approved }),
+        signal,
+    });
+}
+
 type StreamChatMessage = {
     role: string;
     content: string;

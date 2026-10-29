@@ -38,6 +38,7 @@ Network egress: public sanctions-list downloads (Watchman, every 12 h) and cloud
 - **SQLite via mongoose**: `lib/infra/sqliteStore/` implements the MongoDB driver surface mongoose calls (`node:sqlite`, no native deps). All mongoose models/queries run unchanged. `$vectorSearch` is in-process cosine.
 - **Pluggable LLMs** (`lib/llm/providers/`): Anthropic, native Ollama, and OpenAI-compatible (OpenAI, Gemini, OpenRouter, Groq, LM Studio, llama.cpp, any custom endpoint). Roles: `agent`, `utility`, `embedding`.
 - **AI Control Center** (`lib/llm/controlCenter/`, `routes/aiControlCenter.ts`): providers, model assignments, local-only policy; API keys AES-256-GCM encrypted with a master key sealed by the OS keychain (Electron `safeStorage`).
+- `@langchain/langgraph` — the assistant's agent graph (orchestration only; models still go through `lib/llm/providers/`)
 - `graphology` — directed ownership graph (BFS traversal, circular ownership detection)
 - Watchman — `GET /v2/search`; every screening result stores `watchmanListInfo` (list counts + SHA-256 per list)
 
@@ -130,9 +131,11 @@ backend/src/
     llm/
       providers/            — neutral types, Anthropic + OpenAI-compatible adapters, registry (roles: agent/utility/embedding)
       complete.ts           — completeText / chatText (single-shot + multi-turn, provider-neutral)
-      streamAgent.ts        — runAgentStream (SSE agentic loop with tool-use; tool-less fallback)
       validateLlm.ts        — boot-time ping of the configured agent model
       index.ts              — re-exports
+    agent/                  — agent harness on LangGraph (see docs/AGENT_HARNESS.md)
+      agentGraph.ts         — StateGraph (callModel → askApproval → runTools), interrupt() approvals, runAgent / resumeAgent / runSubAgent
+      runTools.ts           — parallel read-only tools, timeouts, error capture, output trimming
     infra/db.ts             — opens SQLite store and attaches it to mongoose (applies pending restore)
     infra/sqliteStore/      — MongoDB-driver-compatible store on node:sqlite (query, update, store)
     infra/backup.ts         — encrypted .capscreen-backup create/restore
@@ -240,7 +243,9 @@ The sidebar shows "Startups" → `/startups` and "Recent Projects" (up to 5).
 
 | Capability | Status | Command / doc |
 |---|---|---|
-| Agent tool loop | ✅ | `backend/src/lib/llm/streamAgent.ts` |
+| Agent graph (LangGraph) | ✅ | `backend/src/lib/agent/agentGraph.ts`, `docs/AGENT_HARNESS.md` |
+| Parallel tools, sub-agents, plans | ✅ | `lib/agent/runTools.ts`, `lib/tools/delegateTool.ts`, `lib/tools/planTool.ts` |
+| Human approval for sensitive tools | ✅ | LangGraph `interrupt()` + `needsApproval` in `lib/tools/registry.ts`, `POST /chat/runs/:id/resume` |
 | Pluggable / local models | ✅ | `backend/src/lib/llm/providers/` |
 | Desktop app (Electron) | ✅ | `desktop/`, `docs/DESKTOP_PLAN.md` |
 | AI Control Center (BYO keys, local models) | ✅ | `/ai`, `backend/src/routes/aiControlCenter.ts` |

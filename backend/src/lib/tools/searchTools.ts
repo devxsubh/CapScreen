@@ -59,6 +59,7 @@ function searchCorpus(query: string): string {
 
 export const searchCompliancePlaybookTool: ToolDefinition = {
   name: "search_compliance_playbook",
+  readOnly: true,
   schema: {
     name: "search_compliance_playbook",
     description:
@@ -89,6 +90,7 @@ Call when the user asks a policy or procedure question:
 
 export const listStartupDocumentsTool: ToolDefinition = {
   name: "list_startup_documents",
+  readOnly: true,
   schema: {
     name: "list_startup_documents",
     description:
@@ -143,6 +145,7 @@ export const listStartupDocumentsTool: ToolDefinition = {
 
 export const searchStartupDocumentsTool: ToolDefinition = {
   name: "search_startup_documents",
+  readOnly: true,
   schema: {
     name: "search_startup_documents",
     description:

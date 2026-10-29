@@ -1,6 +1,6 @@
 import express from "express";
 import type { LlmMessage, LlmToolChoice } from "../lib/llm/providers";
-import { runAgentStream } from "../lib/llm/streamAgent";
+import { runAgent } from "../lib/agent/agentGraph";
 import {
   screenerRegistry,
   SCREEN_CAP_TABLE_TOOL_NAME,
@@ -140,16 +140,16 @@ chatRouter.post("/", async (req, res) => {
       ? { type: "tool", name: SCREEN_CAP_TABLE_TOOL_NAME }
       : undefined;
 
+  // Stop the agent if the user leaves or hits Stop.
+  const abort = new AbortController();
+  res.on("close", () => abort.abort());
+
   try {
-    const { toolActivity } = await runAgentStream({
-      systemPrompt: system,
-      messages: toLlmMessages(validMessages),
-      tools: screenerRegistry.getTools(),
-      executeTool: wrappedExecute,
-      write,
-      maxTokens: 8192,
-      toolChoice,
-    });
+    const { toolActivity } = await runAgent(
+      { systemPrompt: system, messages: toLlmMessages(validMessages) },
+      { registry: screenerRegistry, executeTool: wrappedExecute, write, maxTokens: 8192, toolChoice },
+      abort.signal,
+    );
 
     if (ctx.screeningResult) {
       write(

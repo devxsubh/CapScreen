@@ -15,6 +15,8 @@ import type {
     AppEditAnnotation,
 } from "../shared/types";
 import { EditCard, applyOptimisticResolution } from "./EditCard";
+import { AgentPlan } from "./AgentPlan";
+import { ApprovalCard } from "./ApprovalCard";
 import { PreResponseWrapper } from "../shared/PreResponseWrapper";
 import { getAuthHeaders } from "@/lib/apiAuth";
 import type { ScreeningResult } from "@/lib/screenerTypes";
@@ -36,6 +38,8 @@ function toolCallLabel(name: string): string {
     if (name === "screen_cap_table") return "Screening cap table…";
     if (name === "query_screening_data") return "Querying screening data…";
     if (name === "ic_memo") return "Generating IC memo…";
+    if (name === "update_plan") return "Planning…";
+    if (name === "delegate_task") return "Sub-agent researching…";
     return name ? `Running ${name}...` : "Working...";
 }
 
@@ -53,6 +57,8 @@ function toolCallDoneLabel(name: string): string {
     if (name === "screen_cap_table") return "Screened cap table";
     if (name === "query_screening_data") return "Queried screening data";
     if (name === "ic_memo") return "Generated IC memo";
+    if (name === "update_plan") return "Updated plan";
+    if (name === "delegate_task") return "Sub-agent finished";
     return name ? `Ran ${name}` : "Completed";
 }
 
@@ -1132,6 +1138,8 @@ interface Props {
     onCitationClick?: (citation: AppCitationAnnotation) => void;
     minHeight?: string;
     onWorkflowClick?: (workflowId: string) => void;
+    /** Answers an approval card (Allow / Deny) for a paused assistant run. */
+    onApprovalAnswer?: (runId: string, approved: boolean) => void;
     onEditViewClick?: (ann: AppEditAnnotation, filename: string) => void;
     /**
      * Opens the editor panel for a document without auto-highlighting any
@@ -1201,6 +1209,7 @@ export function AssistantMessage({
     onCitationClick,
     minHeight = "0px",
     onWorkflowClick,
+    onApprovalAnswer,
     onEditViewClick,
     onOpenDocument,
     onOpenScreening,
@@ -1323,8 +1332,11 @@ export function AssistantMessage({
     // events into their own PreResponseWrapper. Content events render
     // between wrappers, so reasoning/tool chatter that arrives after the
     // model has already streamed some prose gets its own wrapper.
+    // Plans and approval cards are standalone groups so they never get
+    // folded away inside a collapsed wrapper.
     type EventGroup =
         | { kind: "pre"; events: AssistantEvent[]; indices: number[] }
+        | { kind: "standalone"; event: AssistantEvent; index: number }
         | {
               kind: "content";
               event: Extract<AssistantEvent, { type: "content" }>;
@@ -1341,6 +1353,12 @@ export function AssistantMessage({
                     current = null;
                 }
                 groups.push({ kind: "content", event: e, index: i });
+            } else if (e.type === "plan" || e.type === "approval_request") {
+                if (current) {
+                    groups.push(current);
+                    current = null;
+                }
+                groups.push({ kind: "standalone", event: e, index: i });
             } else {
                 if (!current)
                     current = { kind: "pre", events: [], indices: [] };
@@ -1511,6 +1529,18 @@ export function AssistantMessage({
                 />
             );
         }
+        if (event.type === "plan") {
+            return <AgentPlan key={globalIdx} steps={event.steps} />;
+        }
+        if (event.type === "approval_request") {
+            return (
+                <ApprovalCard
+                    key={globalIdx}
+                    request={event}
+                    onAnswer={onApprovalAnswer}
+                />
+            );
+        }
         if (event.type === "workflow_applied") {
             return (
                 <WorkflowAppliedBlock
@@ -1563,6 +1593,9 @@ export function AssistantMessage({
                                             )}
                                     </div>
                                 );
+                            }
+                            if (g.kind === "standalone") {
+                                return renderEvent(g.event, 0, [g.event], g.index);
                             }
                             const subsequentContent = hasContentAfter(gIdx);
                             const wrapperIsStreaming = g.events.some(

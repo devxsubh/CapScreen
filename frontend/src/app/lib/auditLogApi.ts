@@ -16,7 +16,8 @@ export interface AuditLogEntry {
     | "screening_analysis_generated"
     | "document_generated"
     | "document_uploaded"
-    | "document_deleted";
+    | "document_deleted"
+    | "agent_tool_approval";
   performedBy: string;
   performedByEmail: string;
   details: Record<string, unknown>;

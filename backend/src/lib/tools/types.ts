@@ -17,6 +17,11 @@ export type ToolDocumentResult = {
   downloadUrl: string;
 };
 
+export type PlanStep = {
+  title: string;
+  status: "pending" | "in_progress" | "done";
+};
+
 export type ToolExecutorResult = {
   content: string;
   screeningResult?: ScreeningResult;
@@ -33,6 +38,8 @@ export type ToolContext = {
   workflowStore?: Map<string, WorkflowPrompt>;
   onWorkflowApplied?: (workflowId: string, title: string) => void;
   onScreeningProgress?: ScreeningProgressFn;
+  /** Called when the agent writes or updates its step-by-step plan. */
+  onPlanUpdated?: (steps: PlanStep[]) => void;
   attachedDocuments?: Array<{ filename: string; document_id: string }>;
   displayedDocument?: { filename: string; document_id: string };
 };

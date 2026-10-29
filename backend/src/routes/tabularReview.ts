@@ -23,7 +23,7 @@ import {
   type MentionedStartup,
 } from "../lib/chat/startupMentions";
 import { assistantRegistry, type ToolContext } from "../lib/tools";
-import { runAgentStream } from "../lib/llm/streamAgent";
+import { runAgent } from "../lib/agent/agentGraph";
 import { friendlyLlmError } from "../lib/llm/friendlyError";
 import { buildWorkflowStore } from "../lib/workflows/workflowMemory";
 import type { ColumnConfig, TabularRowDoc } from "../types/tabular";
@@ -616,25 +616,26 @@ tabularReviewRouter.post("/:id/chat", async (req, res) => {
   write(`data: ${JSON.stringify({ type: "chat_id", chatId })}\n\n`);
 
   try {
-    await runAgentStream({
-      systemPrompt: system,
-      messages: toLlmMessages(parsed.messages),
-      tools: assistantRegistry.getTools(),
-      write,
-      executeTool: async (name, input) => {
-        const result = await assistantRegistry.execute(name, input, ctx);
-        if (result.screeningResult) {
-          ctx.screeningResult = result.screeningResult;
-          write(
-            `data: ${JSON.stringify({
-              type: "screening_result",
-              screeningResult: result.screeningResult,
-            })}\n\n`,
-          );
-        }
-        return { content: result.content, document: result.document };
+    await runAgent(
+      { systemPrompt: system, messages: toLlmMessages(parsed.messages) },
+      {
+        registry: assistantRegistry,
+        write,
+        executeTool: async (name, input) => {
+          const result = await assistantRegistry.execute(name, input, ctx);
+          if (result.screeningResult) {
+            ctx.screeningResult = result.screeningResult;
+            write(
+              `data: ${JSON.stringify({
+                type: "screening_result",
+                screeningResult: result.screeningResult,
+              })}\n\n`,
+            );
+          }
+          return { content: result.content, document: result.document };
+        },
       },
-    });
+    );
 
     if (ctx.screeningResult) {
       write(

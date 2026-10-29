@@ -39,6 +39,8 @@ interface Props {
     isResponseLoading: boolean;
     handleChat: (message: AppMessage) => Promise<string | null>;
     cancel: () => void;
+    /** Answers an assistant approval card (Allow / Deny). */
+    onApprovalAnswer?: (runId: string, approved: boolean) => void;
     screeningResult?: ScreeningResult | null;
     startupHandoff?: AssistantStartupHandoff | null;
     onClearStartupHandoff?: () => void;
@@ -49,6 +51,7 @@ export function ChatView({
     isResponseLoading,
     handleChat,
     cancel,
+    onApprovalAnswer,
     screeningResult = null,
     startupHandoff = null,
     onClearStartupHandoff,
@@ -691,6 +694,7 @@ export function ChatView({
                                                         ? minHeight
                                                         : "0px"
                                                 }
+                                                onApprovalAnswer={onApprovalAnswer}
                                                 onWorkflowClick={(id) => {
                                                     setWorkflowModalInitialId(
                                                         id,

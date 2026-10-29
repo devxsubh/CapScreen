@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+    resumeAgentRun,
     saveChatMessages,
     streamChat,
     streamProjectChat,
@@ -10,6 +11,7 @@ import {
 import { useChatHistoryContext } from "@/app/contexts/ChatHistoryContext";
 import { useGenerateChatTitle } from "./useGenerateChatTitle";
 import type {
+    AgentPlanStep,
     AssistantEvent,
     AppCitationAnnotation,
     AppMessage,
@@ -37,6 +39,25 @@ function findLastContentIndex(events: AssistantEvent[]): number {
         if (events[i].type === "content") return i;
     }
     return -1;
+}
+
+const isPendingApproval = (e: AssistantEvent) =>
+    e.type === "approval_request" && e.status === "pending";
+
+/** Sending a new message means the user moved on, so unanswered approval cards are retired. */
+function skipPendingApprovals(messages: AppMessage[]): AppMessage[] {
+    return messages.map((m) =>
+        m.events?.some(isPendingApproval)
+            ? {
+                  ...m,
+                  events: m.events.map((e) =>
+                      isPendingApproval(e)
+                          ? { ...e, status: "skipped" as const }
+                          : e,
+                  ),
+              }
+            : m,
+    );
 }
 
 function screeningCompleteEvent(
@@ -402,6 +423,586 @@ export function useAssistantChat({
         });
     };
 
+    /**
+     * Reads one SSE response from the assistant and applies each event to
+     * the last assistant message. Used for new messages and for resuming
+     * after an approval. Returns the chat id the server reported, if any.
+     */
+    const readAgentStream = async (
+        response: Response,
+    ): Promise<string | null> => {
+        let streamedChatId: string | null = null;
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("No response body");
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed || !trimmed.startsWith("data:")) continue;
+
+                const dataStr = trimmed.slice(5).trim();
+                if (dataStr === "[DONE]") continue;
+
+                try {
+                    const data = JSON.parse(dataStr);
+
+                    if (data.type === "chat_id") {
+                        streamedChatId = data.chatId;
+                        setChatId(data.chatId);
+                        setCurrentChatId(data.chatId);
+                        continue;
+                    }
+
+                    if (data.type === "content_done") {
+                        setIsLoadingCitations(true);
+                        continue;
+                    }
+
+                    if (data.type === "content_delta") {
+                        const text = data.text as string;
+
+                        // Real content is streaming — retire any
+                        // "Thinking…" / "Running…" placeholders, and
+                        // finalize any in-flight reasoning block so it
+                        // doesn't get stuck rendering as streaming.
+                        clearStreamingPlaceholders();
+                        finalizeStreamingReasoning();
+
+                        // Ensure a streaming content event exists. If
+                        // the last event isn't already a streaming
+                        // content block, start a fresh one — and reset
+                        // the drip so we don't inherit a previous
+                        // block's accumulated text.
+                        const events = eventsRef.current;
+                        const lastEvent = events[events.length - 1];
+                        if (
+                            lastEvent?.type !== "content" ||
+                            !lastEvent.isStreaming
+                        ) {
+                            dripTargetRef.current = text;
+                            dripDisplayLenRef.current = 0;
+                            eventsRef.current = [
+                                ...events,
+                                {
+                                    type: "content" as const,
+                                    text: "",
+                                    isStreaming: true,
+                                },
+                            ];
+                            const snapshot = [...eventsRef.current];
+                            setMessages((prev) => {
+                                const updated = [...prev];
+                                const last = updated[updated.length - 1];
+                                if (last?.role === "assistant") {
+                                    updated[updated.length - 1] = {
+                                        ...last,
+                                        events: snapshot,
+                                    };
+                                }
+                                return updated;
+                            });
+                        } else {
+                            dripTargetRef.current += text;
+                        }
+
+                        startDrip();
+                        continue;
+                    }
+
+                    if (data.type === "reasoning_delta") {
+                        const text = data.text as string;
+                        let events = eventsRef.current;
+                        const last = events[events.length - 1];
+                        if (
+                            last?.type === "reasoning" &&
+                            last.isStreaming
+                        ) {
+                            eventsRef.current = [
+                                ...events.slice(0, -1),
+                                {
+                                    type: "reasoning" as const,
+                                    text: last.text + text,
+                                    isStreaming: true,
+                                },
+                            ];
+                        } else {
+                            // New reasoning block — finalize any in-flight
+                            // content event first so the next content_delta
+                            // starts a fresh block at the correct position.
+                            finalizeStreamingContent();
+                            clearStreamingPlaceholders();
+                            events = eventsRef.current;
+                            eventsRef.current = [
+                                ...events,
+                                {
+                                    type: "reasoning" as const,
+                                    text,
+                                    isStreaming: true,
+                                },
+                            ];
+                        }
+                        const snapshot = [...eventsRef.current];
+                        setMessages((prev) => {
+                            const updated = [...prev];
+                            const last = updated[updated.length - 1];
+                            if (last?.role === "assistant") {
+                                updated[updated.length - 1] = {
+                                    ...last,
+                                    events: snapshot,
+                                };
+                            }
+                            return updated;
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "reasoning_block_end") {
+                        const events = eventsRef.current;
+                        const last = events[events.length - 1];
+                        if (
+                            last?.type === "reasoning" &&
+                            last.isStreaming
+                        ) {
+                            eventsRef.current = [
+                                ...events.slice(0, -1),
+                                {
+                                    type: "reasoning" as const,
+                                    text: last.text,
+                                },
+                            ];
+                        }
+                        const snapshot = [...eventsRef.current];
+                        setMessages((prev) => {
+                            const updated = [...prev];
+                            const last = updated[updated.length - 1];
+                            if (last?.role === "assistant") {
+                                updated[updated.length - 1] = {
+                                    ...last,
+                                    events: snapshot,
+                                };
+                            }
+                            return updated;
+                        });
+                        pushThinkingPlaceholder();
+                        continue;
+                    }
+
+                    if (data.type === "tool_call_start") {
+                        const toolName = (data.name as string) ?? "";
+                        if (toolName === "screen_cap_table") {
+                            pushEvent({
+                                type: "screening_complete",
+                                startupName: null,
+                                totalEntities: 0,
+                                flaggedCount: 0,
+                                reviewCount: 0,
+                                screeningConfidence: null,
+                                isStreaming: true,
+                            });
+                        }
+                        pushEvent({
+                            type: "tool_call_start",
+                            name: toolName,
+                            isStreaming: true,
+                        });
+                        continue;
+                    }
+
+                    if (
+                        data.type === "screening_result" &&
+                        data.screeningResult
+                    ) {
+                        const result =
+                            data.screeningResult as ScreeningResult;
+                        setScreeningResult(result);
+                        screeningResultRef.current = result;
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "screening_complete" &&
+                                !!e.isStreaming,
+                            () => screeningCompleteEvent(result, false),
+                        );
+                        const hasScreeningEvent = eventsRef.current.some(
+                            (e) =>
+                                e.type === "screening_complete" &&
+                                !e.isStreaming,
+                        );
+                        if (!hasScreeningEvent) {
+                            pushEvent(screeningCompleteEvent(result, false));
+                        }
+                        const assistantIndex = lastAssistantMessageIndex(
+                            messagesRef.current,
+                        );
+                        const targetIndex =
+                            assistantIndex >= 0
+                                ? assistantIndex
+                                : messagesRef.current.length - 1;
+                        applyStartupHandoff(
+                            result,
+                            targetIndex,
+                            streamedChatId || chatId || initialChatId,
+                        );
+                        if (!screeningNeedsStartupHandoff(result)) {
+                            csvRef.current = null;
+                            csvFilenameRef.current = null;
+                        }
+                        continue;
+                    }
+
+                    if (data.type === "final_result" && data.screeningResult) {
+                        const result = data.screeningResult as ScreeningResult;
+                        setScreeningResult(result);
+                        screeningResultRef.current = result;
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "screening_complete" &&
+                                !!e.isStreaming,
+                            () => screeningCompleteEvent(result, false),
+                        );
+                        if (
+                            !eventsRef.current.some(
+                                (e) => e.type === "screening_complete",
+                            )
+                        ) {
+                            pushEvent(screeningCompleteEvent(result, false));
+                        }
+                        const assistantIndex = lastAssistantMessageIndex(
+                            messagesRef.current,
+                        );
+                        const targetIndex =
+                            assistantIndex >= 0
+                                ? assistantIndex
+                                : messagesRef.current.length - 1;
+                        applyStartupHandoff(
+                            result,
+                            targetIndex,
+                            streamedChatId || chatId || initialChatId,
+                        );
+                        if (!screeningNeedsStartupHandoff(result)) {
+                            csvRef.current = null;
+                            csvFilenameRef.current = null;
+                        }
+                        continue;
+                    }
+
+                    if (data.type === "workflow_applied") {
+                        pushEvent({
+                            type: "workflow_applied",
+                            workflow_id: data.workflow_id as string,
+                            title: data.title as string,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_read_start") {
+                        pushEvent({
+                            type: "doc_read",
+                            filename: data.filename as string,
+                            isStreaming: true,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_read") {
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "doc_read" &&
+                                e.filename === data.filename &&
+                                !!e.isStreaming,
+                            (e) => ({ ...e, isStreaming: false }),
+                        );
+                        pushThinkingPlaceholder();
+                        continue;
+                    }
+
+                    if (data.type === "doc_find_start") {
+                        pushEvent({
+                            type: "doc_find",
+                            filename: data.filename as string,
+                            query: (data.query as string) ?? "",
+                            total_matches: 0,
+                            isStreaming: true,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_find") {
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "doc_find" &&
+                                e.filename === data.filename &&
+                                e.query === (data.query as string) &&
+                                !!e.isStreaming,
+                            (e) => ({
+                                ...e,
+                                isStreaming: false,
+                                total_matches:
+                                    typeof data.total_matches === "number"
+                                        ? (data.total_matches as number)
+                                        : (
+                                              e as {
+                                                  type: "doc_find";
+                                                  total_matches: number;
+                                              }
+                                          ).total_matches,
+                            }),
+                        );
+                        pushThinkingPlaceholder();
+                        continue;
+                    }
+
+                    if (data.type === "doc_created_start") {
+                        pushEvent({
+                            type: "doc_created",
+                            filename: data.filename as string,
+                            download_url: "",
+                            isStreaming: true,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_download") {
+                        pushEvent({
+                            type: "doc_download",
+                            filename: data.filename as string,
+                            download_url: data.download_url as string,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_created") {
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "doc_created" &&
+                                e.filename === data.filename &&
+                                !!e.isStreaming,
+                            (e) => {
+                                const next: Extract<
+                                    AssistantEvent,
+                                    { type: "doc_created" }
+                                > = {
+                                    type: "doc_created",
+                                    filename: (e as { filename: string })
+                                        .filename,
+                                    download_url:
+                                        data.download_url as string,
+                                    isStreaming: false,
+                                };
+                                if (typeof data.document_id === "string") {
+                                    next.document_id =
+                                        data.document_id as string;
+                                }
+                                if (typeof data.version_id === "string") {
+                                    next.version_id =
+                                        data.version_id as string;
+                                }
+                                if (
+                                    typeof data.version_number === "number"
+                                ) {
+                                    next.version_number =
+                                        data.version_number as number;
+                                }
+                                return next;
+                            },
+                        );
+                        pushThinkingPlaceholder();
+                        continue;
+                    }
+
+                    // Startup screening documents (IC memo / analysis).
+                    if (data.type === "document_created" && data.document) {
+                        const doc = data.document as {
+                            id: string;
+                            startupId: string;
+                            kind: string;
+                            title: string;
+                            downloadUrl?: string;
+                        };
+                        const downloadUrl =
+                            doc.downloadUrl ??
+                            (doc.id
+                                ? `/api/documents/${doc.id}/download`
+                                : "");
+                        const filename = doc.title.endsWith(".doc")
+                            ? doc.title
+                            : `${doc.title}.doc`;
+                        pushEvent({
+                            type: "doc_created",
+                            filename,
+                            download_url: downloadUrl,
+                            document_id: doc.id,
+                            startup_id: doc.startupId,
+                            isStreaming: false,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_replicate_start") {
+                        pushEvent({
+                            type: "doc_replicated",
+                            filename: data.filename as string,
+                            count:
+                                typeof data.count === "number"
+                                    ? (data.count as number)
+                                    : 1,
+                            isStreaming: true,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_replicated") {
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "doc_replicated" &&
+                                e.filename === data.filename &&
+                                !!e.isStreaming,
+                            () => ({
+                                type: "doc_replicated",
+                                filename: data.filename as string,
+                                count:
+                                    typeof data.count === "number"
+                                        ? (data.count as number)
+                                        : Array.isArray(data.copies)
+                                          ? (data.copies as unknown[])
+                                                .length
+                                          : 1,
+                                copies: Array.isArray(data.copies)
+                                    ? (data.copies as {
+                                          new_filename: string;
+                                          document_id: string;
+                                          version_id: string;
+                                      }[])
+                                    : undefined,
+                                error:
+                                    typeof data.error === "string"
+                                        ? (data.error as string)
+                                        : undefined,
+                                isStreaming: false,
+                            }),
+                        );
+                        pushThinkingPlaceholder();
+                        continue;
+                    }
+
+                    if (data.type === "doc_edited_start") {
+                        pushEvent({
+                            type: "doc_edited",
+                            filename: data.filename as string,
+                            document_id: "",
+                            version_id: "",
+                            download_url: "",
+                            annotations: [],
+                            isStreaming: true,
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "doc_edited") {
+                        updateMatchingEvent(
+                            (e) =>
+                                e.type === "doc_edited" &&
+                                e.filename === data.filename &&
+                                !!e.isStreaming,
+                            () => ({
+                                type: "doc_edited",
+                                filename: data.filename as string,
+                                document_id:
+                                    (data.document_id as string) ?? "",
+                                version_id:
+                                    (data.version_id as string) ?? "",
+                                version_number:
+                                    typeof data.version_number === "number"
+                                        ? (data.version_number as number)
+                                        : null,
+                                download_url:
+                                    (data.download_url as string) ?? "",
+                                annotations: Array.isArray(data.annotations)
+                                    ? (data.annotations as import("@/app/components/shared/types").AppEditAnnotation[])
+                                    : [],
+                                error:
+                                    typeof data.error === "string"
+                                        ? (data.error as string)
+                                        : undefined,
+                                isStreaming: false,
+                            }),
+                        );
+                        pushThinkingPlaceholder();
+                        continue;
+                    }
+
+                    if (data.type === "plan_updated") {
+                        const steps = (data.steps ?? []) as AgentPlanStep[];
+                        const hasPlan = eventsRef.current.some(
+                            (e) => e.type === "plan",
+                        );
+                        if (hasPlan) {
+                            updateMatchingEvent(
+                                (e) => e.type === "plan",
+                                () => ({ type: "plan", steps }),
+                            );
+                        } else {
+                            pushEvent({ type: "plan", steps });
+                        }
+                        continue;
+                    }
+
+                    if (data.type === "approval_required") {
+                        clearStreamingPlaceholders();
+                        pushEvent({
+                            type: "approval_request",
+                            runId: data.runId as string,
+                            calls: (data.calls ?? []) as {
+                                name: string;
+                                input: unknown;
+                            }[],
+                            status: "pending",
+                        });
+                        continue;
+                    }
+
+                    if (data.type === "citations") {
+                        // End-of-stream signal — scrub any lingering
+                        // placeholders so they don't persist into the
+                        // finalised message.
+                        clearStreamingPlaceholders();
+                        const incoming = (data.citations ??
+                            []) as AppCitationAnnotation[];
+                        setMessages((prev) => {
+                            const updated = [...prev];
+                            const last = updated[updated.length - 1];
+                            if (last?.role === "assistant") {
+                                updated[updated.length - 1] = {
+                                    ...last,
+                                    annotations: incoming,
+                                };
+                            }
+                            return updated;
+                        });
+                        continue;
+                    }
+                } catch (e) {
+                    console.warn(
+                        "[useAssistantChat] failed to parse SSE line:",
+                        trimmed,
+                        e,
+                    );
+                }
+            }
+        }
+
+        return streamedChatId;
+    };
+
     const handleChat = async (
         message: AppMessage,
         opts?: {
@@ -431,9 +1032,9 @@ export function useAssistantChat({
             lastMessage.role === "user" &&
             lastMessage.content === message.content;
 
-        const newMessages: AppMessage[] = isMessageAlreadyAdded
-            ? messages
-            : [...messages, message];
+        const newMessages: AppMessage[] = skipPendingApprovals(
+            isMessageAlreadyAdded ? messages : [...messages, message],
+        );
 
         setMessages([
             ...newMessages,
@@ -502,543 +1103,7 @@ export function useAssistantChat({
                 throw new Error(`HTTP ${response.status}: ${errText}`);
             }
 
-            const reader = response.body?.getReader();
-            if (!reader) throw new Error("No response body");
-
-            const decoder = new TextDecoder();
-            let buffer = "";
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split("\n");
-                buffer = lines.pop() || "";
-
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed || !trimmed.startsWith("data:")) continue;
-
-                    const dataStr = trimmed.slice(5).trim();
-                    if (dataStr === "[DONE]") continue;
-
-                    try {
-                        const data = JSON.parse(dataStr);
-
-                        if (data.type === "chat_id") {
-                            streamedChatId = data.chatId;
-                            setChatId(data.chatId);
-                            setCurrentChatId(data.chatId);
-                            continue;
-                        }
-
-                        if (data.type === "content_done") {
-                            setIsLoadingCitations(true);
-                            continue;
-                        }
-
-                        if (data.type === "content_delta") {
-                            const text = data.text as string;
-
-                            // Real content is streaming — retire any
-                            // "Thinking…" / "Running…" placeholders, and
-                            // finalize any in-flight reasoning block so it
-                            // doesn't get stuck rendering as streaming.
-                            clearStreamingPlaceholders();
-                            finalizeStreamingReasoning();
-
-                            // Ensure a streaming content event exists. If
-                            // the last event isn't already a streaming
-                            // content block, start a fresh one — and reset
-                            // the drip so we don't inherit a previous
-                            // block's accumulated text.
-                            const events = eventsRef.current;
-                            const lastEvent = events[events.length - 1];
-                            if (
-                                lastEvent?.type !== "content" ||
-                                !lastEvent.isStreaming
-                            ) {
-                                dripTargetRef.current = text;
-                                dripDisplayLenRef.current = 0;
-                                eventsRef.current = [
-                                    ...events,
-                                    {
-                                        type: "content" as const,
-                                        text: "",
-                                        isStreaming: true,
-                                    },
-                                ];
-                                const snapshot = [...eventsRef.current];
-                                setMessages((prev) => {
-                                    const updated = [...prev];
-                                    const last = updated[updated.length - 1];
-                                    if (last?.role === "assistant") {
-                                        updated[updated.length - 1] = {
-                                            ...last,
-                                            events: snapshot,
-                                        };
-                                    }
-                                    return updated;
-                                });
-                            } else {
-                                dripTargetRef.current += text;
-                            }
-
-                            startDrip();
-                            continue;
-                        }
-
-                        if (data.type === "reasoning_delta") {
-                            const text = data.text as string;
-                            let events = eventsRef.current;
-                            const last = events[events.length - 1];
-                            if (
-                                last?.type === "reasoning" &&
-                                last.isStreaming
-                            ) {
-                                eventsRef.current = [
-                                    ...events.slice(0, -1),
-                                    {
-                                        type: "reasoning" as const,
-                                        text: last.text + text,
-                                        isStreaming: true,
-                                    },
-                                ];
-                            } else {
-                                // New reasoning block — finalize any in-flight
-                                // content event first so the next content_delta
-                                // starts a fresh block at the correct position.
-                                finalizeStreamingContent();
-                                clearStreamingPlaceholders();
-                                events = eventsRef.current;
-                                eventsRef.current = [
-                                    ...events,
-                                    {
-                                        type: "reasoning" as const,
-                                        text,
-                                        isStreaming: true,
-                                    },
-                                ];
-                            }
-                            const snapshot = [...eventsRef.current];
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === "assistant") {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        events: snapshot,
-                                    };
-                                }
-                                return updated;
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "reasoning_block_end") {
-                            const events = eventsRef.current;
-                            const last = events[events.length - 1];
-                            if (
-                                last?.type === "reasoning" &&
-                                last.isStreaming
-                            ) {
-                                eventsRef.current = [
-                                    ...events.slice(0, -1),
-                                    {
-                                        type: "reasoning" as const,
-                                        text: last.text,
-                                    },
-                                ];
-                            }
-                            const snapshot = [...eventsRef.current];
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === "assistant") {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        events: snapshot,
-                                    };
-                                }
-                                return updated;
-                            });
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        if (data.type === "tool_call_start") {
-                            const toolName = (data.name as string) ?? "";
-                            if (toolName === "screen_cap_table") {
-                                pushEvent({
-                                    type: "screening_complete",
-                                    startupName: null,
-                                    totalEntities: 0,
-                                    flaggedCount: 0,
-                                    reviewCount: 0,
-                                    screeningConfidence: null,
-                                    isStreaming: true,
-                                });
-                            }
-                            pushEvent({
-                                type: "tool_call_start",
-                                name: toolName,
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (
-                            data.type === "screening_result" &&
-                            data.screeningResult
-                        ) {
-                            const result =
-                                data.screeningResult as ScreeningResult;
-                            setScreeningResult(result);
-                            screeningResultRef.current = result;
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "screening_complete" &&
-                                    !!e.isStreaming,
-                                () => screeningCompleteEvent(result, false),
-                            );
-                            const hasScreeningEvent = eventsRef.current.some(
-                                (e) =>
-                                    e.type === "screening_complete" &&
-                                    !e.isStreaming,
-                            );
-                            if (!hasScreeningEvent) {
-                                pushEvent(screeningCompleteEvent(result, false));
-                            }
-                            const assistantIndex = lastAssistantMessageIndex(
-                                messagesRef.current,
-                            );
-                            const targetIndex =
-                                assistantIndex >= 0
-                                    ? assistantIndex
-                                    : messagesRef.current.length - 1;
-                            applyStartupHandoff(
-                                result,
-                                targetIndex,
-                                streamedChatId || chatId || initialChatId,
-                            );
-                            if (!screeningNeedsStartupHandoff(result)) {
-                                csvRef.current = null;
-                                csvFilenameRef.current = null;
-                            }
-                            continue;
-                        }
-
-                        if (data.type === "final_result" && data.screeningResult) {
-                            const result = data.screeningResult as ScreeningResult;
-                            setScreeningResult(result);
-                            screeningResultRef.current = result;
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "screening_complete" &&
-                                    !!e.isStreaming,
-                                () => screeningCompleteEvent(result, false),
-                            );
-                            if (
-                                !eventsRef.current.some(
-                                    (e) => e.type === "screening_complete",
-                                )
-                            ) {
-                                pushEvent(screeningCompleteEvent(result, false));
-                            }
-                            const assistantIndex = lastAssistantMessageIndex(
-                                messagesRef.current,
-                            );
-                            const targetIndex =
-                                assistantIndex >= 0
-                                    ? assistantIndex
-                                    : messagesRef.current.length - 1;
-                            applyStartupHandoff(
-                                result,
-                                targetIndex,
-                                streamedChatId || chatId || initialChatId,
-                            );
-                            if (!screeningNeedsStartupHandoff(result)) {
-                                csvRef.current = null;
-                                csvFilenameRef.current = null;
-                            }
-                            continue;
-                        }
-
-                        if (data.type === "workflow_applied") {
-                            pushEvent({
-                                type: "workflow_applied",
-                                workflow_id: data.workflow_id as string,
-                                title: data.title as string,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_read_start") {
-                            pushEvent({
-                                type: "doc_read",
-                                filename: data.filename as string,
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_read") {
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "doc_read" &&
-                                    e.filename === data.filename &&
-                                    !!e.isStreaming,
-                                (e) => ({ ...e, isStreaming: false }),
-                            );
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        if (data.type === "doc_find_start") {
-                            pushEvent({
-                                type: "doc_find",
-                                filename: data.filename as string,
-                                query: (data.query as string) ?? "",
-                                total_matches: 0,
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_find") {
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "doc_find" &&
-                                    e.filename === data.filename &&
-                                    e.query === (data.query as string) &&
-                                    !!e.isStreaming,
-                                (e) => ({
-                                    ...e,
-                                    isStreaming: false,
-                                    total_matches:
-                                        typeof data.total_matches === "number"
-                                            ? (data.total_matches as number)
-                                            : (
-                                                  e as {
-                                                      type: "doc_find";
-                                                      total_matches: number;
-                                                  }
-                                              ).total_matches,
-                                }),
-                            );
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        if (data.type === "doc_created_start") {
-                            pushEvent({
-                                type: "doc_created",
-                                filename: data.filename as string,
-                                download_url: "",
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_download") {
-                            pushEvent({
-                                type: "doc_download",
-                                filename: data.filename as string,
-                                download_url: data.download_url as string,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_created") {
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "doc_created" &&
-                                    e.filename === data.filename &&
-                                    !!e.isStreaming,
-                                (e) => {
-                                    const next: Extract<
-                                        AssistantEvent,
-                                        { type: "doc_created" }
-                                    > = {
-                                        type: "doc_created",
-                                        filename: (e as { filename: string })
-                                            .filename,
-                                        download_url:
-                                            data.download_url as string,
-                                        isStreaming: false,
-                                    };
-                                    if (typeof data.document_id === "string") {
-                                        next.document_id =
-                                            data.document_id as string;
-                                    }
-                                    if (typeof data.version_id === "string") {
-                                        next.version_id =
-                                            data.version_id as string;
-                                    }
-                                    if (
-                                        typeof data.version_number === "number"
-                                    ) {
-                                        next.version_number =
-                                            data.version_number as number;
-                                    }
-                                    return next;
-                                },
-                            );
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        // Startup screening documents (IC memo / analysis).
-                        if (data.type === "document_created" && data.document) {
-                            const doc = data.document as {
-                                id: string;
-                                startupId: string;
-                                kind: string;
-                                title: string;
-                                downloadUrl?: string;
-                            };
-                            const downloadUrl =
-                                doc.downloadUrl ??
-                                (doc.id
-                                    ? `/api/documents/${doc.id}/download`
-                                    : "");
-                            const filename = doc.title.endsWith(".doc")
-                                ? doc.title
-                                : `${doc.title}.doc`;
-                            pushEvent({
-                                type: "doc_created",
-                                filename,
-                                download_url: downloadUrl,
-                                document_id: doc.id,
-                                startup_id: doc.startupId,
-                                isStreaming: false,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_replicate_start") {
-                            pushEvent({
-                                type: "doc_replicated",
-                                filename: data.filename as string,
-                                count:
-                                    typeof data.count === "number"
-                                        ? (data.count as number)
-                                        : 1,
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_replicated") {
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "doc_replicated" &&
-                                    e.filename === data.filename &&
-                                    !!e.isStreaming,
-                                () => ({
-                                    type: "doc_replicated",
-                                    filename: data.filename as string,
-                                    count:
-                                        typeof data.count === "number"
-                                            ? (data.count as number)
-                                            : Array.isArray(data.copies)
-                                              ? (data.copies as unknown[])
-                                                    .length
-                                              : 1,
-                                    copies: Array.isArray(data.copies)
-                                        ? (data.copies as {
-                                              new_filename: string;
-                                              document_id: string;
-                                              version_id: string;
-                                          }[])
-                                        : undefined,
-                                    error:
-                                        typeof data.error === "string"
-                                            ? (data.error as string)
-                                            : undefined,
-                                    isStreaming: false,
-                                }),
-                            );
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        if (data.type === "doc_edited_start") {
-                            pushEvent({
-                                type: "doc_edited",
-                                filename: data.filename as string,
-                                document_id: "",
-                                version_id: "",
-                                download_url: "",
-                                annotations: [],
-                                isStreaming: true,
-                            });
-                            continue;
-                        }
-
-                        if (data.type === "doc_edited") {
-                            updateMatchingEvent(
-                                (e) =>
-                                    e.type === "doc_edited" &&
-                                    e.filename === data.filename &&
-                                    !!e.isStreaming,
-                                () => ({
-                                    type: "doc_edited",
-                                    filename: data.filename as string,
-                                    document_id:
-                                        (data.document_id as string) ?? "",
-                                    version_id:
-                                        (data.version_id as string) ?? "",
-                                    version_number:
-                                        typeof data.version_number === "number"
-                                            ? (data.version_number as number)
-                                            : null,
-                                    download_url:
-                                        (data.download_url as string) ?? "",
-                                    annotations: Array.isArray(data.annotations)
-                                        ? (data.annotations as import("@/app/components/shared/types").AppEditAnnotation[])
-                                        : [],
-                                    error:
-                                        typeof data.error === "string"
-                                            ? (data.error as string)
-                                            : undefined,
-                                    isStreaming: false,
-                                }),
-                            );
-                            pushThinkingPlaceholder();
-                            continue;
-                        }
-
-                        if (data.type === "citations") {
-                            // End-of-stream signal — scrub any lingering
-                            // placeholders so they don't persist into the
-                            // finalised message.
-                            clearStreamingPlaceholders();
-                            const incoming = (data.citations ??
-                                []) as AppCitationAnnotation[];
-                            setMessages((prev) => {
-                                const updated = [...prev];
-                                const last = updated[updated.length - 1];
-                                if (last?.role === "assistant") {
-                                    updated[updated.length - 1] = {
-                                        ...last,
-                                        annotations: incoming,
-                                    };
-                                }
-                                return updated;
-                            });
-                            continue;
-                        }
-                    } catch (e) {
-                        console.warn(
-                            "[useAssistantChat] failed to parse SSE line:",
-                            trimmed,
-                            e,
-                        );
-                    }
-                }
-            }
+            streamedChatId = await readAgentStream(response);
 
             flushDrip();
             finalizeStreamingReasoning();
@@ -1183,6 +1248,72 @@ export function useAssistantChat({
         }
     };
 
+    /**
+     * Sends the user's Allow / Deny for a paused tool call, then streams the
+     * rest of the reply into the same assistant message.
+     */
+    const answerApproval = async (runId: string, approved: boolean) => {
+        const current = messagesRef.current;
+        const last = current[current.length - 1];
+        const isWaiting = last?.events?.some(
+            (e) =>
+                e.type === "approval_request" &&
+                e.status === "pending" &&
+                e.runId === runId,
+        );
+        if (last?.role !== "assistant" || !isWaiting || isResponseLoading) return;
+
+        // Continue appending to this message (also works after a page reload).
+        stopDrip();
+        dripTargetRef.current = "";
+        dripDisplayLenRef.current = 0;
+        eventsRef.current = last.events ?? [];
+        updateMatchingEvent(
+            (e) => e.type === "approval_request" && e.runId === runId,
+            (e) =>
+                e.type === "approval_request"
+                    ? { ...e, status: approved ? "approved" : "declined" }
+                    : e,
+        );
+
+        setIsResponseLoading(true);
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+        try {
+            const response = await resumeAgentRun(runId, approved, controller.signal);
+            if (!response.ok) {
+                const detail = await response.text();
+                throw new Error(`HTTP ${response.status}: ${detail}`);
+            }
+            await readAgentStream(response);
+            flushDrip();
+            finalizeStreamingReasoning();
+            if (chatId) {
+                void saveChatMessages(chatId, stripClientOnlyFields(messagesRef.current));
+            }
+        } catch (error: unknown) {
+            stopDrip();
+            if (!(error instanceof Error && error.name === "AbortError")) {
+                const errorMessage =
+                    error instanceof Error && error.message
+                        ? error.message
+                        : "Sorry, something went wrong.";
+                setMessages((prev) => {
+                    const updated = [...prev];
+                    const lastMsg = updated[updated.length - 1];
+                    if (lastMsg?.role === "assistant") {
+                        updated[updated.length - 1] = { ...lastMsg, error: errorMessage };
+                    }
+                    return updated;
+                });
+            }
+        } finally {
+            setIsResponseLoading(false);
+            setIsLoadingCitations(false);
+            abortControllerRef.current = null;
+        }
+    };
+
     const handleNewChat = async (
         message: AppMessage,
         projectId?: string,
@@ -1212,6 +1343,7 @@ export function useAssistantChat({
         clearStartupHandoff,
         handleChat,
         handleNewChat,
+        answerApproval,
         setMessages,
         cancel,
         chatId,

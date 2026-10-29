@@ -4,6 +4,9 @@ const TAVILY_URL = "https://api.tavily.com/search";
 
 export const webSearchTool: ToolDefinition = {
   name: "web_search",
+  readOnly: true,
+  // Sends the query to an outside search service, so the user approves it first.
+  needsApproval: true,
   schema: {
     name: "web_search",
     description:

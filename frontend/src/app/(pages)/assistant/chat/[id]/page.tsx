@@ -16,7 +16,7 @@ export default function AssistantChatPage() {
         useChatHistoryContext();
 
     const initialMessages = newChatMessages ?? [];
-    const { messages, isResponseLoading, handleChat, setMessages, cancel, screeningResult, startupHandoff, clearStartupHandoff } =
+    const { messages, isResponseLoading, handleChat, setMessages, cancel, answerApproval, screeningResult, startupHandoff, clearStartupHandoff } =
         useAssistantChat({ initialMessages, chatId: id });
 
     const hasAutoSent = useRef(false);
@@ -67,6 +67,7 @@ export default function AssistantChatPage() {
             isResponseLoading={isResponseLoading}
             handleChat={handleChat}
             cancel={cancel}
+            onApprovalAnswer={answerApproval}
             screeningResult={screeningResult}
             startupHandoff={startupHandoff}
             onClearStartupHandoff={clearStartupHandoff}

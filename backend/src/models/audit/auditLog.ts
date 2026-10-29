@@ -17,7 +17,8 @@ export type AuditEventType =
   | "screening_analysis_generated"
   | "document_generated"
   | "document_uploaded"
-  | "document_deleted";
+  | "document_deleted"
+  | "agent_tool_approval";
 
 const schema = new mongoose.Schema({
   startupId: {
@@ -39,6 +40,7 @@ const schema = new mongoose.Schema({
       "document_generated",
       "document_uploaded",
       "document_deleted",
+      "agent_tool_approval",
     ],
     required: true,
   },

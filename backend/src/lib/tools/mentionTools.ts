@@ -2,6 +2,7 @@ import type { ToolDefinition } from "./registry";
 
 export const listMentionedStartupsTool: ToolDefinition = {
   name: "list_mentioned_startups",
+  readOnly: true,
   schema: {
     name: "list_mentioned_startups",
     description:

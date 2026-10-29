@@ -11,6 +11,8 @@ import {
   screenDocumentEntitiesTool,
 } from "./searchTools";
 import { webSearchTool } from "./webSearchTool";
+import { updatePlanTool } from "./planTool";
+import { delegateTaskTool } from "./delegateTool";
 
 export { ToolRegistry } from "./registry";
 export type { ToolDefinition } from "./registry";
@@ -19,6 +21,7 @@ export type {
   ToolExecutorResult,
   ToolDocumentResult,
   ToolActivity,
+  PlanStep,
 } from "./types";
 export { SCREEN_CAP_TABLE_TOOL_NAME } from "./screenCapTable";
 
@@ -37,8 +40,10 @@ export const screenerRegistry = new ToolRegistry()
   .register(webSearchTool);
 
 // ── Assistant registry (POST /api/assistant-chat) ────────────────────────────
-// Superset of screenerRegistry — includes workflow tools.
+// Superset of screenerRegistry — adds workflow tools, planning and sub-agents.
 export const assistantRegistry = new ToolRegistry()
+  .register(updatePlanTool)
+  .register(delegateTaskTool)
   .register(listWorkflowsTool)
   .register(readWorkflowTool)
   .register(screenCapTableTool)
