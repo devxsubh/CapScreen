@@ -7,7 +7,7 @@ import { applyPendingRestore } from "./backup";
  * On-device database. Mongoose models run unchanged on top of a SQLite file
  * (see sqliteStore/) — nothing is sent to a database server.
  *
- * Exception: the cloud auth service (src/authService, deployed to Vercel) sets
+ * Exception: the cloud auth service (src/authApp.ts, deployed to Vercel) sets
  * CAPSCREEN_DB=mongodb and stores accounts — only accounts — in MongoDB Atlas.
  * The desktop app never sets it.
  */

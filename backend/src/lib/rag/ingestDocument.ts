@@ -1,6 +1,4 @@
-import { connectDb } from "../infra/db";
-import { DocChunk } from "../../models/rag/docChunk";
-import { RagDocument } from "../../models/rag/ragDocument";
+import * as documentsRepository from "../../modules/documents/documents.repository";
 import { parseDocumentToText } from "./parseDocument";
 import { chunkText } from "./chunkText";
 import { embedTexts } from "./embed";
@@ -19,12 +17,10 @@ export async function ingestDocument(params: {
   const { startupId, documentId, filename, mimeType, buffer } = params;
 
   try {
-    await connectDb();
-
     // 1. Parse to text pages
     const pages = await parseDocumentToText(buffer, mimeType, filename);
     if (pages.length === 0) {
-      await RagDocument.findByIdAndUpdate(documentId, {
+      await documentsRepository.updateRag(documentId, {
         status: "error",
         errorMessage: "Document parsed to empty text — no content found.",
       });
@@ -46,7 +42,7 @@ export async function ingestDocument(params: {
     }
 
     if (rawChunks.length === 0) {
-      await RagDocument.findByIdAndUpdate(documentId, {
+      await documentsRepository.updateRag(documentId, {
         status: "error",
         errorMessage: "No text chunks produced from document.",
       });
@@ -69,16 +65,16 @@ export async function ingestDocument(params: {
       createdAt: new Date(),
     }));
 
-    await DocChunk.insertMany(docs, { ordered: false });
+    await documentsRepository.insertChunks(docs);
 
     // 5. Mark ready
-    await RagDocument.findByIdAndUpdate(documentId, {
+    await documentsRepository.updateRag(documentId, {
       status: "ready",
       chunkCount: docs.length,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    await RagDocument.findByIdAndUpdate(documentId, {
+    await documentsRepository.updateRag(documentId, {
       status: "error",
       errorMessage: msg.slice(0, 500),
     }).catch(() => {});

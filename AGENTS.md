@@ -37,7 +37,7 @@ Network egress: public sanctions-list downloads (Watchman, every 12 h) and cloud
 - `express` + `helmet`, `cors`; loopback-only; `middleware/desktopToken.ts` gate; single local user (`middleware/requireAuth.ts`)
 - **SQLite via mongoose**: `lib/infra/sqliteStore/` implements the MongoDB driver surface mongoose calls (`node:sqlite`, no native deps). All mongoose models/queries run unchanged. `$vectorSearch` is in-process cosine.
 - **Pluggable LLMs** (`lib/llm/providers/`): Anthropic, native Ollama, and OpenAI-compatible (OpenAI, Gemini, OpenRouter, Groq, LM Studio, llama.cpp, any custom endpoint). Roles: `agent`, `utility`, `embedding`.
-- **AI Control Center** (`lib/llm/controlCenter/`, `routes/aiControlCenter.ts`): providers, model assignments, local-only policy; API keys AES-256-GCM encrypted with a master key sealed by the OS keychain (Electron `safeStorage`).
+- **AI Control Center** (`lib/llm/controlCenter/`, `modules/aiControlCenter/`): providers, model assignments, local-only policy; API keys AES-256-GCM encrypted with a master key sealed by the OS keychain (Electron `safeStorage`).
 - `@langchain/langgraph` — the assistant's agent graph (orchestration only; models still go through `lib/llm/providers/`)
 - `graphology` — directed ownership graph (BFS traversal, cycle-safe for circular ownership)
 - Watchman — `GET /v2/search`; every screening result stores `watchmanListInfo` (list counts + SHA-256 per list)
@@ -57,8 +57,8 @@ Accounts are the **only** cloud component. Sign-in works like Claude Code: the a
 
 | Piece | Where |
 |---|---|
-| Auth service (Express) | `backend/src/authService/app.ts` — mounts `routes/auth.ts` (signup/signin/verify/reset) + `routes/desktopOAuth.ts` (RFC 8252 + PKCE) + portal |
-| Hosted portal (sign-in UI) | `backend/src/authService/portal.ts` — one self-contained page; serves `/desktop/authorize`, `/verify-email`, `/reset-password` |
+| Auth service (Express) | `backend/src/authApp.ts` — mounts `modules/auth/auth.routes.ts` (signup/signin/verify/reset) + `modules/auth/desktopOAuth.routes.ts` (RFC 8252 + PKCE) + portal |
+| Hosted portal (sign-in UI) | `backend/src/modules/auth/portal/portal.ts` — one self-contained page; serves `/desktop/authorize`, `/verify-email`, `/reset-password` |
 | Vercel entry | `backend/api/index.ts`, `backend/vercel.json` (project root: `backend/`) |
 | Accounts DB | MongoDB Atlas — `CAPSCREEN_DB=mongodb` switches `lib/infra/db.ts` to Atlas (auth service only) |
 | Desktop client | `desktop/src/authFlow.ts` (protocol, Electron-free) + `desktop/src/session.ts` (keychain, restore, 14-day offline grace, refresh every 12 h) |
@@ -114,36 +114,57 @@ Build each OS on that OS (Next's traced `sharp` binary is platform-specific). Un
 
 ```
 backend/src/
-  index.ts                  — Express app (loopback, desktop-token gate), route mounts
-  routes/
-    assistantChat.ts        — POST /chat (+ /chat/runs/:id/resume): the one agent route, SSE
-    screen.ts               — POST /api/screen/explain (on-demand analyst narrative)
-    startups/               — /api/startups CRUD, CSVs, scoped chat, document search uploads
-    screening/              — POST /api/startups/:id/screen, delta, report, entity reviews
-    documents/              — IC memo, generated-document download, uploaded documents
-    projects/               — GET /projects (startups + their documents, CSVs, screenings)
-    tabularReview.ts        — grids, cell generation, grid chat
-    workflows.ts            — built-in + custom workflows, hide/unhide
-    portfolioMonitoring.ts  — portfolio grid sync, re-screen, digest, compare
-    aiControlCenter.ts      — /api/ai: providers, keys, roles, local models
-    desktopData.ts          — /api/desktop: settings, sanctions lists, backup/restore, audit export
-    auth.ts, desktopOAuth.ts— cloud auth service only (mounted by authService/app.ts)
-  lib/
+  index.ts                  — starts the desktop API (listen, startup checks, graceful shutdown)
+  app.ts                    — createApp(): helmet, CORS, desktop-token gate, requireAuth, error handler
+  routes.ts                 — the route table: every URL prefix → module router
+  authApp.ts, authServer.ts — cloud auth service (Vercel entry: backend/api/index.ts)
+  http/                     — asyncHandler, HttpError, errorHandler, currentUser, eventStream (SSE), body readers
+  middleware/               — desktopToken (per-launch token gate), requireAuth (local user + identity)
+  modules/<feature>/        — one folder per feature, same layers in each:
+      <feature>.routes.ts       paths + middleware → controller (no logic)
+      <feature>.controller.ts   read req, call service, send response (no DB)
+      <feature>.service.ts      business rules; throws HttpError (no req/res)
+      <feature>.repository.ts   mongoose queries (no rules)
+      <feature>.serializer.ts   record → API JSON
+    startups/               — /api/startups CRUD, screening summary; startupAccess.ts guards every /:id route
+    capTables/              — /api/startups/:id/csvs: upload, ingest, edit, preview
+    screening/              — POST /:id/screen, delta, report; POST /api/screen/explain
+    entityReviews/          — human dispositions per entity
+    assistant/              — POST /chat (+ /chat/runs/:id/resume): the agent, SSE (agentStream.ts shared with grid chat)
+    chats/                  — saved assistant chats; startup page transcript
+    documents/              — uploads, IC memos + generated-document downloads, RAG documents
+    workflows/              — built-ins (builtinWorkflows.ts, single source for agent + UI) + the user's own
+    portfolio/              — portfolio grid, background re-screen + digest (rescreen.service.ts), compare
+    tabularReviews/         — grids, grid chat; reviewStatusSync.service.ts keeps grid Status ↔ entity/portfolio decisions
+    screening/ also holds screeningDelta.service.ts (snapshots + what got worse); documents/ holds icMemo.service.ts
+    projects/, auditLogs/, files/, config/
+    aiControlCenter/        — /api/ai: providers, keys, roles, local models
+    desktop/                — /api/desktop: settings, sanctions lists, backup/restore, watch folders, audit export
+    auth/                   — cloud auth service only: accounts, sessions, desktop PKCE, portal
+  lib/                      — engines the services call: no Express, no direct model queries
+                              (database access goes through modules/*/…repository.ts)
     screening/              — runScreening, csvIngest, parseCapTable, graph, watchman, classify,
-                              ownershipExposure, explain, delta, preview, confidence
+                              ownershipExposure, explain, preview, confidence
     agent/                  — LangGraph harness (docs/AGENT_HARNESS.md): agentGraph, runTools
     tools/                  — ToolRegistry + the 13 agent tools (index.ts registers them)
     llm/                    — provider adapters, registry (roles agent/utility/embedding), controlCenter/
     chat/                   — system prompt assembly, @-mentions, project assets, payload validation
     rag/                    — parse, chunk, embed, retrieve, entity extraction
-    workflows/              — builtinWorkflows.ts (single source for agent + UI), workflowMemory.ts
+    tabular/                — grid column definitions, screening result → rows/cells, grid chat prompt
+    sample/                 — read-only sample workspace rules (visibility filters)
     infra/                  — db (SQLite via sqliteStore/), backup, folderWatch, fileStorage, settings, Watchman cache
   models/                   — mongoose schemas (screening/, chat/, documents/, rag/, tabular/, workflows/, audit/, auth/)
   types/screening.ts        — screening domain types (re-exported by the frontend)
-backend/test/               — node:test suites (CSV ingest, ownership math/rules, SQLite store, workflows)
+backend/test/               — node:test suites: engine (CSV ingest, ownership math/rules, SQLite store, workflows)
+                              and HTTP contracts (api.test.ts, authService.test.ts)
 ```
 
-### Agent chat (`routes/assistantChat.ts` + `lib/tools/`)
+**Adding an endpoint:** put it in the feature's module, not in `routes.ts` or `lib/`. Route → controller →
+service → repository; validation errors and not-founds are `throw badRequest(...)` / `throw notFound(...)` from
+`http/httpError.ts`, never `res.status(...)` in a service. Write audit entries with `recordAuditEvent`
+(`modules/auditLogs/auditLogs.service.ts`). Add a case to `test/api.test.ts`.
+
+### Agent chat (`modules/assistant/` + `lib/tools/`)
 
 One route serves the assistant, the startup page chat and (with approvals off) tabular grid chat. Tools:
 `update_plan`, `delegate_task`, `list_workflows`, `read_workflow`, `screen_cap_table`, `list_mentioned_startups`,
@@ -227,7 +248,7 @@ frontend/src/
 | Human approval for sensitive tools | ✅ | LangGraph `interrupt()` + `needsApproval` in `lib/tools/registry.ts`, `POST /chat/runs/:id/resume` |
 | Pluggable / local models | ✅ | `backend/src/lib/llm/providers/` |
 | Desktop app (Electron) | ✅ | `desktop/`, `docs/DESKTOP_PLAN.md` |
-| AI Control Center (BYO keys, local models) | ✅ | `/settings/ai`, `backend/src/routes/aiControlCenter.ts` |
+| AI Control Center (BYO keys, local models) | ✅ | `/settings/ai`, `backend/src/modules/aiControlCenter/` |
 | Persistent agent memory | ✅ seeded | `.claude/agent-memory/project/` |
 | Document RAG | ✅ local embeddings | `backend/src/lib/rag/` |
 | Chat-first UI shell | ✅ restored | `frontend/.../assistant/` |

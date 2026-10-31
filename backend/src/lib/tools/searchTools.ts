@@ -1,8 +1,6 @@
 import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
-import mongoose from "mongoose";
-import { RagDocument } from "../../models/rag/ragDocument";
-import { DocChunk } from "../../models/rag/docChunk";
+import * as documentsRepository from "../../modules/documents/documents.repository";
 import { retrieveRelevantChunks } from "../rag/retrieveChunks";
 import { extractEntitiesFromText } from "../rag/extractEntities";
 import { searchWatchman } from "../screening/watchman";
@@ -114,12 +112,7 @@ export const listStartupDocumentsTool: ToolDefinition = {
           "No startup workspace active. Open a startup page or pass startup_id.",
       };
     }
-    const docs = await RagDocument.find({
-      startupId: new mongoose.Types.ObjectId(sid),
-    })
-      .sort({ uploadedAt: -1 })
-      .limit(50)
-      .lean();
+    const docs = await documentsRepository.listRag(sid, 50);
     if (docs.length === 0) {
       return {
         content:
@@ -239,11 +232,7 @@ export const screenDocumentEntitiesTool: ToolDefinition = {
     }
 
     const sid = coalesceStartupId(args.startup_id, ctx.startupId);
-    const ragDoc = await RagDocument.findOne(
-      sid
-        ? { _id: docId, startupId: new mongoose.Types.ObjectId(sid) }
-        : { _id: docId },
-    ).lean();
+    const ragDoc = await documentsRepository.findRag(docId, sid ?? undefined);
     if (!ragDoc) {
       return {
         content: `Document ${docId} not found. Call list_startup_documents to get valid ids.`,
@@ -255,13 +244,7 @@ export const screenDocumentEntitiesTool: ToolDefinition = {
       };
     }
 
-    const chunks = await DocChunk.find({
-      documentId: new mongoose.Types.ObjectId(docId),
-    })
-      .sort({ chunkIndex: 1 })
-      .select("chunkText")
-      .lean();
-    let fullText = chunks.map((c) => c.chunkText).join("\n\n");
+    let fullText = (await documentsRepository.listChunkTexts(docId)).join("\n\n");
     if (fullText.length > 18000) fullText = fullText.slice(0, 18000) + "\n…[truncated]";
 
     const entities = await extractEntitiesFromText(fullText, ragDoc.filename);

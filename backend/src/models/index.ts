@@ -1,29 +1,6 @@
-export {
-  User,
-  type UserDocument,
-  hashPassword,
-  verifyPassword,
-  findUserByEmail,
-  findUserByEmailWithPassword,
-  findUserById,
-  createUser,
-  confirmUserEmail,
-  updateUserPassword,
-  serializePublicUser,
-} from "./auth/user";
-export {
-  EmailToken,
-  issueEmailToken,
-  consumeEmailToken,
-} from "./auth/emailToken";
-export {
-  AuthToken,
-  findValidRefreshToken,
-  generateRefreshTokenValue,
-  hashRefreshToken,
-  revokeRefreshToken,
-  saveRefreshToken,
-} from "./auth/authToken";
+export { User, type UserDocument } from "./auth/user";
+export { EmailToken, EMAIL_TOKEN_TYPES, type EmailTokenType } from "./auth/emailToken";
+export { AuthToken, TOKEN_TYPES } from "./auth/authToken";
 export { Startup } from "./screening/startup";
 export { CapTableCsv } from "./screening/capTableCsv";
 export { EntityReview } from "./screening/entityReview";
@@ -40,4 +17,4 @@ export { WorkflowModel } from "./workflows/workflow";
 export { HiddenWorkflowModel } from "./workflows/hiddenWorkflow";
 export { RagDocument, type IRagDocument, type RagDocumentStatus } from "./rag/ragDocument";
 export { DocChunk, type IDocChunk } from "./rag/docChunk";
-export { DesktopAuthCode, hashAuthCode } from "./auth/desktopAuthCode";
+export { DesktopAuthCode } from "./auth/desktopAuthCode";

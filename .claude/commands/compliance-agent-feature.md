@@ -25,7 +25,7 @@ Ask (or infer from `$ARGUMENTS`):
 
 If the tool needs new domain logic, add unit-testable functions under `backend/src/lib/` and a test in `backend/test/`.
 
-Prefer the tool's `routingHint` over editing the base prompt in `backend/src/routes/assistantChat.ts`.
+Prefer the tool's `routingHint` over editing the base prompt in `backend/src/modules/assistant/assistant.prompts.ts`.
 
 ---
 

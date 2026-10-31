@@ -1,5 +1,5 @@
-import { findAccessibleStartup } from "../sample/sampleAssets";
-import { CapTableCsv } from "../../models";
+import * as capTablesRepository from "../../modules/capTables/capTables.repository";
+import * as startupsRepository from "../../modules/startups/startups.repository";
 import type { ScreeningResult } from "../screening/runScreening";
 
 export type ProjectCsvMeta = {
@@ -50,15 +50,10 @@ export async function loadProjectAssets(
   projectId: string,
   userId: string,
 ): Promise<{ csvs: ProjectCsvMeta[]; screening_assets: ProjectScreeningAsset[] } | null> {
-  const startup = await findAccessibleStartup(projectId, userId);
+  const startup = await startupsRepository.findAccessible(projectId, userId);
   if (!startup) return null;
 
-  const csvDocs = await CapTableCsv.find({ startupId: projectId })
-    .sort({ uploadedAt: -1 })
-    .select(
-      "filename uploadedAt csvKind parseStatus rosterPurpose recordCount",
-    )
-    .lean();
+  const csvDocs = await capTablesRepository.listSummaries(projectId);
 
   const csvById = new Map(
     csvDocs.map((c) => [String((c as Record<string, unknown>)._id), c]),

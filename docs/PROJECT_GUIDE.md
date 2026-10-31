@@ -169,7 +169,7 @@ StartupScreenerPage  (frontend)
 
 There is **one agent route**, `POST /chat`, used by the assistant (`useAssistantChat`) and by the startup page chat (`useScreenerChat`, which sends `startup_id`).
 
-Each message may carry `workflow` and `focus` (the composer's Tools choice: `screen`, `review`, `ownership`, `research`, `memo`); the latest user message's focus adds a matching instruction to the system prompt (`FOCUS_INSTRUCTIONS` in `routes/assistantChat.ts`).
+Each message may carry `workflow` and `focus` (the composer's Tools choice: `screen`, `review`, `ownership`, `research`, `memo`); the latest user message's focus adds a matching instruction to the system prompt (`FOCUS_INSTRUCTIONS` in `assistant/`).
 
 ```
 POST /chat (SSE)  { messages, chat_id?, csvContent?, screeningResult?, startup_id?, attached_documents?, displayed_doc? }
@@ -192,7 +192,7 @@ Chat history is saved by the client: assistant chats with `PUT /api/chats/:id/me
 
 1. App listens on `127.0.0.1:<random>/callback`, creates a PKCE verifier/challenge (S256) and random `state`.
 2. Opens the browser at `<authUrl>/desktop/authorize?redirect_uri&state&code_challenge`.
-3. User signs in on the hosted portal (`authService/portal.ts`); the portal calls `POST /api/auth/desktop/authorize-code` with its access token and receives a one-time code (only loopback HTTP redirect URIs are accepted).
+3. User signs in on the hosted portal (`modules/auth/portal/portal.ts`); the portal calls `POST /api/auth/desktop/authorize-code` with its access token and receives a one-time code (only loopback HTTP redirect URIs are accepted).
 4. Browser lands on the loopback callback with `?code&state`; the app checks `state` and exchanges `code + code_verifier` at `POST /api/auth/desktop/token`.
 5. Session is sealed with `safeStorage` into `<userData>/vault/session.sealed`; a non-secret `identity.json` is written for the backend's audit attribution. Refresh every 12 h; revoke on sign-out.
 
@@ -251,91 +251,118 @@ Package name `vc-screener-backend`, license AGPL-3.0-only, Node ≥ 22.12 (needs
 
 | File | Role |
 |---|---|
-| `src/index.ts` | The local API. helmet (no CSP), CORS (allows `FRONTEND_URL`, `capscreen://app`, any loopback origin), `desktopToken` gate, cookie parser, 10 MB JSON body limit, all routers, `/health`, 404 and error handlers. Listens on `HOST` (default `127.0.0.1`). On start: opens the DB, logs RAG/web-search warnings, prints the LLM binding, pings the agent model (`validateLlmLive`), pings Watchman, starts the re-screen scheduler and folder watcher. Graceful shutdown on SIGTERM/SIGINT with a 10 s force-exit. |
+| `src/app.ts` | `createApp()`: the local API. helmet (no CSP), CORS (allows `FRONTEND_URL`, `capscreen://app`, any loopback origin), `desktopToken` gate, cookie parser, 10 MB JSON body limit, `requireAuth`, `connectDatabase`, the route table, 404 and error handlers. Tests serve it on a free port. |
+| `src/routes.ts` | The route table: every URL prefix and the module router behind it. All `/api/startups/:id/...` routes sit behind `requireStartupAccess`. |
+| `src/index.ts` | Starts `createApp()`. Listens on `HOST` (default `127.0.0.1`). On start: opens the DB, logs RAG/web-search warnings, prints the LLM binding, pings the agent model (`validateLlmLive`), pings Watchman, starts the re-screen scheduler and folder watcher. Graceful shutdown on SIGTERM/SIGINT with a 10 s force-exit. |
 | `src/loadEnv.ts` | Loads root `.env`, `.env.local`, then `backend/.env`, `backend/.env.local` **only when not launched by Electron** (`CAPSCREEN_DESKTOP_TOKEN` unset). |
 | `src/authServer.ts` | Runs the cloud auth service locally (`AUTH_PORT`, default 4100). |
-| `src/authService/app.ts` | `createAuthApp()`: logs JWT/email configuration warnings, strict CSP, `trust proxy 1`, 100 KB body limit, mounts `/api/auth/desktop` and `/api/auth`, serves the portal page at `/`, `/signin`, `/desktop/authorize`, `/verify-email`, `/reset-password`. |
-| `src/authService/portal.ts` | `portalHtml()`: one self-contained HTML page (inline CSS/JS, light/dark) that drives sign-in, sign-up, verify, reset and the desktop hand-off. |
-| `src/authService/logo.ts` | Inline brand SVG for the portal. |
+| `src/authApp.ts` | `createAuthApp()`: logs JWT/email configuration warnings, strict CSP, `trust proxy 1`, 100 KB body limit, `connectDatabase` on `/api/auth`, mounts `/api/auth/desktop` and `/api/auth`, 404 and error handlers, serves the portal page at `/`, `/signin`, `/desktop/authorize`, `/verify-email`, `/reset-password`. |
+| `src/modules/auth/portal/portal.ts` | `portalHtml()`: one self-contained HTML page (inline CSS/JS, light/dark) that drives sign-in, sign-up, verify, reset and the desktop hand-off. |
+| `src/modules/auth/portal/logo.ts` | Inline brand SVG for the portal. |
 | `api/index.ts` | Vercel serverless entry: `export default createAuthApp()`. |
 | `vercel.json` / `.vercelignore` | Project root `backend/`; no build step; all paths rewrite to `/api`; 30 s max duration. Keeps keys, DB files, scripts, sample data and docs out of uploads. |
 
-### 6.3 Middleware (`src/middleware/`)
+### 6.3 Layers, HTTP helpers and middleware
+
+Each feature lives in `src/modules/<feature>/` and is split the same way:
+
+| File | Job | Must not |
+|---|---|---|
+| `<feature>.routes.ts` | Express router: paths, middleware (rate limits, uploads, access guards), `asyncHandler(controller.fn)` | contain logic |
+| `<feature>.controller.ts` | Read `req` (body, params, `currentUser(res)`), call the service, choose status/headers, serialize | touch the database |
+| `<feature>.service.ts` | Business rules; throws `HttpError` (`badRequest`, `notFound`, …) for expected failures | read `req`/`res` (SSE services receive the response or an `EventStream`) |
+| `<feature>.repository.ts` | Mongoose queries for that feature's collections | hold rules |
+| `<feature>.serializer.ts` | Database record → API JSON | |
+| `<feature>.validation.ts` / `.prompts.ts` | Request parsing / LLM prompt text, where a module has enough to warrant it | |
+
+Modules: `auth` (cloud auth service only), `startups`, `capTables`, `screening`, `entityReviews`, `chats`, `assistant`, `documents`, `projects`, `tabularReviews`, `workflows`, `portfolio`, `auditLogs`, `aiControlCenter`, `desktop`, `config`, `files`. Engines that are not HTTP-specific (screening, RAG, LLM providers, the agent and its tools) stay in `src/lib/`; services call them.
+
+`src/http/` — shared by every module:
+
+| File | What it does |
+|---|---|
+| `asyncHandler.ts` | Wraps async handlers so a rejected promise reaches the error handler (Express 4 doesn't do this). |
+| `httpError.ts` | `HttpError(status, detail, extra)` plus `badRequest` / `unauthorized` / `forbidden` / `notFound` / `conflict`. |
+| `errorHandler.ts` | `notFoundHandler` and `errorHandler`: `HttpError` → `{ detail, ...extra }`; anything else → 500 (message hidden in production). |
+| `currentUser.ts` | `currentUser(res)` → `{ userId, userEmail }` set by `requireAuth` / `requireJwt`. |
+| `eventStream.ts` | `openEventStream(res)`: SSE headers, `send`, `done` (`[DONE]`), and an abort signal for client disconnects. |
+| `connectDatabase.ts` | Opens the database once before routes run. |
+| `body.ts` | `asBody`, `str`, `optionalStr` for untyped JSON bodies. |
+
+`src/middleware/`:
 
 | File | What it does |
 |---|---|
 | `desktopToken.ts` | If `CAPSCREEN_DESKTOP_TOKEN` is set, every request (except `OPTIONS`, `/health`, `/api/files/*`) must carry `x-capscreen-token` equal to it (constant-time compare), else 403. |
 | `requireAuth.ts` | Desktop single-user auth: `res.locals.userId = "local-user"` always; `userEmail`/`userName` from `<data>/identity.json` (cached by mtime) or `you@capscreen.local`. Data ownership stays `local-user` so records survive a different person signing in. |
-| `requireJwt.ts` | Auth service only: verifies an RS256 `Authorization: Bearer` access token and loads the user. |
-| `userIdentity.ts` | `authIdentityOr500()` helper that returns `{userId, userEmail}` or sends 500. |
 
 ### 6.4 HTTP API (every endpoint)
 
-Mount prefixes come from `src/index.ts`. All routes use `requireAuth` (local user).
+Mount prefixes come from `src/routes.ts`. All routes use `requireAuth` (local user). The file column names the module under `src/modules/`.
 
 **Chat and narratives**
 
 | Method & path | File | Purpose |
 |---|---|---|
-| `POST /chat` | `routes/assistantChat.ts` | The agent, SSE. Used by the assistant and the startup page chat (`startup_id`). Forces `screen_cap_table` on a first CSV turn; approvals on. |
-| `POST /chat/runs/:runId/resume` | `routes/assistantChat.ts` | Allow/Deny a paused tool call; writes an `agent_tool_approval` audit entry and streams the rest. |
-| `POST /chat/create` | `routes/assistantChat.ts` | Returns a new random chat id (sidebar helper). |
-| `POST /api/screen/explain` | `routes/screen.ts` | On-demand analyst narrative for one entity (`explainMatch`). |
+| `POST /chat` | `assistant/` | The agent, SSE. Used by the assistant and the startup page chat (`startup_id`). Forces `screen_cap_table` on a first CSV turn; approvals on. |
+| `POST /chat/runs/:runId/resume` | `assistant/` | Allow/Deny a paused tool call; writes an `agent_tool_approval` audit entry and streams the rest. |
+| `POST /chat/create` | `assistant/` | Returns a new random chat id (sidebar helper). |
+| `POST /api/screen/explain` | `screening/` | On-demand analyst narrative for one entity (`explainMatch`). |
 
-**Startups** (`routes/startups/index.ts` composes sub-routers; `:id` is guarded by `requireStartupOwner`)
+**Startups** (composed in `src/routes.ts`; every `/:id` route is guarded by `startups/startupAccess.ts` → `requireStartupAccess`, 404 for unknown startups)
 
 | Method & path | File | Purpose |
 |---|---|---|
-| `GET /api/startups/screening-summary` | `routes/portfolio/startupAliases.ts` | Portfolio summary rows |
-| `POST /api/startups/rescreen-all` | `routes/portfolio/startupAliases.ts` | Re-screen every startup now |
-| `POST /api/startups/analyze-csv` | `routes/startups/csvs.ts` | Preview a CSV without a startup |
-| `GET /api/startups` · `POST /api/startups` | `routes/startups/crud.ts` | List / create |
-| `GET/PATCH/DELETE /api/startups/:id` | `routes/startups/crud.ts` | Read / rename / soft-delete (sample startups too) |
-| `GET /api/startups/:id/csvs` | `routes/startups/csvs.ts` | List uploaded CSVs |
-| `POST /api/startups/:id/csvs/analyze` | `routes/startups/csvs.ts` | Preview (ingest result + graph stats + ETA) |
-| `POST /api/startups/:id/csvs` | `routes/startups/csvs.ts` | Save a CSV (runs ingest, detects roster purpose) |
-| `PATCH/DELETE /api/startups/:id/csvs/:csvId` | `routes/startups/csvs.ts` | Edit content / soft-delete |
-| `POST /api/startups/:id/screen` | `routes/screening/startupRoutes.ts` | Screen a stored CSV (`purpose`: cap_table / co_investor / vendor), save result, snapshot, sync portfolio grid, audit |
-| `GET /api/startups/:id/screening-delta` | `routes/screening/startupRoutes.ts` | What got worse since the previous run |
-| `GET /api/startups/:id/screening-report` | `routes/screening/startupRoutes.ts` | CSV export of the result |
-| `GET/POST /api/startups/:id/entity-reviews` | `routes/screening/entityReviews.ts` | Human dispositions per entity (pending / cleared / escalated / blocked) |
-| `POST /api/startups/:id/ic-memo` | `routes/documents/startupIcMemo.ts` | Generate an IC compliance memo |
+| `GET /api/startups/screening-summary` | `startups/` | Portfolio summary rows |
+| `POST /api/startups/rescreen-all` | `startups/` | Re-screen every startup now |
+| `POST /api/startups/analyze-csv` | `capTables/` | Preview a CSV without a startup |
+| `GET /api/startups` · `POST /api/startups` | `startups/` | List / create |
+| `GET/PATCH/DELETE /api/startups/:id` | `startups/` | Read / rename / soft-delete (sample startups too) |
+| `GET /api/startups/:id/csvs` | `capTables/` | List uploaded CSVs |
+| `POST /api/startups/:id/csvs/analyze` | `capTables/` | Preview (ingest result + graph stats + ETA) |
+| `POST /api/startups/:id/csvs` | `capTables/` | Save a CSV (runs ingest, detects roster purpose) |
+| `PATCH/DELETE /api/startups/:id/csvs/:csvId` | `capTables/` | Edit content / soft-delete |
+| `POST /api/startups/:id/screen` | `screening/` | Screen a stored CSV (`purpose`: cap_table / co_investor / vendor), save result, snapshot, sync portfolio grid, audit |
+| `GET /api/startups/:id/screening-delta` | `screening/` | What got worse since the previous run |
+| `GET /api/startups/:id/screening-report` | `screening/` | CSV export of the result |
+| `GET/POST /api/startups/:id/entity-reviews` | `entityReviews/` | Human dispositions per entity (pending / cleared / escalated / blocked) |
+| `POST /api/startups/:id/ic-memo` | `documents/` | Generate an IC compliance memo |
 | `GET /api/startups/:id/ic-memo` · `/ic-memo/latest` · `/ic-memo/:docId` | same | List / latest / one memo |
 | `GET /api/startups/:id/documents/:docId/download` | same | Download a generated document |
-| `GET/PUT /api/startups/:id/chat` | `routes/startups/chat.ts` | Load / save the startup page chat |
-| `GET/POST /api/startups/:id/rag-documents` | `routes/startups/ragDocuments.ts` | List / upload PDF/DOCX/TXT/CSV for document search (parse, chunk, embed async) |
+| `GET/PUT /api/startups/:id/chat` | `chats/` | Load / save the startup page chat |
+| `GET/POST /api/startups/:id/rag-documents` | `documents/` | List / upload PDF/DOCX/TXT/CSV for document search (parse, chunk, embed async) |
 | `DELETE /api/startups/:id/rag-documents/:docId` | same | Remove document + chunks |
 
-`routes/startups/middleware.ts` provides auth, `connectDbMiddleware`, `requireStartupOwner`, `rejectSampleWrite`; `routes/startups/serializers.ts` shapes startup/CSV JSON.
+`startups/startupAccess.ts` provides `requireStartupAccess` (loads `res.locals.startup`) and `requireWritableStartup` (403 for shared samples on upload and screen).
 
 **Projects and documents** — "projects" are the same `Startup` records with their uploaded documents, CSVs and screenings attached.
 
 | Method & path | File | Purpose |
 |---|---|---|
-| `GET /projects` · `GET /projects/:projectId` | `routes/projects/index.ts` | Startups as projects (detail includes `StoredDocument`s, CSVs and screening assets) |
-| `GET/POST /single-documents` | `routes/documents/singleDocuments.ts` | List / upload standalone documents |
+| `GET /projects` · `GET /projects/:projectId` | `projects/` | Startups as projects (detail includes `StoredDocument`s, CSVs and screening assets) |
+| `GET/POST /single-documents` | `documents/` | List / upload standalone documents |
 | `GET /single-documents/:docId/url` · `DELETE /single-documents/:docId` | same | Signed download URL / delete |
-| `POST /projects/:projectId/documents` | same (`projectDocumentsRouter`) | Upload into a project |
-| `GET /api/documents/:docId/view` · `/download` | `routes/documents/startupDocumentDownload.ts` | View / download a generated document (Markdown → Word-compatible HTML) |
-| `GET /api/files/:token` | `lib/infra/fileStorage.ts` | Serve a file for a signed, unexpired HMAC token (exempt from the desktop token) |
+| `POST /projects/:projectId/documents` | `documents/` (`projectDocumentsRouter`) | Upload into a project |
+| `GET /api/documents/:docId/view` · `/download` | `documents/` | View / download a generated document (Markdown → Word-compatible HTML) |
+| `GET /api/files/:token` | `files/` (token signing in `lib/infra/fileStorage.ts`) | Serve a file for a signed, unexpired HMAC token (exempt from the desktop token) |
 
-**Chats** (`routes/chats.ts`): `GET/POST /api/chats`, `GET/PATCH/DELETE /api/chats/:id`, `PUT /api/chats/:id/messages`, `POST /api/chats/:id/generate-title`.
+**Chats** (`chats/`): `GET/POST /api/chats`, `GET/PATCH/DELETE /api/chats/:id`, `PUT /api/chats/:id/messages`, `POST /api/chats/:id/generate-title`.
 
-**Tabular review** (`routes/tabularReview.ts`): `GET/POST /tabular-review`, `POST /tabular-review/prompt` (LLM writes a column prompt), `GET/PATCH/DELETE /tabular-review/:id`, `POST /:id/generate` (SSE; screening-backed reviews sync from startup data instead of calling the LLM), `POST /:id/regenerate-cell`, `POST /:id/clear-cells`, `GET /:id/chats`, `GET /:id/chats/:chatId/messages`, `DELETE /:id/chats/:chatId`, `POST /:id/chat` (agent chat with the grid as context, approvals off).
+**Tabular review** (`tabularReviews/`): `GET/POST /tabular-review`, `POST /tabular-review/prompt` (placeholder column prompt), `GET/PATCH/DELETE /tabular-review/:id`, `POST /:id/generate` (SSE; screening-backed reviews sync from startup data instead of calling the LLM), `POST /:id/regenerate-cell`, `POST /:id/clear-cells`, `GET /:id/chats`, `GET /:id/chats/:chatId/messages`, `DELETE /:id/chats/:chatId`, `POST /:id/chat` (agent chat with the grid as context, approvals off).
 
-**Workflows** (`routes/workflows.ts`): `GET /workflows` (built-in followed by custom, `?type=`), `POST /workflows`, `GET/PUT/PATCH/DELETE /workflows/:workflowId` (built-ins readable, not editable), `GET/POST /workflows/hidden`, `DELETE /workflows/hidden/:workflowId`.
+**Workflows** (`workflows/`; `workflows.service.ts` is also what the agent's workflow tools use): `GET /workflows` (built-in followed by custom, `?type=`), `POST /workflows`, `GET/PUT/PATCH/DELETE /workflows/:workflowId` (built-ins readable, not editable), `GET/POST /workflows/hidden`, `DELETE /workflows/hidden/:workflowId`.
 
-**Portfolio** (`routes/portfolioMonitoring.ts`, `/api/portfolio`): `POST /sync`, `GET /review`, `POST /rescreen`, `GET /digest`, `POST /startups/:startupId/entity-review`, `GET /compare`.
+**Portfolio** (`portfolio/`, `/api/portfolio`): `POST /sync`, `GET /review`, `POST /rescreen`, `GET /digest`, `POST /startups/:startupId/entity-review`, `GET /compare`.
 
-**Audit** (`routes/auditLogs.ts`): `GET /api/audit-logs?startupId=`, `POST /api/audit-logs`, `GET /api/audit-logs/export`.
+**Audit** (`auditLogs/`; other modules write entries through `recordAuditEvent`): `GET /api/audit-logs?startupId=`, `POST /api/audit-logs`, `GET /api/audit-logs/export`.
 
-**Desktop data** (`routes/desktopData.ts`, `/api/desktop`): `GET/PUT /settings` (background screening, sanctions lists and screening thresholds; `GET` also returns `screeningDefaults`, and `PUT {screening: null}` resets the thresholds; the shell watches `settings.json` and reloads Watchman when the lists change), `GET /sanctions` (list info, online/offline mode, cached list times), `POST /backup` (encrypted `.capscreen-backup`), `POST /restore` (stage, then exit 75 so the shell restarts the backend), `GET/PUT /watch-folders/:startupId`, `GET /audit-export` (hash-chained export).
+**Desktop data** (`desktop/`, `/api/desktop`): `GET/PUT /settings` (background screening, sanctions lists and screening thresholds; `GET` also returns `screeningDefaults`, and `PUT {screening: null}` resets the thresholds; the shell watches `settings.json` and reloads Watchman when the lists change), `GET /sanctions` (list info, online/offline mode, cached list times), `POST /backup` (encrypted `.capscreen-backup`), `POST /restore` (stage, then exit 75 so the shell restarts the backend), `GET/PUT /watch-folders/:startupId`, `GET /audit-export` (hash-chained export).
 
-**AI Control Center** (`routes/aiControlCenter.ts`, `/api/ai`): `GET /state`, `GET /health` (`?fresh=1`), `PUT/DELETE /providers/:id`, `PUT/DELETE /providers/:id/key` (verified against the provider unless `skipVerify`), `GET /providers/:id/models`, `POST /providers/:id/test`, `POST /probe-tools`, `PUT /roles`, `PUT /policy` (local-only), `GET /local`, `POST /local/start`, `POST /local/pull` (SSE), `DELETE /local/models/:name`, `POST /quick-setup/local`, `POST /quick-setup/cloud`.
+**AI Control Center** (`aiControlCenter/`, `/api/ai`): `GET /state`, `GET /health` (`?fresh=1`), `PUT/DELETE /providers/:id`, `PUT/DELETE /providers/:id/key` (verified against the provider unless `skipVerify`), `GET /providers/:id/models`, `POST /providers/:id/test`, `POST /probe-tools`, `PUT /roles`, `PUT /policy` (local-only), `GET /local`, `POST /local/start`, `POST /local/pull` (SSE), `DELETE /local/models/:name`, `POST /quick-setup/local`, `POST /quick-setup/cloud`.
 
-**Misc**: `GET /api/config` (LLM role summary without keys, thresholds, `ragEnabled`, `webSearchEnabled`), `GET /health`.
+**Misc**: `GET /api/config` (`config/`) (LLM role summary without keys, thresholds, `ragEnabled`, `webSearchEnabled`), `GET /health`.
 
-**Auth service only** (mounted by `authService/app.ts`, not the desktop backend): `routes/auth.ts` → `/api/auth/signup`, `/signin`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password`, `/signout`, `/refresh-tokens`, `GET /me` (rate-limited); `routes/desktopOAuth.ts` → `/api/auth/desktop/authorize-code`, `/token`, `/refresh`, `/revoke`.
+**Auth service only** (mounted by `authApp.ts`, not the desktop backend): `auth/auth.routes.ts` → `/api/auth/signup`, `/signin`, `/verify-email`, `/resend-verification`, `/forgot-password`, `/reset-password`, `/signout`, `/refresh-tokens`, `GET /me` (rate-limited); `auth/desktopOAuth.routes.ts` → `/api/auth/desktop/authorize-code`, `/token`, `/refresh`, `/revoke`.
 
 ### 6.5 `src/lib/` module map (every file)
 
@@ -355,7 +382,6 @@ Mount prefixes come from `src/index.ts`. All routes use `requireAuth` (local use
 | `ownershipExposure.ts` | OFAC 50% rule (recursive, cycle-safe), `ofac_50`/`ubo_25` flags, risk escalation, exposure statement, max exposure, portfolio summary line |
 | `explain.ts` | `explainMatch`: 3–4 sentence analyst note (who / why / confidence / next step) via the utility model; data-residency and error fallbacks |
 | `screeningConfidence.ts` | 0–100 deterministic score (persons weigh 2, companies 1; clear 1, review 0.5, flagged 0) |
-| `screeningDelta.ts` | Snapshots (`entityRisks` map) and the diff of entities that worsened |
 | `screeningPreview.ts` | Pre-screen preview: entity/edge counts, ownership depth, circular ownership, ETA (`max(3, ceil(n·0.5)+2)` s) |
 | `screeningProgress.ts` | Progress stages `parse / graph / screen / exposure / explain` and labels |
 | `screeningLog.ts` | `[screening]` console logging (off with `SCREENING_LOG=0`) |
@@ -396,13 +422,11 @@ Mount prefixes come from `src/index.ts`. All routes use `requireAuth` (local use
 | `retrieveChunks.ts` | `$vectorSearch` (in-process cosine) with keyword fallback, top-k `RAG_TOP_K` (default 6) |
 | `extractEntities.ts` | LLM extraction of named persons/companies (≤ 80) for `screen_document_entities` |
 
-**`lib/documents/`**: `generateIcMemo.ts` (facts block + LLM memo), `generateScreeningAnalysis.ts`, `icMemoDocument.ts` (persist/list `StartupDocument`), `markdownToWordHtml.ts`.
+**`lib/documents/`**: `generateIcMemo.ts` (facts block + LLM memo), `generateScreeningAnalysis.ts`, `markdownToWordHtml.ts`. Saving and listing them is `modules/documents/icMemo.service.ts`.
 
-**`lib/portfolio/`**: `portfolioGrid.ts` (entity-screening reviews, portfolio monitoring review sync, review statuses → grid), `portfolioCompare.ts` (compare startups, shared ultimate owners), `rescreenScheduler.ts` (re-screen all startups, `ScreeningDigest`, optional `DIGEST_WEBHOOK_URL` POST, checks every 15 min whether a run is due).
+**Moved into modules** (they hold business rules and query the database): `modules/portfolio/portfolioGrid.service.ts` (entity-screening grids, portfolio monitoring grid sync, review statuses → grid), `portfolioCompare.service.ts` (compare startups, shared ultimate owners), `rescreen.service.ts` (re-screen all startups, `ScreeningDigest`, optional `DIGEST_WEBHOOK_URL` POST, checks every 15 min whether a run is due); `modules/screening/screeningDelta.service.ts` (snapshots and the diff of entities that worsened); `modules/tabularReviews/reviewStatusSync.service.ts` (a grid Status edit ↔ `EntityReview` / startup portfolio status, plus the audit entry; Status column indexes come from the column definitions); `modules/workflows/` (`builtinWorkflows.ts`, the 12 built-ins and single source for agent and UI; `workflows.service.ts`: built-ins + own, CRUD, hide/unhide, `buildWorkflowStore` for the agent).
 
-**`lib/tabular/`**: `tabularScreening.ts` (`PORTFOLIO_COLUMNS`, `ENTITY_SCREENING_COLUMNS`, risk → flag colour, result → rows/cells), `reviewStatusSync.ts` (Status column writes back to `EntityReview` / startup status), `buildTabularChatPrompt.ts` (grid as Markdown for chat).
-
-**`lib/workflows/`**: `builtinWorkflows.ts` (the 12 built-ins, single source for agent and UI), `workflowMemory.ts` (`listWorkflows` = built-ins + own, CRUD for own workflows, hide/unhide, `buildWorkflowStore` for the agent).
+**`lib/tabular/`**: `tabularScreening.ts` (`PORTFOLIO_COLUMNS`, `ENTITY_SCREENING_COLUMNS`, risk → flag colour, result → rows/cells), `buildTabularChatPrompt.ts` (grid as Markdown for chat).
 
 **`lib/infra/`**
 
@@ -421,7 +445,7 @@ Mount prefixes come from `src/index.ts`. All routes use `requireAuth` (local use
 | `requestDedup.ts` | Share one in-flight promise per key |
 | `webSearchConfig.ts` | Tavily key presence/sanity |
 
-**`lib/auth/`** (auth service): `config.ts` (JWT keys, expirations, `logAuthStartupWarnings`), `jwt.ts`, `tokens.ts`, `cookies.ts`, `loginLockout.ts` (5 failures → 15 min), `validate.ts`, `email.ts` + `emailConfig.ts` + `emailTemplates.ts` (Resend: verification, password reset).
+**`modules/auth/`** (auth service only): `auth.routes/controller/service.ts` (accounts, cookie sessions, email links; 5 failed sign-ins → 15 min lock), `desktopOAuth.routes/controller/service/validation.ts` (RFC 8252 + PKCE), `user.repository.ts` and `token.repository.ts` (users; hashed refresh tokens, email-link tokens and desktop codes), `session.ts` (issues access + refresh tokens), `config.ts` (JWT keys, expirations, `logAuthStartupWarnings`), `jwt.ts`, `password.ts`, `cookies.ts`, `requireJwt.ts`, `auth.validation.ts`, `rateLimits.ts`, `email.ts` + `emailConfig.ts` + `emailTemplates.ts` (Resend: verification, password reset), `portal/`.
 
 **`lib/shared/`**: `promptDelimiters.ts` (`wrapEntityName`, `wrapCsvData`, `wrapUntrustedText`, `UNTRUSTED_DATA_PROMPT_GUARD`), `dataResidency.ts` (`DATA_RESIDENCY` blocks PII to remote LLMs), `startupId.ts` (ObjectId validation/coalescing).
 
@@ -538,8 +562,8 @@ For review/flagged entities only, in parallel. The prompt includes the untrusted
 
 ### 7.6 Monitoring
 
-- **Snapshots and delta** (`screeningDelta.ts`): each run stores `entityRisks`; the delta lists entities that got worse. Shown by `ScreeningDeltaBanner`.
-- **Background re-screening** (`rescreenScheduler.ts`): every 15 min, if enabled and the last digest is older than `intervalHours` (default 24), re-screens every startup's latest cap table / co-investor / vendor CSV, writes a `ScreeningDigest`, optionally POSTs to `DIGEST_WEBHOOK_URL`. The desktop `notifications.ts` poller raises a native notification when a new digest has new flags or review items.
+- **Snapshots and delta** (`modules/screening/screeningDelta.service.ts`): each run stores `entityRisks`; the delta lists entities that got worse. Shown by `ScreeningDeltaBanner`.
+- **Background re-screening** (`modules/portfolio/rescreen.service.ts`): every 15 min, if enabled and the last digest is older than `intervalHours` (default 24), re-screens every startup's latest cap table / co-investor / vendor CSV, writes a `ScreeningDigest`, optionally POSTs to `DIGEST_WEBHOOK_URL`. The desktop `notifications.ts` poller raises a native notification when a new digest has new flags or review items.
 
 ---
 
@@ -588,7 +612,7 @@ Approvals are on for `POST /chat` (assistant and startup page). Tabular grid cha
 
 ### 8.4 Prompts and guards
 
-- The base prompt in `routes/assistantChat.ts`: Markdown output, never conclude guilt, never invent data, aggregate counts only after a screen (the side panel shows details), numbered lists only for 2–5 mutually exclusive choices (rendered as chips by `parseMessageOptions.ts`), cite web results, read the workflow first when one is selected.
+- The base prompt in `backend/src/modules/assistant/assistant.prompts.ts`: Markdown output, never conclude guilt, never invent data, aggregate counts only after a screen (the side panel shows details), numbered lists only for 2–5 mutually exclusive choices (rendered as chips by `parseMessageOptions.ts`), cite web results, read the workflow first when one is selected.
 - `buildSystemPrompt` adds tool routing hints, `UNTRUSTED_DATA_PROMPT_GUARD`, and wraps CSV content and entity names in XML delimiters to blunt prompt injection from uploaded data.
 
 ---
@@ -659,7 +683,7 @@ restore-pending.json, restore-staging/, tmp/   backup restore staging
 
 ## 11. Cloud auth service
 
-- Code lives in the backend package (`src/authService/`, `routes/auth.ts`, `routes/desktopOAuth.ts`, `lib/auth/`, auth models) and deploys to Vercel with `backend/` as project root.
+- Code lives in the backend package (`src/authApp.ts`, `src/modules/auth/`, auth models) and deploys to Vercel with `backend/` as project root.
 - Storage: MongoDB Atlas via `CAPSCREEN_DB=mongodb` + `MONGODB_URI`. It stores **accounts only**.
 - Features: signup (Resend email verification; auto-confirmed without `RESEND_API_KEY`), sign-in with lockout, verify, resend, forgot/reset password, signout, refresh-token rotation, `/me`, and the desktop OAuth endpoints. It logs missing JWT keys / email configuration at startup.
 - Desktop refresh tokens default to 30 days (`DESKTOP_REFRESH_TOKEN_EXPIRATION_DAYS`).
@@ -814,7 +838,7 @@ Sidebar (`AppSidebar.tsx`): logo and collapse button; **New chat** (⇧⌘O / Ct
 
 ### 14.1 Built-in workflows
 
-Defined once in `backend/src/lib/workflows/builtinWorkflows.ts`, served to the UI by `GET /workflows` (with `is_system: true`) and to the agent by `read_workflow`.
+Defined once in `backend/src/modules/workflows/builtinWorkflows.ts`, served to the UI by `GET /workflows` (with `is_system: true`) and to the agent by `read_workflow`.
 
 | Id | Title | Type |
 |---|---|---|
@@ -922,17 +946,18 @@ Dev only: `electron` 43.7.9, `electron-builder` 26.17.0, `esbuild` 0.25.4, `cros
 ### 17.4 Internal module dependencies
 
 ```
-routes/assistantChat.ts, routes/tabularReview.ts
+modules/assistant, modules/tabularReviews (agentStream.ts)
    └─▶ lib/agent/agentGraph ─▶ lib/llm/providers (getLlm) ─▶ controlCenter/store
    │                         └▶ lib/agent/runTools ─▶ lib/tools/registry ─▶ lib/tools/*
-   └─▶ lib/chat/buildSystemPrompt, startupMentions, projectAssets; lib/workflows/workflowMemory
+   └─▶ lib/chat/buildSystemPrompt, startupMentions, projectAssets; modules/workflows/workflows.service
 lib/tools/screenCapTable ─▶ lib/screening/runScreening
 lib/screening/runScreening ─▶ csvIngest (─▶ parseCapTable, inferCsvSchema ─▶ llm/complete)
                            ─▶ graph ─▶ watchman (─▶ infra/cache, requestDedup)
                            ─▶ classify ─▶ ownershipExposure ─▶ explain (─▶ llm/complete, shared/dataResidency)
+lib/tools/*, lib/rag/*, lib/chat/* ─▶ modules/*/…repository (no direct model access)
 lib/tools/searchTools ─▶ lib/rag/* ; lib/tools/generateDocumentTool ─▶ documentTypes ─▶ lib/documents/*
-lib/portfolio/rescreenScheduler ─▶ runScreening, screeningDelta, portfolioGrid ─▶ lib/tabular/*
-every route ─▶ models/* ─▶ mongoose ─▶ lib/infra/db ─▶ sqliteStore (or MongoDB for auth)
+modules/portfolio/rescreen.service ─▶ runScreening, screening/screeningDelta.service, portfolioGrid.service ─▶ lib/tabular/*
+routes ─▶ controller ─▶ service ─▶ repository ─▶ models/* ─▶ mongoose ─▶ lib/infra/db ─▶ sqliteStore (or MongoDB for auth)
 
 desktop/main ─▶ sidecars (Watchman, backend, UI) ─▶ protocol (proxy + token)
              ─▶ vault, session ─▶ authFlow ─▶ auth service (cloud)
@@ -1078,9 +1103,9 @@ pnpm --filter vc-screener-backend run generate:jwt-keys
 1. `README.md`, then sections 1 and 3 of this guide.
 2. `backend/sample-data/sample-cap-table.csv` + `DEMO.md`, and `backend/test/ownership.test.ts`, which states the expected numbers.
 3. The engine: `types/screening.ts` → `lib/screening/runScreening.ts` → `csvIngest.ts` → `graph.ts` → `watchman.ts` → `classify.ts` → `ownershipExposure.ts` → `explain.ts`.
-4. The API around it: `src/index.ts` → `routes/startups/index.ts` → `routes/screening/startupRoutes.ts`.
-5. The agent: `docs/AGENT_HARNESS.md` → `lib/agent/agentGraph.ts` → `lib/tools/index.ts` → `routes/assistantChat.ts`.
-6. Models: `lib/llm/providers/registry.ts` → `controlCenter/store.ts` → `routes/aiControlCenter.ts`.
+4. The API around it: `src/app.ts` → `src/routes.ts` → `modules/screening/` (routes → controller → service).
+5. The agent: `docs/AGENT_HARNESS.md` → `lib/agent/agentGraph.ts` → `lib/tools/index.ts` → `modules/assistant/` (`assistant.service.ts`, `agentStream.ts`).
+6. Models: `lib/llm/providers/registry.ts` → `controlCenter/store.ts` → `modules/aiControlCenter/aiControlCenter.service.ts`.
 7. Storage: `lib/infra/db.ts` → `sqliteStore/store.ts` → `test/sqliteStore.test.ts`.
 8. Desktop: `docs/DESKTOP_PLAN.md` → `desktop/src/main.ts` → `sidecars.ts` → `protocol.ts` → `session.ts`/`authFlow.ts`.
 9. UI: `app/(pages)/layout.tsx` → `startups/StartupScreenerPage.tsx` → `screen/ScreeningResultsPanel.tsx` + `OwnershipGraph.tsx` → `hooks/useScreenerChat.ts` → `hooks/useAssistantChat.ts`.

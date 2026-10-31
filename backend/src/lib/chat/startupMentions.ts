@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
-import { connectDb } from "../infra/db";
-import { visibleStartupFilter } from "../sample/sampleAssets";
-import { Startup } from "../../models";
+import * as startupsRepository from "../../modules/startups/startups.repository";
 import { screeningSummary } from "../screening/runScreening";
 import type { ScreeningResult } from "../../types/screening";
 
@@ -41,11 +39,9 @@ export async function resolveStartupMentions(
   userId?: string,
 ): Promise<MentionedStartup[]> {
   if (tokens.length === 0) return [];
-  await connectDb();
-
   const startups = userId
-    ? await Startup.find(visibleStartupFilter(userId)).lean()
-    : await Startup.find({ isSample: true }).lean();
+    ? await startupsRepository.listVisible(userId)
+    : await startupsRepository.listSamples();
   const byId = new Map<string, Record<string, unknown>>();
   const byName = new Map<string, Record<string, unknown>>();
   for (const s of startups as Array<Record<string, unknown>>) {

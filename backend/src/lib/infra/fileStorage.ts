@@ -1,7 +1,6 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
-import express from "express";
 import { dataDir } from "./dataDir";
 
 /**
@@ -97,29 +96,21 @@ export async function getObjectDownloadUrl(
   return `${apiOrigin()}/api/files/${payload}.${sign(payload)}`;
 }
 
-/** GET /api/files/:token — serves a file for a signed, unexpired token. */
-export const fileDownloadRouter = express.Router();
+export type DownloadToken =
+  | { ok: true; key: string; filename: string }
+  | { ok: false; reason: "invalid" | "expired" };
 
-fileDownloadRouter.get("/:token", async (req, res) => {
-  const [payload, sig] = req.params.token.split(".");
+/** Checks a token made by getObjectDownloadUrl: signature first, then expiry. */
+export function readDownloadToken(token: string): DownloadToken {
+  const [payload, sig] = token.split(".");
   const expected = payload ? sign(payload) : "";
   if (!sig || sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
-    res.status(403).json({ detail: "Invalid download link" });
-    return;
+    return { ok: false, reason: "invalid" };
   }
   const { k, f, e } = JSON.parse(Buffer.from(payload, "base64url").toString()) as { k: string; f: string; e: number };
-  if (Date.now() > e) {
-    res.status(410).json({ detail: "Download link expired" });
-    return;
-  }
-  const body = await downloadObject(k);
-  if (!body) {
-    res.status(404).json({ detail: "File not found" });
-    return;
-  }
-  res.setHeader("Content-Disposition", `attachment; filename="${f.replace(/"/g, "")}"`);
-  res.type(path.extname(f) || "application/octet-stream").send(body);
-});
+  if (Date.now() > e) return { ok: false, reason: "expired" };
+  return { ok: true, key: k, filename: f };
+}
 
 export function detectFileType(
   filename: string,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BUILTIN_WORKFLOWS } from "../src/lib/workflows/builtinWorkflows";
+import { BUILTIN_WORKFLOWS } from "../src/modules/workflows/builtinWorkflows";
 import {
   buildWorkflowStore,
   createWorkflow,
@@ -11,7 +11,7 @@ import {
   listWorkflows,
   unhideWorkflow,
   updateWorkflow,
-} from "../src/lib/workflows/workflowMemory";
+} from "../src/modules/workflows/workflows.service";
 import { useTempDatabase } from "./helpers";
 
 useTempDatabase();

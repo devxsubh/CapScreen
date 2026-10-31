@@ -21,8 +21,8 @@
 |---|---|---|
 | Chat-first assistant UI | ✅ | `frontend/.../assistant/`, `InitialView`, `ChatView`, workflows modal |
 | Agent tool-calling loop | ✅ LangGraph | `backend/src/lib/agent/`, `lib/tools/`, `POST /chat` (`docs/AGENT_HARNESS.md`) |
-| Workflows (prompt + tabular) | ✅ | `backend/src/lib/workflows/builtinWorkflows.ts` (single source), `read_workflow` tool |
-| Startups / deal workspaces | ✅ | `backend/src/routes/startups/`, `frontend/.../startups/` |
+| Workflows (prompt + tabular) | ✅ | `backend/src/modules/workflows/builtinWorkflows.ts` (single source), `read_workflow` tool |
+| Startups / deal workspaces | ✅ | `backend/src/modules/startups/` (+ `capTables/`, `screening/`, `src/routes.ts`), `frontend/.../startups/` |
 | Session memory (chat context) | ✅ Per-request | Client sends `messages` + `screeningResult` + `csvContent` each turn |
 | Persistent agent memory | 🔲 Scaffolded | `.claude/agent-memory/` — use `/init-memory`, `/make-agent` |
 | Document RAG | ✅ | `backend/src/lib/rag/` (local or cloud embeddings, keyword fallback) |

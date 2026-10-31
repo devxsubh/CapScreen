@@ -1,5 +1,4 @@
-import mongoose from "mongoose";
-import { DocChunk } from "../../models/rag/docChunk";
+import * as documentsRepository from "../../modules/documents/documents.repository";
 import { embedQuery, isEmbeddingEnabled } from "./embed";
 
 const TOP_K = parseInt(process.env.RAG_TOP_K ?? "6", 10);
@@ -36,37 +35,7 @@ async function vectorSearch(
   documentId?: string,
 ): Promise<RetrievedChunk[]> {
   const queryVector = await embedQuery(query);
-
-  const filter: Record<string, unknown> = {
-    startupId: new mongoose.Types.ObjectId(startupId),
-  };
-  if (documentId) {
-    filter.documentId = new mongoose.Types.ObjectId(documentId);
-  }
-
-  const pipeline: mongoose.PipelineStage[] = [
-    {
-      $vectorSearch: {
-        index: "rag_vector_index",
-        path: "embedding",
-        queryVector,
-        numCandidates: topK * 10,
-        limit: topK * 2,
-        filter,
-      },
-    } as mongoose.PipelineStage,
-    {
-      $project: {
-        filename: 1,
-        chunkText: 1,
-        pageNumber: 1,
-        score: { $meta: "vectorSearchScore" },
-      },
-    },
-  ];
-
-  type VectorRow = { filename: string; chunkText: string; pageNumber: number | null; score: number };
-  const rows = (await DocChunk.aggregate(pipeline)) as VectorRow[];
+  const rows = await documentsRepository.vectorSearchChunks(startupId, queryVector, topK * 2, documentId);
 
   return rows
     .filter((r) => r.score >= MIN_SCORE)
@@ -85,13 +54,6 @@ async function keywordFallback(
   topK: number,
   documentId?: string,
 ): Promise<RetrievedChunk[]> {
-  const filter: Record<string, unknown> = {
-    startupId: new mongoose.Types.ObjectId(startupId),
-  };
-  if (documentId) {
-    filter.documentId = new mongoose.Types.ObjectId(documentId);
-  }
-
   const terms = query
     .toLowerCase()
     .split(/\s+/)
@@ -99,10 +61,7 @@ async function keywordFallback(
 
   if (terms.length === 0) return [];
 
-  const chunks = await DocChunk.find(filter)
-    .select("filename chunkText pageNumber")
-    .limit(300)
-    .lean();
+  const chunks = await documentsRepository.listChunksForKeywordSearch(startupId, 300, documentId);
 
   type ScoredChunk = { filename: string; chunkText: string; pageNumber: number | null; score: number };
   const scored: ScoredChunk[] = chunks

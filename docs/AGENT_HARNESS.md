@@ -8,7 +8,7 @@ How CapScreen's assistant runs: the graph, how tools run, sub-agents, plans and 
 | `backend/src/lib/agent/runTools.ts` | Runs one round of tool calls: parallel reads, timeouts, error capture, trimming |
 | `backend/src/lib/tools/delegateTool.ts` | `delegate_task`: sub-agents (same graph, read-only tools) |
 | `backend/src/lib/tools/planTool.ts` | `update_plan`: live checklist |
-| `backend/src/routes/assistantChat.ts` | Streams a turn over SSE; forces `screen_cap_table` on a first CSV turn; `POST /chat/runs/:runId/resume` for Allow / Deny |
+| `backend/src/modules/assistant/` | Streams a turn over SSE; forces `screen_cap_table` on a first CSV turn; `POST /chat/runs/:runId/resume` for Allow / Deny |
 
 Packages: `@langchain/langgraph` and its peer `@langchain/core`. We use LangGraph for orchestration only. Models are still called through our own provider layer (`lib/llm/providers/`), so Claude, OpenAI-compatible APIs, Ollama, LM Studio, BYO keys and local-only mode all keep working.
 

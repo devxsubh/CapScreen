@@ -1,6 +1,6 @@
 import type { ScreeningResult } from "../screening/runScreening";
 import type { ScreeningProgressFn } from "../screening/screeningProgress";
-import type { WorkflowPrompt } from "../workflows/workflowMemory";
+import type { WorkflowPrompt } from "../../modules/workflows/workflows.service";
 import type { MentionedStartup } from "../chat/startupMentions";
 
 export type ToolActivity = {

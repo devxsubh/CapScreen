@@ -9,8 +9,8 @@ import {
   StartupDocument,
   TabularCell,
   TabularReview,
-  findUserByEmail,
 } from "../../src/models";
+import * as users from "../../src/modules/auth/user.repository";
 import { connectDb, disconnectDb } from "../../src/lib/infra/db";
 import { ingestCsv, deriveParseStatus } from "../../src/lib/screening/csvIngest";
 import { extractCsvTable } from "../../src/lib/screening/parseCapTable";
@@ -21,7 +21,7 @@ import {
 } from "../../src/lib/sample/sampleAssets";
 import {
   seedEntityScreeningReview,
-} from "../../src/lib/portfolio/portfolioGrid";
+} from "../../src/modules/portfolio/portfolioGrid.service";
 import {
   entityToCells,
   riskToFlag,
@@ -455,7 +455,7 @@ export async function resolveSeedUser(
   email?: string,
 ): Promise<{ userId: string; userEmail: string }> {
   if (email) {
-    const user = await findUserByEmail(email);
+    const user = await users.findByEmail(email);
     if (!user) {
       throw new Error(`No user found for email: ${email}`);
     }

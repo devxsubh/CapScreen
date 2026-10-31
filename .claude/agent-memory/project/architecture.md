@@ -10,7 +10,7 @@ metadata:
 - **Electron shell** (`desktop/`) starts three loopback sidecars on free ports: Watchman (bundled Go binary), the Express backend (utilityProcess, per-launch token) and the Next.js standalone UI. The window loads `capscreen://app`; `/__api/*` is proxied to the backend with the token.
 - **Data:** SQLite at `<userData>/capscreen.db` via the mongoose driver shim (`backend/src/lib/infra/sqliteStore/`); files under `<userData>/files/`.
 - **Models:** chosen in the AI Control Center (local Ollama/LM Studio or BYO cloud keys); keys encrypted with a keychain-sealed master key.
-- **Cloud:** only the auth service (`backend/src/authService`, Vercel + Atlas) — accounts, never screening data.
+- **Cloud:** only the auth service (`backend/src/authApp.ts` + `backend/src/modules/auth/`, Vercel + Atlas) — accounts, never screening data.
 
 Full picture: `docs/DESKTOP_PLAN.md`, `docs/PROJECT_GUIDE.md`.
 

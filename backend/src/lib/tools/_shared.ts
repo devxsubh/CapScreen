@@ -1,35 +1,22 @@
-import { Startup, CapTableCsv } from "../../models";
+import * as capTablesRepository from "../../modules/capTables/capTables.repository";
+import * as startupsRepository from "../../modules/startups/startups.repository";
 import { coalesceStartupId, isValidStartupObjectId } from "../shared/startupId";
 import type { ScreeningResult } from "../screening/runScreening";
 import type { ToolContext, ToolDocumentResult } from "./types";
-import type { StartupDocumentRecord } from "../documents/icMemoDocument";
+import type { StartupDocumentRecord } from "../../modules/documents/icMemo.service";
 
 export async function loadStartupCapTableCsvContent(
   startupId: string,
   userId?: string,
 ): Promise<string | null> {
-  const filter: Record<string, unknown> = { _id: startupId };
-  if (userId) filter.ownerId = userId;
-
-  const startup = (await Startup.findOne(filter).lean()) as
-    | Record<string, unknown>
-    | null;
+  const startup = userId
+    ? await startupsRepository.findOwned(startupId, userId)
+    : await startupsRepository.findById(startupId);
   if (!startup) return null;
 
-  let csvDoc = null as Record<string, unknown> | null;
-  if (startup.latestCsvId) {
-    csvDoc = (await CapTableCsv.findById(startup.latestCsvId as string).lean()) as
-      | Record<string, unknown>
-      | null;
-  }
-  if (!csvDoc) {
-    csvDoc = (await CapTableCsv.findOne({
-      startupId,
-      rosterPurpose: { $in: ["cap_table", "entity_roster"] },
-    })
-      .sort({ uploadedAt: -1 })
-      .lean()) as Record<string, unknown> | null;
-  }
+  const csvDoc =
+    (startup.latestCsvId ? await capTablesRepository.findById(startup.latestCsvId) : null) ??
+    (await capTablesRepository.findLatest(startupId, ["cap_table", "entity_roster"]));
   if (!csvDoc || typeof csvDoc.content !== "string") return null;
   if (csvDoc.parseStatus === "invalid" || csvDoc.parseStatus === "needs_review") {
     return null;
@@ -51,9 +38,7 @@ export async function resolveScreeningForStartup(
     if (ctx.startupId === idQ && ctx.screeningResult) {
       return { result: ctx.screeningResult, label: "workspace", id: idQ };
     }
-    const startup = (await Startup.findById(idQ).lean()) as
-      | Record<string, unknown>
-      | null;
+    const startup = await startupsRepository.findById(idQ);
     if (startup?.lastScreeningResult) {
       return {
         result: startup.lastScreeningResult as ScreeningResult,
@@ -103,10 +88,7 @@ export async function resolveScreeningDocumentContext(
       ctx.screeningResult?.startupName?.trim().toLowerCase() ??
       result?.startupName?.trim().toLowerCase();
     if (nameHint && ctx.userId) {
-      const owned = (await Startup.findOne({
-        ownerId: ctx.userId,
-        name: new RegExp(`^${nameHint.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
-      }).lean()) as Record<string, unknown> | null;
+      const owned = await startupsRepository.findOwnedByName(ctx.userId, nameHint);
       if (owned) id = String(owned._id);
     }
   }

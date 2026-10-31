@@ -1,9 +1,9 @@
 import { runScreening, screeningSummaryBrief } from "../screening/runScreening";
-import { Startup } from "../../models";
 import {
   saveScreeningSnapshot,
   computeScreeningDelta,
-} from "../screening/screeningDelta";
+} from "../../modules/screening/screeningDelta.service";
+import * as startupsRepository from "../../modules/startups/startups.repository";
 import { loadStartupCapTableCsvContent } from "./_shared";
 import type { ToolDefinition } from "./registry";
 
@@ -40,11 +40,10 @@ export const screenCapTableTool: ToolDefinition = {
     });
     ctx.screeningResult = result;
     if (ctx.startupId && ctx.userId) {
-      const updated = await Startup.findOneAndUpdate(
-        { _id: ctx.startupId, ownerId: ctx.userId },
-        { lastScreeningResult: result, lastScreenedAt: new Date() },
-        { new: true },
-      ).lean();
+      const updated = await startupsRepository.updateOwned(ctx.startupId, ctx.userId, {
+        lastScreeningResult: result,
+        lastScreenedAt: new Date(),
+      });
       if (updated) {
         await saveScreeningSnapshot(ctx.startupId, "cap_table", result).catch(() => {});
         await computeScreeningDelta(ctx.startupId, result).catch(() => {});

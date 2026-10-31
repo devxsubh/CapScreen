@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import mongoose from "mongoose";
 
 /**
@@ -18,7 +17,3 @@ schema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 export const DesktopAuthCode =
   mongoose.models["DesktopAuthCode"] ?? mongoose.model("DesktopAuthCode", schema);
-
-export function hashAuthCode(code: string): string {
-  return crypto.createHash("sha256").update(code).digest("hex");
-}

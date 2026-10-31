@@ -1,8 +1,10 @@
-import { AuditLog, Startup, StartupDocument } from "../../models";
+import { recordAuditEvent } from "../../modules/auditLogs/auditLogs.service";
+import * as documentsRepository from "../../modules/documents/documents.repository";
+import * as startupsRepository from "../../modules/startups/startups.repository";
 import {
   createIcMemoDocument,
   createScreeningAnalysisDocument,
-} from "../documents/icMemoDocument";
+} from "../../modules/documents/icMemo.service";
 import { buildFactsBlock } from "../documents/generateIcMemo";
 import { completeText } from "../llm/complete";
 import { toToolDocument } from "./_shared";
@@ -54,9 +56,7 @@ async function genericClaudeDocument(
   docType: string,
   { resolved, ctx, contentIntent }: DocTypeParams,
 ): Promise<ToolExecutorResult> {
-  const startup = (await Startup.findById(resolved.id).lean()) as
-    | Record<string, unknown>
-    | null;
+  const startup = await startupsRepository.findById(resolved.id);
   const startupName =
     (startup?.name as string | undefined) ??
     resolved.result.startupName ??
@@ -80,23 +80,22 @@ async function genericClaudeDocument(
   });
   const title = `${docType.replace(/_/g, " ")} — ${startupName} — ${dateStr}`;
 
-  const doc = await StartupDocument.create({
+  const doc = await documentsRepository.createGenerated({
     startupId: resolved.id,
-    kind: "custom" as const,
+    kind: "custom",
     title,
     content: customContent,
     screeningScreenedAt: resolved.result.screenedAt ?? null,
   });
 
-  const docId = String((doc as unknown as Record<string, unknown>)._id);
+  const docId = String(doc._id);
 
-  await AuditLog.create({
-    startupId: resolved.id,
-    eventType: "document_generated",
-    performedBy: ctx.userId ?? "system",
-    performedByEmail: ctx.userEmail ?? "system@local",
-    details: { documentId: docId, title, docType },
-  }).catch(() => {});
+  await recordAuditEvent(
+    { userId: ctx.userId ?? "system", userEmail: ctx.userEmail ?? "system@local" },
+    "document_generated",
+    resolved.id,
+    { documentId: docId, title, docType },
+  ).catch(() => {});
 
   const docResult: ToolDocumentResult = {
     id: docId,

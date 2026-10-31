@@ -68,7 +68,7 @@ backend/src/
     embedding.ts
     retrieval.ts
     citationValidate.ts
-  routes/complianceDocs.ts
+  modules/complianceDocs/ (routes, controller, service, repository)
   lib/tools/            — add retrieve_compliance_context tool (register in index.ts)
 
 frontend/src/

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { computeScreeningDelta, decodeRiskKey, encodeRiskKey, saveScreeningSnapshot } from "../src/lib/screening/screeningDelta";
+import { computeScreeningDelta, decodeRiskKey, encodeRiskKey, saveScreeningSnapshot } from "../src/modules/screening/screeningDelta.service";
 import { Startup } from "../src/models";
 import type { ScreeningResult } from "../src/types/screening";
 import { entity, useTempDatabase } from "./helpers";
