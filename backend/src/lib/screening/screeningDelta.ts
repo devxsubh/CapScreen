@@ -14,16 +14,28 @@ export interface ScreeningDeltaChange {
   newRisk: string;
 }
 
+/**
+ * Mongoose map keys may not contain "." or "$", but entity names often do ("Acme Inc.", "Dr. Petrov"), so snapshot
+ * keys are stored percent-encoded. Names without those characters (and older snapshots) are unchanged.
+ */
+export function encodeRiskKey(name: string): string {
+  return name.replace(/%/g, "%25").replace(/\./g, "%2E").replace(/\$/g, "%24");
+}
+
+export function decodeRiskKey(key: string): string {
+  return key.replace(/%2E/g, ".").replace(/%24/g, "$").replace(/%25/g, "%");
+}
+
 function entityRisksFromSnapshot(
   snap: Record<string, unknown>,
 ): Map<string, string> {
   const raw = snap.entityRisks as Map<string, string> | Record<string, string>;
   const map = new Map<string, string>();
   if (raw instanceof Map) {
-    raw.forEach((v, k) => map.set(k, v));
+    raw.forEach((v, k) => map.set(decodeRiskKey(k), v));
   } else if (raw && typeof raw === "object") {
     for (const [k, v] of Object.entries(raw)) {
-      map.set(k, v);
+      map.set(decodeRiskKey(k), v);
     }
   }
   return map;
@@ -107,7 +119,7 @@ export async function saveScreeningSnapshot(
 ): Promise<void> {
   const entityRisks: Record<string, string> = {};
   for (const e of result.entities) {
-    entityRisks[e.name] = e.riskLevel;
+    entityRisks[encodeRiskKey(e.name)] = e.riskLevel;
   }
 
   await ScreeningSnapshot.create({
