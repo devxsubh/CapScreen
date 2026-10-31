@@ -14,6 +14,3 @@ export const CHAT_FOCUS: Record<ChatFocus, { label: string; description: string 
 
 export const CHAT_FOCUS_ORDER: ChatFocus[] = ["screen", "review", "ownership", "research", "memo"];
 
-export function isChatFocus(value: unknown): value is ChatFocus {
-    return typeof value === "string" && value in CHAT_FOCUS;
-}

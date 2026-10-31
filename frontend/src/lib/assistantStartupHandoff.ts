@@ -38,12 +38,6 @@ export function clearAssistantStartupHandoff(): void {
   sessionStorage.removeItem(STORAGE_KEY);
 }
 
-export function csvFileFromHandoff(
-  handoff: AssistantStartupHandoff,
-): File {
-  return new File([handoff.content], handoff.filename, { type: "text/csv" });
-}
-
 export function lastAssistantMessageIndex(messages: AppMessage[]): number {
   return messages.map((m) => m.role).lastIndexOf("assistant");
 }

@@ -99,14 +99,6 @@ export async function deleteDocument(documentId: string): Promise<void> {
     await apiRequest(`/single-documents/${documentId}`, { method: "DELETE" });
 }
 
-export async function getDocumentUrl(
-    documentId: string,
-    versionId?: string | null,
-): Promise<{ url: string; filename: string; version_id: string | null }> {
-    const qs = versionId ? `?version_id=${encodeURIComponent(versionId)}` : "";
-    return apiRequest(`/single-documents/${documentId}/url${qs}`);
-}
-
 // ---------------------------------------------------------------------------
 // Chat (MongoDB via /api/chats)
 // ---------------------------------------------------------------------------
@@ -121,14 +113,6 @@ export async function saveChatMessages(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages }),
     });
-}
-
-/** @deprecated Use saveChatMessages */
-export function savePreviewChatMessages(
-    chatId: string,
-    messages: AppMessage[],
-): void {
-    void saveChatMessages(chatId, messages);
 }
 
 export async function createChat(payload?: {
@@ -146,11 +130,6 @@ export async function listChats(options?: { limit?: number }): Promise<AppChat[]
     if (options?.limit) params.set("limit", String(options.limit));
     const query = params.toString();
     return apiRequest<AppChat[]>(`/api/chats${query ? `?${query}` : ""}`);
-}
-
-export async function listProjectChats(projectId: string): Promise<AppChat[]> {
-    const chats = await listChats();
-    return chats.filter((c) => c.project_id === projectId);
 }
 
 export async function getChat(chatId: string): Promise<AppChatDetailOut> {

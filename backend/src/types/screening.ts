@@ -10,7 +10,6 @@ export type CsvKind =
   | "unknown";
 export type ParseSource = "strict" | "heuristic" | "ai";
 export type ScreeningMode = "ownership_graph" | "entity_roster";
-export type ReviewStatus = "pending" | "cleared" | "escalated" | "blocked";
 export type OwnershipRuleFlag = "ofac_50" | "ubo_25";
 
 export interface OwnershipPathStep {

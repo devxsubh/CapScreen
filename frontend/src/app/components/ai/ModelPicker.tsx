@@ -643,7 +643,3 @@ export function ModelPicker({ open: openProp, onOpenChange, hideTrigger = false 
     );
 }
 
-/** @deprecated Use ModelPicker — kept as alias for any remaining imports. */
-export function ConnectProviderMenu() {
-    return <ModelPicker />;
-}

@@ -1,9 +1,5 @@
 import type { ColumnConfig } from "../shared/types";
 
-export type PillSegment =
-    | { type: "text"; content: string }
-    | { type: "pill"; content: string };
-
 /** Sequential colors assigned to tags by their position in the tags array. */
 export const TAG_COLORS = [
     "bg-blue-100 text-blue-700",
@@ -52,21 +48,3 @@ export function getPillClass(content: string, column?: ColumnConfig): string {
     return "bg-gray-100 text-gray-700";
 }
 
-/** Split text on [[...]] pill markers, preserving surrounding text. */
-export function parsePills(text: string): PillSegment[] {
-    const segments: PillSegment[] = [];
-    const regex = /\[\[([^\]]+)\]\]/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(text)) !== null) {
-        if (match.index > lastIndex) {
-            segments.push({ type: "text", content: text.slice(lastIndex, match.index) });
-        }
-        segments.push({ type: "pill", content: match[1] });
-        lastIndex = regex.lastIndex;
-    }
-    if (lastIndex < text.length) {
-        segments.push({ type: "text", content: text.slice(lastIndex) });
-    }
-    return segments;
-}

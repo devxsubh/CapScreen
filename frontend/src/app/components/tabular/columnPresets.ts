@@ -118,6 +118,3 @@ export function getPresetConfig(
     return { prompt: preset.prompt, format: preset.format, tags: preset.tags };
 }
 
-export function getPresetPrompt(title: string): string | null {
-    return getPresetConfig(title)?.prompt ?? null;
-}

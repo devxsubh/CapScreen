@@ -36,10 +36,6 @@ export function desktop(): DesktopBridge | null {
   return typeof window !== "undefined" ? (window.capscreenDesktop ?? null) : null;
 }
 
-export function isDesktop(): boolean {
-  return desktop() !== null;
-}
-
 const noopSubscribe = () => () => {};
 
 /**

@@ -304,9 +304,6 @@ export interface RagDocumentRecord {
   errorMessage: string | null;
 }
 
-export const listRagDocuments = (startupId: string) =>
-  api<RagDocumentRecord[]>(`/api/startups/${startupId}/rag-documents`);
-
 export async function uploadRagDocument(
   startupId: string,
   file: File,
@@ -326,11 +323,6 @@ export async function uploadRagDocument(
   }
   return resp.json() as Promise<RagDocumentRecord>;
 }
-
-export const deleteRagDocument = (startupId: string, docId: string) =>
-  api<void>(`/api/startups/${startupId}/rag-documents/${docId}`, {
-    method: "DELETE",
-  });
 
 // ── Screener chat ───────────────────────────────────────────────────────────
 

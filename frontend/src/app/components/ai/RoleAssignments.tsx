@@ -393,12 +393,3 @@ export function OtherTasksSection({
     );
 }
 
-/** @deprecated Prefer ChatModelSection + OtherTasksSection. */
-export function RoleAssignments({ state, health, onChange }: { state: AiState; health: AiHealth; onChange: () => void }) {
-    return (
-        <>
-            <ChatModelSection state={state} health={health} onChange={onChange} />
-            <OtherTasksSection state={state} health={health} onChange={onChange} />
-        </>
-    );
-}

@@ -39,7 +39,7 @@ Network egress: public sanctions-list downloads (Watchman, every 12 h) and cloud
 - **Pluggable LLMs** (`lib/llm/providers/`): Anthropic, native Ollama, and OpenAI-compatible (OpenAI, Gemini, OpenRouter, Groq, LM Studio, llama.cpp, any custom endpoint). Roles: `agent`, `utility`, `embedding`.
 - **AI Control Center** (`lib/llm/controlCenter/`, `routes/aiControlCenter.ts`): providers, model assignments, local-only policy; API keys AES-256-GCM encrypted with a master key sealed by the OS keychain (Electron `safeStorage`).
 - `@langchain/langgraph` — the assistant's agent graph (orchestration only; models still go through `lib/llm/providers/`)
-- `graphology` — directed ownership graph (BFS traversal, circular ownership detection)
+- `graphology` — directed ownership graph (BFS traversal, cycle-safe for circular ownership)
 - Watchman — `GET /v2/search`; every screening result stores `watchmanListInfo` (list counts + SHA-256 per list)
 
 ### Frontend stack
@@ -163,7 +163,7 @@ frontend/src/
   app/
     (pages)/
       assistant/            — compliance assistant (InitialView → ChatView)
-      startups/             — StartupsPage; [id] = StartupScreenerPage (the one startup workspace); [id]/assistant/chat/[chatId] redirects to it
+      startups/             — StartupsPage; [id] = StartupScreenerPage (the one startup workspace); old startup chat URLs redirect to it (next.config.ts)
       tabular-reviews/      — review list + TRView
       workflows/            — WorkflowList + workflow editor
       settings/             — Settings: account, ai (AI Control Center), screening (thresholds), sanctions, data (backup & audit), about
@@ -195,7 +195,7 @@ frontend/src/
 | `/assistant`, `/assistant/chat/:id` | Compliance assistant | Primary chat shell |
 | `/startups` | `StartupsPage` | List + create startups |
 | `/startups/:id` | `StartupScreenerPage` | The startup workspace: chat on the left; Cap table, Graph, Entities, Flags and Documents tabs on the right. Choose startup, the Startups list and workflows run on a startup all open it |
-| `/startups/:id/assistant/chat/:chatId` | Redirect | Old startup chat links land on `/startups/:id` |
+| Old URLs | Redirects | `/`, `/settings`, `/account`, `/ai` and old startup-chat links redirect in `next.config.ts` |
 | `/startups/:id/tabular-reviews/:reviewId`, `/tabular-reviews[/:id]` | Tabular review | |
 | `/workflows[/:id]` | Workflows | Built-ins come from `GET /workflows` |
 | `/settings/account` | Account | Signed-in account; password changes happen on the hosted portal (`/account` redirects here) |

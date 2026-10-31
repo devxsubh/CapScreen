@@ -103,13 +103,3 @@ export const parseErrorSchema = new mongoose.Schema(
   { _id: false },
 );
 
-export const ownershipRecordSchema = new mongoose.Schema(
-  {
-    entity: { type: String, required: true },
-    entityType: { type: String, enum: ["person", "company"], required: true },
-    owner: { type: String, required: true },
-    ownerType: { type: String, enum: ["person", "company"], required: true },
-    ownershipPct: { type: Number, required: true },
-  },
-  { _id: false },
-);

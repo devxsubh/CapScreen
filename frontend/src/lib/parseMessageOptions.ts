@@ -94,17 +94,6 @@ export function parseMessageOptions(text: string): ParsedMessageOptions | null {
     return { displayText, options };
 }
 
-/**
- * Returns display text for markdown rendering — strips MCQ options when active.
- */
-export function textForDisplayWithOptions(
-    text: string,
-    showOptions: boolean,
-): string {
-    if (!showOptions) return text;
-    return parseMessageOptions(text)?.displayText ?? text;
-}
-
 export function shouldShowMessageOptions(
     messageIndex: number,
     messages: Array<{ role: string }>,

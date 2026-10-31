@@ -711,7 +711,7 @@ Package `capscreen`. Next.js 16 App Router, React 19.2, TypeScript, Tailwind CSS
 
 | File | Purpose |
 |---|---|
-| `next.config.ts` | Loads the monorepo root `.env`; `output: "standalone"` only when `CAPSCREEN_DESKTOP_BUILD=1`; Turbopack/file-tracing root at the monorepo; redirects `/projects*` → `/startups*`, and `/ai` and `/account/models` → `/settings/ai` |
+| `next.config.ts` | Loads the monorepo root `.env`; `output: "standalone"` only when `CAPSCREEN_DESKTOP_BUILD=1`; Turbopack/file-tracing root at the monorepo; every URL redirect (there are no redirect-only pages): `/` → `/assistant`, `/settings` and `/account` → `/settings/account`, `/ai` and `/account/models` → `/settings/ai`, `/projects*` → `/startups*`, old startup chats `/startups/:id/assistant/chat/:chatId` → `/startups/:id` (merged into the workspace; older startup chats in the sidebar open as assistant chats) |
 | `components.json`, `eslint.config.mjs`, `postcss.config.mjs`, `tsconfig.json` | shadcn, lint, Tailwind, TypeScript |
 | `.env.local.example` | Points to the root `.env` |
 | `public/` | `capscreen-logo.svg`, `capscreen-logo-reversed.svg`, `capscreen-mark.svg`, `apple-touch-icon.png`, `link-image.jpg`, and empty Next starter SVGs |
@@ -728,15 +728,13 @@ Package `capscreen`. Next.js 16 App Router, React 19.2, TypeScript, Tailwind CSS
 
 | URL | File | Renders |
 |---|---|---|
-| `/` | `app/page.tsx` | Redirect to `/assistant` |
 | `/assistant`, `/assistant/chat/[id]` | `(pages)/assistant/…` | `InitialView` → `ChatView` |
 | `/startups` | `(pages)/startups/page.tsx` | `StartupsPage` |
 | `/startups/[id]` | `(pages)/startups/[id]/page.tsx` | `StartupScreenerPage`, the one startup workspace: scoped chat on the left, analysis dock on the right (Cap table, Graph, Entities, Flags, **Documents** = `StartupDocumentsPanel` explorer + viewer). Opened by the Startups list, Choose startup in the assistant, and workflows run on a startup (`?workflow=1` sends the queued workflow message through the workspace chat) |
-| `/startups/[id]/assistant/chat/[chatId]` | `.../chat/[chatId]/page.tsx` | Redirects to `/startups/[id]` (the separate startup chat page was merged into the workspace). Older startup chats in the sidebar history open as assistant chats |
 | `/startups/[id]/tabular-reviews/[reviewId]`, `/tabular-reviews/[id]` | | `TRView` |
 | `/tabular-reviews` | `(pages)/tabular-reviews/page.tsx` | Review list, new review modal, portfolio monitoring card |
 | `/workflows`, `/workflows/[id]` | `(pages)/workflows/…` | `WorkflowList`; prompt editor (Tiptap) or column schema editor |
-| `/settings` | `(pages)/settings/layout.tsx`, `page.tsx` | Settings shell: a full-height panel on the left grouped into Account / Screening / Data, each page with a one-line hint (a row of tabs on narrow windows), and a wide content area (up to 72rem) where related cards sit two to a row on wide screens; `/settings` redirects to `/settings/account` |
+| `/settings` | `(pages)/settings/layout.tsx` | Settings shell: a full-height panel on the left grouped into Account / Screening / Data, each page with a one-line hint (a row of tabs on narrow windows), and a wide content area (up to 72rem) where related cards sit two to a row on wide screens; `/settings` redirects to `/settings/account` (in `next.config.ts`) |
 | `/settings/account` | `(pages)/settings/account/page.tsx` | Profile, connection state, password portal, restart tour, sign out |
 | `/settings/ai` | `(pages)/settings/ai/page.tsx` | AI Control Center: status card, setup wizard, chat model, providers and keys, local models, other tasks, local-only mode; `/ai` redirects here |
 | `/settings/screening` | `(pages)/settings/screening/page.tsx` | Match-score thresholds (score band, try-a-score), OFAC / beneficial-owner thresholds, matches per entity; save bar, reset to defaults |
@@ -744,7 +742,6 @@ Package `capscreen`. Next.js 16 App Router, React 19.2, TypeScript, Tailwind CSS
 | `/settings/connectors` | `(pages)/settings/connectors/page.tsx` | Connectors (Carta, Pulley, AngelList, Google Drive, Dropbox, SharePoint, OpenCorporates, Companies House), all coming soon; a Show in chat switch per connector. The list and the preference live in `lib/connectors.ts` (preference in browser storage, per computer) |
 | `/settings/data` | `(pages)/settings/data/page.tsx` | Backup & audit: storage location, encrypted backup, restore, audit-log export, and **Start fresh** (`StartFreshCard`: type ERASE → `POST /api/desktop/erase`, `lib/infra/eraseData.ts`; erases startups, files, chats, reviews, workflows and the audit log, keeps sign-in, AI setup and settings, sets a safety copy aside in `<data>/backups/before-erase-<time>/`, then clears per-computer UI state so onboarding starts over) |
 | `/settings/about` | `(pages)/settings/about/page.tsx` | Version, data folder, engine and AI status, copy diagnostics (no account details, keys or cap-table data) |
-| `/account` | `(pages)/account/page.tsx` | Redirect to `/settings/account` |
 | layouts / errors | `app/layout.tsx`, `(pages)/layout.tsx` (sidebar, chat history, tour, `DesktopShell`), `error.tsx`, `global-error.tsx`, `not-found.tsx` | |
 
 Onboarding: a new user sees (1) the tour (`lib/onboardingTour.ts`, driver.js, storage key `capscreen_onboarding_tour_v2`; bump the version when the steps change). It runs on the assistant home and points at `data-tour` anchors: `composer`, `composer-sources`, `composer-tools`, `composer-model`, `getting-started`, `nav-assistant` (New chat), `nav-search`, `nav-startups`, `nav-tabular`, `nav-workflows`, `ai-status`, `nav-settings`; steps whose anchor isn't on screen are skipped. (2) The **Getting started** checklist under the composer (`assistant/GettingStarted.tsx`): Set up AI, Create a startup, Upload and screen a cap table, Ask the assistant, Take the tour; each ticks itself off from real data and the card hides when done or dismissed. (3) First-run empty states (`shared/EmptyState.tsx`) on Startups, Tabular reviews and Workflows with numbered first steps. Replay the tour from Settings → Profile.
@@ -762,7 +759,7 @@ Sidebar (`AppSidebar.tsx`): logo and collapse button; **New chat** (⇧⌘O / Ct
 
 ### 13.4 Components (`src/app/components/`)
 
-**`ai/`**: `AiStatusCard.tsx` (problems + one fix each), `SetupWizard.tsx`, `LocalSetup.tsx`, `CloudSetup.tsx`, `RoleAssignments.tsx`, `LocalModels.tsx`, `ProviderList.tsx`, `ModelPicker.tsx` (chat toolbar control: models grouped by provider with logos, readable names, a one-line hint and the recommended badge; connect a provider through a pop-up; `ConnectProviderMenu.tsx` re-exports it), `ProviderLogo.tsx` (official marks: `ProviderLogo` for AI providers from `public/providers/`; `ModelLogo` for the model's maker — Anthropic, OpenAI, Google Gemini/Gemma, Meta, Qwen, Mistral, DeepSeek, Microsoft, Nomic, Mixedbread — and `systemBrands` + `BrandMark` for the OS (macOS, Windows, Linux) and chip maker (Apple, Intel, AMD, Qualcomm), all from `public/brands/`. Sources: Simple Icons, Wikimedia Commons public-domain/CC0/MIT files, or the company's site), `useModelDownload.ts`. Model ids are shown through `lib/modelDisplay.ts` (`modelDisplayName`, `modelHint`, `providerDisplayName`); the raw id stays in tooltips and is what gets saved.
+**`ai/`**: `AiStatusCard.tsx` (problems + one fix each), `SetupWizard.tsx`, `LocalSetup.tsx`, `CloudSetup.tsx`, `RoleAssignments.tsx`, `LocalModels.tsx`, `ProviderList.tsx`, `ModelPicker.tsx` (chat toolbar control: models grouped by provider with logos, readable names, a one-line hint and the recommended badge; connect a provider through a pop-up), `ProviderLogo.tsx` (official marks: `ProviderLogo` for AI providers from `public/providers/`; `ModelLogo` for the model's maker — Anthropic, OpenAI, Google Gemini/Gemma, Meta, Qwen, Mistral, DeepSeek, Microsoft, Nomic, Mixedbread — and `systemBrands` + `BrandMark` for the OS (macOS, Windows, Linux) and chip maker (Apple, Intel, AMD, Qualcomm), all from `public/brands/`. Sources: Simple Icons, Wikimedia Commons public-domain/CC0/MIT files, or the company's site), `useModelDownload.ts`. Model ids are shown through `lib/modelDisplay.ts` (`modelDisplayName`, `modelHint`, `providerDisplayName`); the raw id stays in tooltips and is what gets saved.
 
 **`settings/`**: `SettingsParts.tsx` (`SettingsHeader`, `SettingsCard`, `Switch`, `DetailRow`, `StatusLine`) shared by the `/settings/*` pages.
 
@@ -912,11 +909,11 @@ An **assistant** workflow is a Markdown prompt: selecting one prefixes the messa
 | `@xyflow/react` | Ownership graph |
 | `react-markdown`, `remark-gfm`, `remark-math`, `rehype-katex`, `katex` | Chat Markdown + math |
 | `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/pm`, `tiptap-markdown` | Workflow prompt editor |
-| `pdfjs-dist` (4.10.38), `docx-preview`, `docx`, `mammoth` | PDF/DOCX viewing and generation |
+| `pdfjs-dist` (4.10.38), `docx-preview`, `docx` | PDF/DOCX viewing and generation |
 | `exceljs` | Tabular export |
 | `driver.js` | Onboarding tour |
-| `@radix-ui/react-dropdown-menu`, `@radix-ui/react-icons`, `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react` | shadcn/ui primitives and icons |
-| dev: `tailwindcss` v4, `@tailwindcss/postcss`, `tw-animate-css`, `babel-plugin-react-compiler`, `eslint`, `eslint-config-next`, `typescript`, `baseline-browser-mapping`, `@types/*` | Styling, compiler, lint |
+| `@radix-ui/react-dropdown-menu`, `@radix-ui/react-slot`, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react` | shadcn/ui primitives and icons |
+| dev: `tailwindcss` v4, `@tailwindcss/postcss`, `tw-animate-css`, `eslint`, `eslint-config-next`, `typescript`, `baseline-browser-mapping`, `@types/*` | Styling, compiler, lint |
 
 ### 17.3 Desktop
 
@@ -1000,6 +997,7 @@ Against today's OFAC/EU lists every name in `sample-cap-table.csv` comes back cl
 | Backend simplifications | One Watchman cache instead of seven response caches (the startup caches could serve a result up to 30 s stale after a screen); eight unused barrel files removed; `POST /api/screen` and `/stream` removed (no callers); unused `/projects` write routes removed. |
 | Small fixes | The project chat explorer now loads the startup's documents from `GET /projects/:id` (preview mode used to skip them); `reset-database.ts` prints the real database it clears; auth-service startup warnings are actually logged; the desktop shell also strips `CAPSCREEN_DB` and `LLM_CONFIG_FILE` from the backend env. |
 | Settings | Account and Data & Backup became one `/settings` area (Account, AI Control Center, Screening, Sanctions data, Backup & audit, About); the AI Control Center moved from `/ai` to `/settings/ai`. Screening thresholds became configurable in the app (previously env-only, which the desktop backend never reads) and are recorded on every result. `settings.test.ts` added. |
+| Dead code (Nov 2026) | Removed ~30 unused exports (old API helpers, chat/RAG helpers, unused types, deprecated aliases such as `ConnectProviderMenu` and `RoleAssignments`), the template's `lib/types.ts`, and unused frontend packages (`@radix-ui/react-icons`, `mammoth`, `babel-plugin-react-compiler`). Redirect-only pages (`/`, `/settings`, `/account`, old startup chats) became `next.config.ts` redirects. |
 | Docs | `AGENTS.md`, `README.md`, `docs/AGENT_HARNESS.md`, `docs/DESKTOP_PLAN.md`, `.claude/*` and `.env.example` updated to the current code. |
 
 Net effect: about 14,000 fewer lines of source (≈ 21%), lint warnings 153 → 127, no new dependencies.

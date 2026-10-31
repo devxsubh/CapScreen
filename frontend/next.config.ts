@@ -14,8 +14,19 @@ const nextConfig: NextConfig = {
     root: monorepoRoot,
   },
   outputFileTracingRoot: monorepoRoot,
+  // All URL redirects live here rather than in redirect-only pages.
   async redirects() {
     return [
+      { source: "/", destination: "/assistant", permanent: false },
+      // Settings opens on Profile; old account URLs land there too.
+      { source: "/settings", destination: "/settings/account", permanent: false },
+      { source: "/account", destination: "/settings/account", permanent: false },
+      // Startup chats now live in the startup workspace.
+      {
+        source: "/startups/:id/assistant/chat/:chatId",
+        destination: "/startups/:id",
+        permanent: true,
+      },
       {
         source: "/projects",
         destination: "/startups",

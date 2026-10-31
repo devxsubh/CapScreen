@@ -21,7 +21,3 @@ export function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
   return p;
 }
 
-/** How many requests are currently in-flight (for diagnostics). */
-export function inflightCount(): number {
-  return inflight.size;
-}

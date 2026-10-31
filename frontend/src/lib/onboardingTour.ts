@@ -28,10 +28,6 @@ export function markTourCompleted(): void {
     setTourCompleted(true);
 }
 
-export function resetTourCompletion(): void {
-    setTourCompleted(false);
-}
-
 /** For useSyncExternalStore: re-read hasCompletedTour() when the tour finishes or is reset. */
 export function subscribeTourCompletion(onChange: () => void): () => void {
     window.addEventListener(TOUR_EVENT, onChange);

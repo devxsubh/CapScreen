@@ -50,17 +50,6 @@ export function getEdges(graph: DirectedGraph): OwnershipEdge[] {
   }));
 }
 
-/** Nodes at the top of ownership chains — no further owner in the graph. */
-export function getUltimateOwners(graph: DirectedGraph): GraphNode[] {
-  return graph
-    .nodes()
-    .filter((n) => graph.inDegree(n) === 0)
-    .map((name) => ({
-      name,
-      type: graph.getNodeAttribute(name, "type") as "person" | "company",
-    }));
-}
-
 export function isUltimateOwner(graph: DirectedGraph, nodeName: string): boolean {
   return graph.inDegree(nodeName) === 0;
 }
@@ -133,10 +122,6 @@ export function findOwnershipCycles(graph: DirectedGraph): string[][] {
   }
 
   return cycles;
-}
-
-export function hasOwnershipCycles(graph: DirectedGraph): boolean {
-  return findOwnershipCycles(graph).length > 0;
 }
 
 // BFS from the startup node upward through ownership (inNeighbors = who owns me?).

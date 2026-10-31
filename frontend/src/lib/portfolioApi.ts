@@ -41,9 +41,6 @@ export const syncPortfolioGrid = () =>
     method: "POST",
   });
 
-export const getPortfolioReviewId = () =>
-  api<{ reviewId: string }>("/api/portfolio/review");
-
 export const runPortfolioRescreen = () =>
   api<{ rescreened: number; total: number; digestId: string | null }>(
     "/api/portfolio/rescreen",

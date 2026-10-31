@@ -235,11 +235,6 @@ function scheduleListMaintenance(): void {
   listTimer.unref();
 }
 
-/** For the Data page via the backend: current mode is also in status.json. */
-export function sanctionsMode(): WatchmanMode {
-  return watchmanMode;
-}
-
 // ── Backend (Express) ────────────────────────────────────────────────────────
 
 export async function startBackend(opts: {

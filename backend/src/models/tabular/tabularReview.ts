@@ -1,10 +1,5 @@
 import mongoose from "mongoose";
 
-export type TabularReviewKind =
-  | "standard"
-  | "portfolio_monitoring"
-  | "entity_screening";
-
 const rowSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },

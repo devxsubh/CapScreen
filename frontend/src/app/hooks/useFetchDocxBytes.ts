@@ -117,25 +117,3 @@ export function useFetchDocxBytes(
     return { bytes, downloadUrl, loading, error };
 }
 
-/**
- * Evict cache entries for a given document (e.g. after accept/reject
- * writes new bytes at the same storage path, or the user uploads a new
- * version). Pass a versionId to scope eviction; omit to clear every
- * cached version for that document.
- */
-export function invalidateDocxBytes(
-    documentId: string,
-    versionId?: string | null,
-): void {
-    if (versionId !== undefined) {
-        for (const key of Array.from(bytesCache.keys())) {
-            if (key.startsWith(`${documentId}:${versionId ?? ""}:`)) {
-                bytesCache.delete(key);
-            }
-        }
-        return;
-    }
-    for (const key of Array.from(bytesCache.keys())) {
-        if (key.startsWith(`${documentId}:`)) bytesCache.delete(key);
-    }
-}

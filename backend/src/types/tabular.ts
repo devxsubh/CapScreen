@@ -7,12 +7,6 @@ export interface ColumnConfig {
   tags?: string[];
 }
 
-export interface TabularCellContent {
-  summary: string;
-  flag?: "green" | "grey" | "yellow" | "red";
-  reasoning?: string;
-}
-
 export interface TabularRowDoc {
   id: string;
   name: string;

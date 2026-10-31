@@ -29,15 +29,3 @@ export function detectRosterPurpose(
   return "cap_table";
 }
 
-export function rosterPurposeLabel(purpose: RosterPurpose): string {
-  switch (purpose) {
-    case "co_investor":
-      return "Co-investor roster";
-    case "vendor":
-      return "Vendor roster";
-    case "entity_roster":
-      return "Entity roster";
-    default:
-      return "Cap table";
-  }
-}

@@ -197,10 +197,3 @@ export function portalHtml(): string {
 </html>`;
 }
 
-/** Page the desktop app's loopback server shows after the browser hands back. */
-export function desktopDonePage(ok: boolean, message: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8"><title>CapScreen</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;font:15px/1.5 -apple-system,system-ui,sans-serif;background:#f6f6f7;color:#0a0a0a}
-.c{max-width:420px;text-align:center;padding:24px}.logo{height:30px;margin-bottom:22px}.logo svg{height:100%;width:auto}h1{font:500 22px Georgia,serif;margin:0 0 8px}p{color:#6b7280}</style></head>
-<body><div class="c"><div class="logo">${LOGO_SVG}</div><h1>${ok ? "You're signed in" : "Sign-in didn't complete"}</h1><p>${message}</p></div></body></html>`;
-}
