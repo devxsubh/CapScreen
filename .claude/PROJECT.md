@@ -42,7 +42,7 @@ User message (+ optional CSV attach, startup_id, @-mentions, workflow)
   → events: content_delta, tool_call_start, screening_progress/result, plan_updated, approval_required
 ```
 
-**Extend tools:** create the tool in `backend/src/lib/tools/` and register it in `lib/tools/index.ts`. Mirror any new UI event in `AssistantEvent` (`frontend/src/app/components/shared/types.ts`).
+**Extend tools:** create the tool in `backend/src/lib/tools/` and register it in `lib/tools/index.ts`. Mirror any new UI event in `AssistantEvent` (`frontend/src/types/app.ts`).
 
 ---
 
@@ -98,6 +98,6 @@ Roadmap: `.claude/commands/compliance-rag-roadmap.md`.
 ## Conventions when editing this codebase
 
 - **Backend:** Express + TypeScript strict; tools in `lib/tools/` (registered in `lib/tools/index.ts`); screening orchestration in `lib/screening/runScreening.ts`.
-- **Frontend:** Assistant UI under `assistant/`, `workflows/`, `shared/` — preserve compliance shell features unless asked to remove.
-- **Types:** Screener domain types in `frontend/src/lib/screenerTypes.ts`; assistant types in `shared/types.ts` (`App*` prefix).
+- **Frontend:** Assistant UI under `features/assistant/`, `features/workflows/`, shared pieces in `components/` — preserve compliance shell features unless asked to remove.
+- **Types:** Screener domain types in `frontend/src/types/screening.ts`; assistant types in `frontend/src/types/app.ts` (`App*` prefix).
 - **Env:** Desktop app — models and keys in the AI Control Center; browser-only dev — root `.env` + Watchman via `docker-compose.dev.yml`.

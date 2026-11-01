@@ -72,8 +72,8 @@ backend/src/
   lib/tools/            — add retrieve_compliance_context tool (register in index.ts)
 
 frontend/src/
-  app/lib/screenerApi.ts
-  app/components/assistant/
+  api/screenerChat.ts
+  features/assistant/
 ```
 
 ---

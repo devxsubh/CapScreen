@@ -1,6 +1,6 @@
 "use client";
 
-import { WorkflowList } from "@/app/components/workflows/WorkflowList";
+import { WorkflowList } from "@/features/workflows/components/WorkflowList";
 
 export default function WorkflowsPage() {
     return (

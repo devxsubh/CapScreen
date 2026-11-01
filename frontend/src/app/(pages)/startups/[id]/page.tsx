@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { StartupScreenerPage } from "@/app/components/startups/StartupScreenerPage";
+import { StartupScreenerPage } from "@/features/startups/components/StartupScreenerPage";
 
 interface Props {
     params: Promise<{ id: string }>;

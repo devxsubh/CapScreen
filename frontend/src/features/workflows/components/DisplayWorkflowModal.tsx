@@ -1,0 +1,658 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { MessageSquare, Search, Table2, X } from "lucide-react";
+import type { AppDocument, AppMessage, AppWorkflow } from "@/types/app";
+import { createTabularReview } from "@/api/tabularReviews";
+import { getStartup, listCsvs } from "@/api/startups";
+import type { ScreeningResult } from "@/types/screening";
+import { isCsvAssetId, isDocumentAssetId, isScreeningAssetId, parseCsvAssetId } from "@/features/documents/lib/workflowAssetIds";
+import { useRouter } from "next/navigation";
+import { useDirectoryData } from "@/features/documents/hooks/useDirectoryData";
+import { FileDirectory } from "@/features/documents/components/FileDirectory";
+import { useChatHistoryContext } from "@/contexts/ChatHistoryContext";
+import { AssistantPanel, TabularPanel } from "./WorkflowPreviewPanels";
+import { Toggle, WorkflowProjectPicker } from "./WorkflowProjectPicker";
+
+interface Props {
+    workflows: AppWorkflow[];
+    workflow: AppWorkflow | null;
+    onClose: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// DisplayWorkflowModal
+// ---------------------------------------------------------------------------
+export function DisplayWorkflowModal({ workflows, workflow, onClose }: Props) {
+    const [screen, setScreen] = useState<"select" | "configure">("select");
+    const [selected, setSelected] = useState<AppWorkflow | null>(workflow);
+    const [listSearch, setListSearch] = useState("");
+    const selectedRowRef = useRef<HTMLButtonElement>(null);
+
+    // Configure screen state
+    const [inProject, setInProject] = useState(false);
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
+        null,
+    );
+    const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(
+        new Set(),
+    );
+    const [docSearch, setDocSearch] = useState("");
+    const [assistantPrompt, setAssistantPrompt] = useState("");
+    const [saving, setSaving] = useState(false);
+
+    const router = useRouter();
+    const { saveChat, setNewChatMessages } = useChatHistoryContext();
+    const {
+        loading: dirLoading,
+        projects,
+        standaloneDocuments,
+    } = useDirectoryData(screen === "configure");
+
+    useEffect(() => {
+        if (workflow) {
+            setSelected(workflow);
+            setScreen("select");
+            setListSearch("");
+        } else {
+            setSelected(null);
+        }
+    }, [workflow?.id]);
+
+    useEffect(() => {
+        if (selected && selectedRowRef.current) {
+            selectedRowRef.current.scrollIntoView({ block: "nearest" });
+        }
+    }, [selected?.id]);
+
+    // Reset configure state on back
+    useEffect(() => {
+        if (screen === "select") {
+            setInProject(false);
+            setSelectedProjectId(null);
+            setSelectedDocIds(new Set());
+            setDocSearch("");
+            setAssistantPrompt("");
+        }
+    }, [screen]);
+
+    function handleClose() {
+        setSelected(null);
+        setScreen("select");
+        onClose();
+    }
+
+    if (!workflow) return null;
+    const wf = selected ?? workflow;
+
+    // ---------------------------------------------------------------------------
+    // Handlers
+    // ---------------------------------------------------------------------------
+    async function resolveSelectedAssets(): Promise<{
+        files: { filename: string; document_id: string }[];
+        csvContent?: string;
+        screeningResult?: ScreeningResult;
+    }> {
+        const allDocs: AppDocument[] = [
+            ...standaloneDocuments,
+            ...projects.flatMap((p) => p.documents || []),
+        ];
+        const files = allDocs
+            .filter(
+                (d) =>
+                    selectedDocIds.has(d.id) && isDocumentAssetId(d.id),
+            )
+            .map((d) => ({ filename: d.filename, document_id: d.id }));
+
+        const csvSelections = [...selectedDocIds].filter(isCsvAssetId);
+        let csvContent: string | undefined;
+        if (csvSelections.length === 1) {
+            const parsed = parseCsvAssetId(csvSelections[0]);
+            if (parsed) {
+                const csvList = await listCsvs(parsed.projectId);
+                const match = csvList.find((c) => c.id === parsed.csvId);
+                if (match?.content) {
+                    csvContent = match.content;
+                }
+            }
+        }
+
+        const screeningSelections = [...selectedDocIds].filter(
+            isScreeningAssetId,
+        );
+        let screeningResult: ScreeningResult | undefined;
+        if (screeningSelections.length === 1) {
+            const parts = screeningSelections[0]
+                .slice("screening:".length)
+                .split(":");
+            const purpose = parts[0];
+            const assetProjectId = parts[1];
+            if (assetProjectId) {
+                const startup = await getStartup(assetProjectId);
+                if (purpose === "co_investor") {
+                    screeningResult =
+                        startup.lastCoInvestorScreeningResult ?? undefined;
+                } else if (purpose === "vendor") {
+                    screeningResult =
+                        startup.lastVendorScreeningResult ?? undefined;
+                } else {
+                    screeningResult =
+                        startup.lastScreeningResult ?? undefined;
+                }
+            }
+        }
+
+        return { files, csvContent, screeningResult };
+    }
+
+    async function handleStartChat() {
+        setSaving(true);
+        try {
+            const projectId = inProject ? selectedProjectId! : undefined;
+            // Startup workflows run in the startup workspace's chat; others get a new assistant chat.
+            const chatId = projectId ? null : await saveChat();
+            if (!projectId && !chatId) return;
+
+            const { files, csvContent, screeningResult } =
+                await resolveSelectedAssets();
+
+            const content = assistantPrompt.trim()
+                ? `Run the "${wf.title}" workflow.\n\n${assistantPrompt.trim()}`
+                : `Run the "${wf.title}" workflow.`;
+
+            const message: AppMessage = {
+                role: "user",
+                content,
+                workflow: { id: wf.id, title: wf.title },
+                files: files.length > 0 ? files : undefined,
+                csvContent,
+                screeningResult,
+            };
+
+            setNewChatMessages([message]);
+            handleClose();
+            router.push(
+                projectId
+                    ? `/startups/${projectId}?workflow=1`
+                    : `/assistant/chat/${chatId}`,
+            );
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    async function handleCreateReview() {
+        const allDocs: AppDocument[] = [
+            ...standaloneDocuments,
+            ...projects.flatMap((p) => p.documents || []),
+        ];
+        const docIds = allDocs
+            .filter((d) => selectedDocIds.has(d.id))
+            .map((d) => d.id);
+        const projectId = inProject ? selectedProjectId! : undefined;
+
+        setSaving(true);
+        try {
+            const review = await createTabularReview({
+                title: wf.title,
+                document_ids: docIds,
+                columns_config: wf.columns_config || [],
+                workflow_id: wf.is_system ? undefined : wf.id,
+                project_id: projectId,
+            });
+            handleClose();
+            router.push(
+                projectId
+                    ? `/startups/${projectId}/tabular-reviews/${review.id}`
+                    : `/tabular-reviews/${review.id}`,
+            );
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Tabular doc browser helpers
+    // ---------------------------------------------------------------------------
+    const q = docSearch.toLowerCase().trim();
+    const selectedProject = projects.find((p) => p.id === selectedProjectId);
+    const projectDocs = selectedProject?.documents ?? [];
+
+    const filteredProjectDocs = q
+        ? projectDocs.filter((d) => d.filename.toLowerCase().includes(q))
+        : projectDocs;
+
+    const filteredStandalone = q
+        ? standaloneDocuments.filter((d) =>
+              d.filename.toLowerCase().includes(q),
+          )
+        : standaloneDocuments;
+
+    function filterProjectAssets(p: (typeof projects)[number]) {
+        const documents = (p.documents || []).filter(
+            (d) => !q || d.filename.toLowerCase().includes(q),
+        );
+        const csvs = (p.csvs || []).filter(
+            (c) => !q || c.filename.toLowerCase().includes(q),
+        );
+        const screening_assets = (p.screening_assets || []).filter(
+            (s) =>
+                !q ||
+                s.label.toLowerCase().includes(q) ||
+                (s.csv_filename?.toLowerCase().includes(q) ?? false),
+        );
+        return { ...p, documents, csvs, screening_assets };
+    }
+
+    const filteredAllProjects = projects
+        .map(filterProjectAssets)
+        .filter(
+            (p) =>
+                !q ||
+                p.name.toLowerCase().includes(q) ||
+                p.documents.length > 0 ||
+                p.csvs.length > 0 ||
+                p.screening_assets.length > 0,
+        );
+
+    const filteredInProjectAssets = selectedProject
+        ? filterProjectAssets(selectedProject)
+        : null;
+
+    // ---------------------------------------------------------------------------
+    // Render
+    // ---------------------------------------------------------------------------
+    return createPortal(
+        <div className="fixed inset-0 z-[101] flex items-center justify-center bg-black/20 backdrop-blur-xs">
+            <div
+                className={`w-full rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 flex flex-col h-[600px] transition-all duration-200 ${screen === "select" ? "max-w-4xl" : "max-w-2xl"}`}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 shrink-0">
+                    <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                        {screen === "select" ? (
+                            <>
+                                <span>Workflows</span>
+                                <span>›</span>
+                                <span>Select workflow</span>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => setScreen("select")}
+                                    className="hover:text-gray-700 transition-colors"
+                                >
+                                    Workflows
+                                </button>
+                                <span>›</span>
+                                <span className="truncate max-w-[160px]">
+                                    {wf.title}
+                                </span>
+                                <span>›</span>
+                                <span>
+                                    {wf.type === "assistant"
+                                        ? "New Chat"
+                                        : "New Review"}
+                                </span>
+                            </>
+                        )}
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+
+                {/* ── SELECT SCREEN ── */}
+                {screen === "select" && (
+                    <>
+                        <div className="flex flex-row flex-1 min-h-0 overflow-hidden">
+                            {/* Left: workflow list */}
+                            <div className="w-80 shrink-0 flex flex-col border-t border-gray-200">
+                                {/* Search */}
+                                <div className="px-3 py-2 shrink-0 border-b border-gray-100">
+                                    <div className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1">
+                                        <Search className="h-3 w-3 text-gray-400 shrink-0" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search…"
+                                            value={listSearch}
+                                            onChange={(e) => setListSearch(e.target.value)}
+                                            className="flex-1 bg-transparent text-xs text-gray-700 placeholder:text-gray-400 outline-none"
+                                        />
+                                        {listSearch && (
+                                            <button onClick={() => setListSearch("")} className="text-gray-400 hover:text-gray-600">
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                {/* List */}
+                                <div className="overflow-y-auto flex-1">
+                                    {workflows
+                                        .filter((wfItem) => !listSearch || wfItem.title.toLowerCase().includes(listSearch.toLowerCase()))
+                                        .map((wfItem) => {
+                                            const isSelected = selected?.id === wfItem.id;
+                                            const Icon = wfItem.type === "tabular" ? Table2 : MessageSquare;
+                                            return (
+                                                <button
+                                                    key={wfItem.id}
+                                                    ref={isSelected ? selectedRowRef : null}
+                                                    type="button"
+                                                    onClick={() => setSelected(wfItem)}
+                                                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs text-left border-b border-gray-200 transition-colors ${isSelected ? "bg-gray-100" : "hover:bg-gray-50"}`}
+                                                >
+                                                    <span className={`flex-1 truncate ${isSelected ? "text-gray-900 font-medium" : "text-gray-700"}`}>
+                                                        {wfItem.title}
+                                                    </span>
+                                                    <Icon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                                                </button>
+                                            );
+                                        })}
+                                </div>
+                            </div>
+
+                            {/* Right: workflow detail */}
+                            {wf.type === "assistant" ? (
+                                <AssistantPanel key={wf.id} workflow={wf} />
+                            ) : (
+                                <TabularPanel key={wf.id} workflow={wf} />
+                            )}
+                        </div>
+
+                        <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+                            {wf.is_system ? (
+                                <button
+                                    onClick={() => {
+                                        router.push(`/workflows/${wf.id}`);
+                                        handleClose();
+                                    }}
+                                    className="rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                    View Page
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => {
+                                        router.push(`/workflows/${wf.id}`);
+                                        handleClose();
+                                    }}
+                                    className="rounded-lg bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)] px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                    Edit
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setScreen("configure")}
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                            >
+                                Use
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {/* ── ASSISTANT CONFIGURE SCREEN ── */}
+                {screen === "configure" && wf.type === "assistant" && (
+                    <>
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                            {/* Add-on prompt */}
+                            <div className="px-5 pb-3 shrink-0">
+                                <p className="text-xs font-medium text-gray-700 mb-2">
+                                    Message (optional)
+                                </p>
+                                <textarea
+                                    rows={3}
+                                    value={assistantPrompt}
+                                    onChange={(e) =>
+                                        setAssistantPrompt(e.target.value)
+                                    }
+                                    placeholder="Add any additional instructions to the workflow prompt…"
+                                    className="w-full text-sm text-gray-700 placeholder:text-gray-400 bg-gray-50 border border-gray-200 rounded-md px-3 py-2 resize-none outline-none leading-relaxed"
+                                />
+                            </div>
+
+                            {/* Toggle row */}
+                            <div className="px-5 py-3 flex flex-col gap-2 shrink-0">
+                                <span className="text-xs font-medium text-gray-700">
+                                    Create in a project
+                                </span>
+                                <Toggle
+                                    on={inProject}
+                                    onToggle={() => {
+                                        setInProject(!inProject);
+                                        setSelectedProjectId(null);
+                                        setSelectedDocIds(new Set());
+                                        setDocSearch("");
+                                    }}
+                                />
+                            </div>
+
+                            {inProject && (
+                                <>
+                                    <div className="px-5 pt-1 pb-1 shrink-0">
+                                        <p className="text-xs font-medium text-gray-700">
+                                            Select project
+                                        </p>
+                                    </div>
+                                    <div className="px-5 pb-2 shrink-0">
+                                        <WorkflowProjectPicker
+                                            projects={projects}
+                                            selectedId={selectedProjectId}
+                                            onSelect={(id) => {
+                                                setSelectedProjectId(id);
+                                                if (!id) setSelectedDocIds(new Set());
+                                            }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="px-5 pt-1 pb-1 shrink-0">
+                                <p className="text-xs font-medium text-gray-700">
+                                    {inProject
+                                        ? "Select project files"
+                                        : "Select documents"}
+                                </p>
+                            </div>
+
+                            <div className="px-4 pt-1.5 pb-1 shrink-0">
+                                <div className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1">
+                                    <Search className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search…"
+                                        value={docSearch}
+                                        onChange={(e) =>
+                                            setDocSearch(e.target.value)
+                                        }
+                                        className="flex-1 bg-transparent text-xs text-gray-700 placeholder:text-gray-400 outline-none"
+                                    />
+                                    {docSearch && (
+                                        <button
+                                            onClick={() => setDocSearch("")}
+                                            className="text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto px-4 pb-2">
+                                <FileDirectory
+                                    standaloneDocs={
+                                        inProject ? [] : filteredStandalone
+                                    }
+                                    directoryProjects={
+                                        inProject
+                                            ? filteredInProjectAssets
+                                                ? [filteredInProjectAssets]
+                                                : []
+                                            : filteredAllProjects
+                                    }
+                                    loading={dirLoading}
+                                    selectedIds={selectedDocIds}
+                                    onChange={setSelectedDocIds}
+                                    allowMultiple
+                                    forceExpanded={!!q || inProject}
+                                    emptyMessage={
+                                        q
+                                            ? "No matches found"
+                                            : inProject
+                                              ? "No files in this project"
+                                              : "No documents yet"
+                                    }
+                                />
+                            </div>
+                        </div>
+
+                        <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+                            <span className="text-xs text-gray-400">
+                                {selectedDocIds.size > 0
+                                    ? `${selectedDocIds.size} selected`
+                                    : ""}
+                            </span>
+                            <button
+                                onClick={handleStartChat}
+                                disabled={
+                                    saving || (inProject && !selectedProjectId)
+                                }
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                            >
+                                {saving ? "Starting…" : "Start Chat"}
+                            </button>
+                        </div>
+                    </>
+                )}
+
+                {/* ── TABULAR CONFIGURE SCREEN ── */}
+                {screen === "configure" && wf.type === "tabular" && (
+                    <>
+                        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                            {/* Toggle stacked */}
+                            <div className="px-5 pb-3 flex flex-col gap-2 shrink-0">
+                                <span className="text-xs font-medium text-gray-700">
+                                    Create in a project
+                                </span>
+                                <Toggle
+                                    on={inProject}
+                                    onToggle={() => {
+                                        setInProject(!inProject);
+                                        setSelectedProjectId(null);
+                                        setDocSearch("");
+                                        setSelectedDocIds(new Set());
+                                    }}
+                                />
+                            </div>
+
+                            {/* Project section */}
+                            {inProject && (
+                                <>
+                                    <div className="px-5 pt-1 pb-1 shrink-0">
+                                        <p className="text-xs font-medium text-gray-700">
+                                            Select Project
+                                        </p>
+                                    </div>
+                                    <div className="px-5 pb-2 shrink-0">
+                                        <WorkflowProjectPicker
+                                            projects={projects}
+                                            selectedId={selectedProjectId}
+                                            onSelect={(id) => {
+                                                setSelectedProjectId(id);
+                                                if (!id)
+                                                    setSelectedDocIds(
+                                                        new Set(),
+                                                    );
+                                            }}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Documents section */}
+                            <div className="px-5 pt-3 pb-1 shrink-0">
+                                <p className="text-xs font-medium text-gray-700">
+                                    Select Documents
+                                </p>
+                            </div>
+
+                            {/* Search */}
+                            <div className="px-4 pt-1.5 pb-1 shrink-0">
+                                <div className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1">
+                                    <Search className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search…"
+                                        value={docSearch}
+                                        onChange={(e) =>
+                                            setDocSearch(e.target.value)
+                                        }
+                                        className="flex-1 bg-transparent text-xs text-gray-700 placeholder:text-gray-400 outline-none"
+                                    />
+                                    {docSearch && (
+                                        <button
+                                            onClick={() => setDocSearch("")}
+                                            className="text-gray-400 hover:text-gray-600"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* File browser */}
+                            <div className="flex-1 overflow-y-auto px-4 pb-2">
+                                <FileDirectory
+                                    standaloneDocs={
+                                        inProject
+                                            ? filteredProjectDocs
+                                            : filteredStandalone
+                                    }
+                                    directoryProjects={
+                                        inProject ? [] : filteredAllProjects
+                                    }
+                                    loading={dirLoading}
+                                    selectedIds={selectedDocIds}
+                                    onChange={setSelectedDocIds}
+                                    allowMultiple
+                                    forceExpanded={!!q || inProject}
+                                    emptyMessage={
+                                        q
+                                            ? "No matches found"
+                                            : inProject
+                                              ? "No documents in this project"
+                                              : "No documents yet"
+                                    }
+                                />
+                            </div>
+                        </div>
+
+                        <div className="border-t border-gray-200 px-5 py-3 flex items-center justify-between shrink-0">
+                            <span className="text-xs text-gray-400">
+                                {selectedDocIds.size > 0
+                                    ? `${selectedDocIds.size} selected`
+                                    : ""}
+                            </span>
+                            <button
+                                onClick={handleCreateReview}
+                                disabled={
+                                    saving ||
+                                    selectedDocIds.size === 0 ||
+                                    (inProject && !selectedProjectId)
+                                }
+                                className="rounded-lg bg-gray-950 px-5 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                            >
+                                {saving ? "Creating…" : "Create Review"}
+                            </button>
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>,
+        document.body,
+    );
+}

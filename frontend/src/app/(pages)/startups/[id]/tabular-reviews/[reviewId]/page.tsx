@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { TRView } from "@/app/components/tabular/TabularReviewView";
+import { TRView } from "@/features/tabular/components/TabularReviewView";
 
 interface Props {
     params: Promise<{ id: string; reviewId: string }>;

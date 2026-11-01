@@ -115,7 +115,7 @@ Electron main  (desktop/src/main.ts)
 
 Only three things leave the machine:
 
-1. **Sanctions-list downloads** by Watchman (OFAC Treasury, EU webgate) every 12 h. The shell also keeps an offline snapshot (`desktop/src/listCache.ts`) and starts Watchman from it when an online start fails.
+1. **Sanctions-list downloads** by Watchman (OFAC Treasury, EU webgate) every 12 h. The shell also keeps an offline snapshot (`desktop/src/sidecars/listCache.ts`) and starts Watchman from it when an online start fails.
 2. **Sign-in** traffic to the hosted auth service (accounts only).
 3. **Cloud LLM / embedding calls**, only when the user assigns a cloud model in the AI Control Center. Local-only mode blocks them in `getLlm()`. The optional `web_search` tool (Tavily) asks the user to approve each query first.
 
@@ -132,10 +132,10 @@ Only three things leave the machine:
 1. `desktop/src/main.ts` registers the `capscreen://` scheme, creates the window with a splash page and calls `start()`.
 2. `start()` kicks off `boot()` **in parallel** with sign-in:
    - `loadMasterKey()` (`vault.ts`) unseals or creates a 32-byte master key with Electron `safeStorage` (OS keychain).
-   - `startWatchman()` (`sidecars.ts`) reaps a stale Watchman PID, writes a config for the chosen lists, launches the binary, waits for it (falls back to the offline snapshot if downloads fail).
+   - `startWatchman()` (`sidecars/watchman.ts`) reaps a stale Watchman PID, writes a config for the chosen lists, launches the binary, waits for it (falls back to the offline snapshot if downloads fail).
    - `startFrontend()` and `startBackend()` run in parallel on free ports. The backend receives `CAPSCREEN_DATA_DIR`, `CAPSCREEN_DESKTOP_TOKEN`, `CAPSCREEN_MASTER_KEY`, `WATCHMAN_URL`, `CAPSCREEN_API_ORIGIN`, `CAPSCREEN_CORPUS_DIR`, `FRONTEND_URL`. Variables that would redirect it to cloud services (`CAPSCREEN_DB`, `MONGODB_URI`, `RESEND_API_KEY`, `LLM_CONFIG_FILE`) are deleted from its env.
    - Protocol handler installed (packaged) or token injector (dev); notification poller and sanctions-settings watcher start.
-3. Meanwhile `restoreSession()` (`session.ts`) tries to refresh the sealed refresh token. If that fails, the sign-in gate (`splash.ts` `signInHtml`) is shown until the browser round trip completes. Offline, a session up to 14 days old is accepted.
+3. Meanwhile `restoreSession()` (`auth/session.ts`) tries to refresh the sealed refresh token. If that fails, the sign-in gate (`auth/signInGate.ts`, page from `window/shellPages.ts`) is shown until the browser round trip completes. Offline, a session up to 14 days old is accepted.
 4. When both finish, the window loads `capscreen://app/` → Next redirects `/` to `/assistant`.
 
 Supervision: sidecars restart with backoff after a crash (give up after 5 quick failures). Exit code **75** means "restart me" (used after a backup restore). Logs go to `<userData>/logs/<name>.log` (rotated past 10 MB) and `main.log`.
@@ -479,7 +479,7 @@ All are mongoose models; on desktop they persist to SQLite through the driver sh
 
 ### 6.7 Types (`src/types/`)
 
-- `screening.ts`: the domain contract — `OwnershipRecord`, `WatchmanMatch` (keeps raw Watchman fields for auditors), `WatchmanListInfo`, `EntityScreeningQuery`, `EntityResult`, `OwnershipEdge`, `ColumnMapping`, `CsvIngestResult`, `ScreeningResult`, `ScreeningSummary`, and the enums (`RiskLevel`, `ParseStatus`, `CsvKind`, `ParseSource`, `ScreeningMode`, `ReviewStatus`, `OwnershipRuleFlag`, `RosterPurpose`). The frontend re-exports this file (type-only) from `frontend/src/lib/screenerTypes.ts`.
+- `screening.ts`: the domain contract — `OwnershipRecord`, `WatchmanMatch` (keeps raw Watchman fields for auditors), `WatchmanListInfo`, `EntityScreeningQuery`, `EntityResult`, `OwnershipEdge`, `ColumnMapping`, `CsvIngestResult`, `ScreeningResult`, `ScreeningSummary`, and the enums (`RiskLevel`, `ParseStatus`, `CsvKind`, `ParseSource`, `ScreeningMode`, `ReviewStatus`, `OwnershipRuleFlag`, `RosterPurpose`). The frontend re-exports this file (type-only) from `frontend/src/types/screening.ts`.
 - `tabular.ts`: `ColumnConfig`, `TabularCellContent`, `TabularRowDoc`.
 
 ### 6.8 Scripts (`backend/scripts/`)
@@ -697,20 +697,30 @@ Package `capscreen-desktop`, product name CapScreen, version 1.0.0. The main pro
 
 ### 12.1 Source files (`desktop/src/`)
 
+`main.ts` is the entry point and only wires things together; each folder owns one job.
+
 | File | Responsibility |
 |---|---|
-| `main.ts` | App lifecycle: single window, tray (closing keeps it running so background screening continues), app menu (AI Control Center `Cmd+,` → `/settings/ai`, Data & Backup, New Startup `CmdOrCtrl+N`, open logs/data folder), external links open in the browser, sign-in gate, boot, sign-out, quit, error logging to `logs/main.log`, dev-only CDP via `CAPSCREEN_REMOTE_DEBUG` |
-| `sidecars.ts` | Supervisor for Watchman (child process), backend and UI (Electron `utilityProcess` when packaged; `tsx` / `next dev` in dev); log piping; restart with backoff; exit 75 = restart; Watchman config per selected lists; online/offline mode; list snapshot maintenance; reload Watchman when the lists change; `stopAll` |
-| `protocol.ts` | `capscreen://` scheme; streaming HTTP proxy to UI and `/__api/*` backend; adds the token; rewrites redirects onto the app origin; dev token injection |
+| `main.ts` | Entry: single-instance lock, boot (start the sidecars, install the protocol), sign-in gate, sign-out, app lifecycle events, dev-only CDP via `CAPSCREEN_REMOTE_DEBUG` |
 | `preload.ts` | Exposes `window.capscreenDesktop` (sandboxed; everything over validated IPC) |
-| `ipc.ts` | IPC handlers: `bootstrap`, `sign-out`, `shell-action`, `open-account`, `open-external`, `reveal`, `save-file`, `pick-folder`, `pick-file`, `notify`, `print-pdf` |
+| `runtime.ts` | Sidecar URLs and the per-launch token once booted; `appUrl()`, `apiBase()` |
+| `logging.ts` | Main-process errors to `logs/main.log` (and `console.error` when packaged) |
+| `paths.ts` | userData / resources paths, Watchman binary name per platform/arch |
 | `vault.ts` | Master key create/unseal with `safeStorage` |
-| `session.ts` | Sealed session, restore with 14-day offline grace, background refresh every 12 h, `identity.json`, sign-in, sign-out (revoke) |
-| `authFlow.ts` | Electron-free RFC 8252 + PKCE client |
-| `listCache.ts` | Offline snapshot of OFAC and EU source files and its manifest |
 | `notifications.ts` | Polls the latest digest and raises native notifications that deep-link into the app |
-| `splash.ts` | Shell HTML pages: splash, boot error, sign-in gate, browser "you can close this tab" page |
-| `paths.ts` / `ports.ts` | Paths and Watchman binary name per platform/arch; `freePort()` and `waitForHttp()` |
+| `auth/authFlow.ts` | Electron-free RFC 8252 + PKCE client |
+| `auth/session.ts` | Sealed session, restore with 14-day offline grace, background refresh every 12 h, `identity.json`, sign-in, sign-out (revoke) |
+| `auth/signInGate.ts` | Sign-in page until signed in; handles its buttons (sign in, create account, reopen, cancel) |
+| `bridge/protocol.ts` | `capscreen://` scheme; streaming HTTP proxy to UI and `/__api/*` backend; adds the token; rewrites redirects onto the app origin; dev token injection |
+| `bridge/ipc.ts` | IPC handlers: `bootstrap`, `sign-out`, `shell-action`, `open-account`, `open-external`, `reveal`, `save-file`, `pick-folder`, `pick-file`, `notify`, `print-pdf` |
+| `sidecars/supervisor.ts` | Log piping (rotated past 10 MB), restart with backoff, exit 75 = restart, `stopAll` |
+| `sidecars/watchman.ts` | Watchman config per selected lists; online/offline mode; list snapshot maintenance; reload when the lists change |
+| `sidecars/backend.ts`, `sidecars/frontend.ts` | Start the backend and UI (Electron `utilityProcess` when packaged; `tsx` / `next dev` in dev) |
+| `sidecars/listCache.ts` | Offline snapshot of OFAC and EU source files and its manifest |
+| `sidecars/ports.ts` | `freePort()` and `waitForHttp()` |
+| `window/mainWindow.ts` | The app window: create, show, navigate, external links open in the browser, closing hides to the tray |
+| `window/menu.ts`, `window/tray.ts` | App menu (AI Control Center `Cmd+,` → `/settings/ai`, Data & Backup, New Startup `CmdOrCtrl+N`, open logs/data folder); tray menu |
+| `window/shellPages.ts` | Shell HTML pages: splash, boot error, sign-in gate, browser "you can close this tab" page |
 
 ### 12.2 Build and packaging
 
@@ -742,13 +752,16 @@ Package `capscreen`. Next.js 16 App Router, React 19.2, TypeScript, Tailwind CSS
 
 ### 13.2 How the UI talks to the backend
 
-- `lib/apiBase.ts`: backend origin from the preload bridge (`window.capscreenDesktop.apiBase`, i.e. `capscreen://app/__api`) or `NEXT_PUBLIC_API_BASE_URL` / `http://localhost:3001`.
+- `api/apiBase.ts`: backend origin from the preload bridge (`window.capscreenDesktop.apiBase`, i.e. `capscreen://app/__api`) or `NEXT_PUBLIC_API_BASE_URL` / `http://localhost:3001`.
 - `lib/desktop.ts`: typed bridge (`desktop()`, `isDesktop()`, hydration-safe `useDesktop()`).
 - No auth headers: the desktop token is added by the Electron main process, and `pnpm dev` runs open on loopback.
 - `contexts/AuthContext.tsx` / `UserProfileContext.tsx`: the local user plus the signed-in account's email, name and organisation from the bridge; sign-out goes through the shell.
-- SSE is read with `fetch` + stream reading in `app/lib/screenerApi.ts` (startup chat and resume) and `app/lib/capScreenApi.ts` (assistant, project chat, tabular generation and chat).
+- Every backend call goes through `src/api/`, one file per backend module (`startups.ts`, `chats.ts`, `projects.ts`, `tabularReviews.ts`, `workflows.ts`, `portfolio.ts`, `aiControlCenter.ts`, `desktopData.ts`, `auditLogs.ts`, `screeningExplain.ts`); `client.ts` is the shared fetch helper.
+- SSE is read with `fetch` + stream reading in `api/screenerChat.ts` (startup chat and resume), `api/chats.ts` (assistant, project chat) and `api/tabularReviews.ts` (tabular generation and chat).
 
 ### 13.3 Routes (`src/app/`)
+
+`app/` holds routes only: each `page.tsx` reads its params and renders one component from `features/`.
 
 | URL | File | Renders |
 |---|---|---|
@@ -756,81 +769,90 @@ Package `capscreen`. Next.js 16 App Router, React 19.2, TypeScript, Tailwind CSS
 | `/startups` | `(pages)/startups/page.tsx` | `StartupsPage` |
 | `/startups/[id]` | `(pages)/startups/[id]/page.tsx` | `StartupScreenerPage`, the one startup workspace: scoped chat on the left, analysis dock on the right (Cap table, Graph, Entities, Flags, **Documents** = `StartupDocumentsPanel` explorer + viewer). Opened by the Startups list, Choose startup in the assistant, and workflows run on a startup (`?workflow=1` sends the queued workflow message through the workspace chat) |
 | `/startups/[id]/tabular-reviews/[reviewId]`, `/tabular-reviews/[id]` | | `TRView` |
-| `/tabular-reviews` | `(pages)/tabular-reviews/page.tsx` | Review list, new review modal, portfolio monitoring card |
-| `/workflows`, `/workflows/[id]` | `(pages)/workflows/…` | `WorkflowList`; prompt editor (Tiptap) or column schema editor |
+| `/tabular-reviews` | `features/tabular/components/TabularReviewsPage.tsx` | Review list, new review modal, portfolio monitoring card |
+| `/workflows`, `/workflows/[id]` | `(pages)/workflows/…` | `WorkflowList`; `WorkflowEditorPage`: prompt editor (Tiptap) or column schema editor |
 | `/settings` | `(pages)/settings/layout.tsx` | Settings shell: a full-height panel on the left grouped into Account / Screening / Data, each page with a one-line hint (a row of tabs on narrow windows), and a wide content area (up to 72rem) where related cards sit two to a row on wide screens; `/settings` redirects to `/settings/account` (in `next.config.ts`) |
-| `/settings/account` | `(pages)/settings/account/page.tsx` | Profile, connection state, password portal, restart tour, sign out |
-| `/settings/ai` | `(pages)/settings/ai/page.tsx` | AI Control Center: status card, setup wizard, chat model, providers and keys, local models, other tasks, local-only mode; `/ai` redirects here |
-| `/settings/screening` | `(pages)/settings/screening/page.tsx` | Match-score thresholds (score band, try-a-score), OFAC / beneficial-owner thresholds, matches per entity; save bar, reset to defaults |
-| `/settings/sanctions` | `(pages)/settings/sanctions/page.tsx` | Engine status, list switches with entry counts and SHA-256, background re-screening |
-| `/settings/connectors` | `(pages)/settings/connectors/page.tsx` | Connectors (Carta, Pulley, AngelList, Google Drive, Dropbox, SharePoint, OpenCorporates, Companies House), all coming soon; a Show in chat switch per connector. The list and the preference live in `lib/connectors.ts` (preference in browser storage, per computer) |
-| `/settings/data` | `(pages)/settings/data/page.tsx` | Backup & audit: storage location, encrypted backup, restore, audit-log export, and **Start fresh** (`StartFreshCard`: type ERASE → `POST /api/desktop/erase`, `lib/infra/eraseData.ts`; erases startups, files, chats, reviews, workflows and the audit log, keeps sign-in, AI setup and settings, sets a safety copy aside in `<data>/backups/before-erase-<time>/`, then clears per-computer UI state so onboarding starts over) |
-| `/settings/about` | `(pages)/settings/about/page.tsx` | Version, data folder, engine and AI status, copy diagnostics (no account details, keys or cap-table data) |
+| `/settings/account` | `features/settings/components/AccountSettingsPage.tsx` | Profile, connection state, password portal, restart tour, sign out |
+| `/settings/ai` | `features/ai/components/AiControlCenterPage.tsx` | AI Control Center: status card, setup wizard, chat model, providers and keys, local models, other tasks, local-only mode; `/ai` redirects here |
+| `/settings/screening` | `features/settings/components/ScreeningSettingsPage.tsx` | Match-score thresholds (score band, try-a-score), OFAC / beneficial-owner thresholds, matches per entity; save bar, reset to defaults |
+| `/settings/sanctions` | `features/settings/components/SanctionsSettingsPage.tsx` | Engine status, list switches with entry counts and SHA-256, background re-screening |
+| `/settings/connectors` | `features/settings/components/ConnectorsSettingsPage.tsx` | Connectors (Carta, Pulley, AngelList, Google Drive, Dropbox, SharePoint, OpenCorporates, Companies House), all coming soon; a Show in chat switch per connector. The list and the preference live in `lib/connectors.ts` (preference in browser storage, per computer) |
+| `/settings/data` | `features/settings/components/DataSettingsPage.tsx` | Backup & audit: storage location, encrypted backup, restore, audit-log export, and **Start fresh** (`StartFreshCard`: type ERASE → `POST /api/desktop/erase`, `lib/infra/eraseData.ts`; erases startups, files, chats, reviews, workflows and the audit log, keeps sign-in, AI setup and settings, sets a safety copy aside in `<data>/backups/before-erase-<time>/`, then clears per-computer UI state so onboarding starts over) |
+| `/settings/about` | `features/settings/components/AboutSettingsPage.tsx` | Version, data folder, engine and AI status, copy diagnostics (no account details, keys or cap-table data) |
 | layouts / errors | `app/layout.tsx`, `(pages)/layout.tsx` (sidebar, chat history, tour, `DesktopShell`), `error.tsx`, `global-error.tsx`, `not-found.tsx` | |
 
-Onboarding: a new user sees (1) the tour (`lib/onboardingTour.ts`, driver.js, storage key `capscreen_onboarding_tour_v2`; bump the version when the steps change). It runs on the assistant home and points at `data-tour` anchors: `composer`, `composer-sources`, `composer-tools`, `composer-model`, `getting-started`, `nav-assistant` (New chat), `nav-search`, `nav-startups`, `nav-tabular`, `nav-workflows`, `ai-status`, `nav-settings`; steps whose anchor isn't on screen are skipped. (2) The **Getting started** checklist under the composer (`assistant/GettingStarted.tsx`): Set up AI, Create a startup, Upload and screen a cap table, Ask the assistant, Take the tour; each ticks itself off from real data and the card hides when done or dismissed. (3) First-run empty states (`shared/EmptyState.tsx`) on Startups, Tabular reviews and Workflows with numbered first steps. Replay the tour from Settings → Profile.
+Onboarding: a new user sees (1) the tour (`lib/onboardingTour.ts`, driver.js, storage key `capscreen_onboarding_tour_v2`; bump the version when the steps change). It runs on the assistant home and points at `data-tour` anchors: `composer`, `composer-sources`, `composer-tools`, `composer-model`, `getting-started`, `nav-assistant` (New chat), `nav-search`, `nav-startups`, `nav-tabular`, `nav-workflows`, `ai-status`, `nav-settings`; steps whose anchor isn't on screen are skipped. (2) The **Getting started** checklist under the composer (`features/assistant/components/GettingStarted.tsx`): Set up AI, Create a startup, Upload and screen a cap table, Ask the assistant, Take the tour; each ticks itself off from real data and the card hides when done or dismissed. (3) First-run empty states (`components/common/EmptyState.tsx`) on Startups, Tabular reviews and Workflows with numbered first steps. Replay the tour from Settings → Profile.
 
 UI conventions (match the sidebar; reuse these instead of hand-rolled styles):
-- Page title: `components/shared/PageHeader.tsx` (EB Garamond `text-3xl`, one-line description, actions right); Settings uses the same type via `SettingsHeader`. Detail pages: small sans breadcrumb above (or beside) a serif title.
+- Page title: `components/layout/PageHeader.tsx` (EB Garamond `text-3xl`, one-line description, actions right); Settings uses the same type via `SettingsHeader`. Detail pages: small sans breadcrumb above (or beside) a serif title.
 - Buttons: `components/ui/button.tsx`. Primary = near-black `bg-gray-950`, hover `gray-800`; `outline` = white with a hairline ring shadow; `ghost` = soft grey hover. Destructive outline: red text with a red ring. Main actions are labelled ("New startup"), not bare "+" icons.
 - Tabs: `ToolbarTabs` and the analysis dock use pill tabs (active `bg-black/[0.06]`, hover `bg-black/[0.04]`).
 - Neutral accents: links are dark grey with a soft underline; spinners, resize handles and focus rings are grey. Blue only where it carries meaning (Word-file icons, tag colours, the UBO badge, graph colours, workflow type).
 - Modals: overlay `bg-black/20 backdrop-blur-xs`; panel `rounded-2xl bg-white shadow-2xl ring-1 ring-black/5`.
 - Surfaces: main content is white; the sidebar is `#f7f7f7`; hairline borders `border-black/[0.06]`.
-- Colours: `gray-*` is retuned in `globals.css` (`@theme`) to Tailwind's neutral scale, so use `gray` for every grey (not slate, zinc or neutral). Status colours: **red** = flagged / error, **amber** = review / warning (not yellow or orange), **emerald** = clear / success (not green). Near-black is `gray-950`, not `black`. Other hues only where they are categories: tabular tag colours (`pillUtils.ts`), audit event icons, startup initial tiles, the ownership diagram, workflow type, Word-file icons.
+- Colours: `gray-*` is retuned in `globals.css` (`@theme`) to Tailwind's neutral scale, so use `gray` for every grey (not slate, zinc or neutral). Status colours: **red** = flagged / error, **amber** = review / warning (not yellow or orange), **emerald** = clear / success (not green). Near-black is `gray-950`, not `black`. Other hues only where they are categories: tabular tag colours (`features/tabular/lib/pillUtils.ts`), audit event icons, startup initial tiles, the ownership diagram, workflow type, Word-file icons.
 
-Sidebar (`AppSidebar.tsx`): logo and collapse button; **New chat** (⇧⌘O / Ctrl+Shift+O, the way into the assistant) and **Search** (⌘K / Ctrl+K, filters chats); Startups, Tabular reviews, Workflows. Below: **Startups** (five most recently updated, colour-coded initial tiles, All startups, + for a new one) and **Chats** (grouped Today / Yesterday / Previous 7 days / Previous 30 days / Older, + for a new chat, Show more). The footer shows the assistant's model with its maker's logo and a health dot (links to AI Control), then the profile card (opens Settings). Collapsed, it's an icon rail with the CapScreen mark, the same actions and the AI status. Onboarding tour hooks: `data-tour` on New chat (`nav-assistant`), the nav items and `recent-projects`.
+Sidebar (`components/layout/AppSidebar.tsx`): logo and collapse button; **New chat** (⇧⌘O / Ctrl+Shift+O, the way into the assistant) and **Search** (⌘K / Ctrl+K, filters chats); Startups, Tabular reviews, Workflows. Below: **Startups** (five most recently updated, colour-coded initial tiles, All startups, + for a new one) and **Chats** (grouped Today / Yesterday / Previous 7 days / Previous 30 days / Older, + for a new chat, Show more). The footer shows the assistant's model with its maker's logo and a health dot (links to AI Control), then the profile card (opens Settings). Collapsed, it's an icon rail with the CapScreen mark, the same actions and the AI status. Onboarding tour hooks: `data-tour` on New chat (`nav-assistant`), the nav items and `recent-projects`.
 
-### 13.4 Components (`src/app/components/`)
+### 13.4 Folder layout (`src/`)
 
-**`ai/`**: `AiStatusCard.tsx` (problems + one fix each), `SetupWizard.tsx`, `LocalSetup.tsx`, `CloudSetup.tsx`, `RoleAssignments.tsx`, `LocalModels.tsx`, `ProviderList.tsx`, `ModelPicker.tsx` (chat toolbar control: models grouped by provider with logos, readable names, a one-line hint and the recommended badge; connect a provider through a pop-up), `ProviderLogo.tsx` (official marks: `ProviderLogo` for AI providers from `public/providers/`; `ModelLogo` for the model's maker — Anthropic, OpenAI, Google Gemini/Gemma, Meta, Qwen, Mistral, DeepSeek, Microsoft, Nomic, Mixedbread — and `systemBrands` + `BrandMark` for the OS (macOS, Windows, Linux) and chip maker (Apple, Intel, AMD, Qualcomm), all from `public/brands/`. Sources: Simple Icons, Wikimedia Commons public-domain/CC0/MIT files, or the company's site), `useModelDownload.ts`. Model ids are shown through `lib/modelDisplay.ts` (`modelDisplayName`, `modelHint`, `providerDisplayName`); the raw id stays in tooltips and is what gets saved.
+```
+app/            routes only (thin page.tsx files, layouts, error pages)
+features/<f>/   one folder per product area: components/ (incl. the <Name>Page a route renders), hooks/, lib/
+api/            HTTP clients, one file per backend module
+components/     shared UI: ui/ (shadcn), layout/, chat/, common/
+contexts/       React contexts (auth, profile, chat history, sidebar, onboarding tour)
+hooks/, lib/    app-wide hooks and helpers
+types/          app.ts (App* types), screening.ts (re-exports the backend contract)
+```
 
-**`settings/`**: `SettingsParts.tsx` (`SettingsHeader`, `SettingsCard`, `Switch`, `DetailRow`, `StatusLine`) shared by the `/settings/*` pages.
+A file used by one feature lives in that feature; a file used by several lives in `components/`, `hooks/`, `lib/` or `types/`. Imports use `@/` across folders and `./` within one.
 
-**`assistant/`**
+### 13.5 Features (`src/features/`)
+
+**`features/ai/`** (`components/`, `hooks/useModelDownload.ts`, `lib/modelDisplay.ts`): `AiControlCenterPage.tsx`, `AiStatusCard.tsx` (problems + one fix each), `SetupWizard.tsx`, `LocalSetup.tsx`, `CloudSetup.tsx`, `RoleAssignments.tsx`, `LocalModels.tsx`, `ProviderList.tsx`, `ModelPicker.tsx` (chat toolbar control: models grouped by provider with logos, readable names, a one-line hint and the recommended badge; connect a provider through `ConnectProviderDialog.tsx`), `ProviderLogo.tsx` (official marks: `ProviderLogo` for AI providers from `public/providers/`; `ModelLogo` for the model's maker — Anthropic, OpenAI, Google Gemini/Gemma, Meta, Qwen, Mistral, DeepSeek, Microsoft, Nomic, Mixedbread — and `systemBrands` + `BrandMark` for the OS (macOS, Windows, Linux) and chip maker (Apple, Intel, AMD, Qualcomm), all from `public/brands/`. Sources: Simple Icons, Wikimedia Commons public-domain/CC0/MIT files, or the company's site). Model ids are shown through `lib/modelDisplay.ts` (`modelDisplayName`, `modelHint`, `providerDisplayName`); the raw id stays in tooltips and is what gets saved.
+
+**`settings/`**: the `/settings/*` pages (`AccountSettingsPage.tsx`, `ScreeningSettingsPage.tsx`, `SanctionsSettingsPage.tsx`, `ConnectorsSettingsPage.tsx`, `DataSettingsPage.tsx`, `AboutSettingsPage.tsx`), `StartFreshCard.tsx`, and `SettingsParts.tsx` (`SettingsHeader`, `SettingsCard`, `Switch`, `DetailRow`, `StatusLine`) shared by them.
+
+**`assistant/`** (`hooks/useAssistantChat.ts`: SSE events, approvals, plans, screening results, generated documents, saving chats; `hooks/useGenerateChatTitle.ts`; `lib/assistantScreening.ts`, `assistantStartupHandoff.ts`: latest screening from messages, page hand-off)
 
 | File | Purpose |
 |---|---|
 | `InitialView.tsx`, `AssistantGreeting.tsx` | Empty state: headline and the composer in its `hero` layout |
 | `ChatView.tsx` | Active chat: thread, composer, side panel, approval answers, startup hand-off |
-| `ChatInput.tsx` | Composer. Context bar (Choose startup, Workflows), then a toolbar: **Files & Sources** (add files, browse documents, Connectors — all "Soon" for now, filtered by Settings → Connectors, with a Manage connectors link — and the active sanctions lists), **Tools** (focus: sanctions screen, review matches, ownership trace, web research, draft memo; shown as a pill while on), **Mention** (inserts `@` and opens the startup picker), `ModelPicker` (`showProviderMenu`) and send. `hero` adds quick-action chips under the box. @-mentions as before. Focus definitions: `lib/chatFocus.ts`, icons: `focusIcons.ts` |
-| `AssistantMessage.tsx` | An assistant turn: Markdown (+ KaTeX), tool steps, plans, approvals, generated documents, screening card, option chips |
+| `ChatInput.tsx` | Composer. Context bar (Choose startup, Workflows), then a toolbar: **Files & Sources** (add files, browse documents, Connectors — all "Soon" for now, filtered by Settings → Connectors, with a Manage connectors link — and the active sanctions lists), **Tools** (focus: sanctions screen, review matches, ownership trace, web research, draft memo; shown as a pill while on), **Mention** (inserts `@` and opens the startup picker), `ModelPicker` (`showProviderMenu`) and send. `hero` adds quick-action chips under the box. @-mentions as before. Focus definitions: `lib/chatFocus.ts`, icons: `lib/focusIcons.ts`; small parts in `ChatInputParts.tsx` |
+| `AssistantMessage.tsx` | An assistant turn: tool steps, plans, approvals, option chips. Markdown (+ KaTeX, citations) in `AssistantMarkdown.tsx`; generated-document cards in `DocumentBlocks.tsx`; screening / workflow cards in `ToolResultBlocks.tsx`; tool-call labels in `lib/toolCallLabels.ts` |
 | `UserMessage.tsx` | User bubble with files and workflow tag |
 | `AssistantSidePanel.tsx` | Tabbed side panel (documents, citations, screening results) |
 | `AgentPlan.tsx`, `ApprovalCard.tsx` | Live plan; Allow/Deny before a sensitive tool |
 | `AssistantWorkflowModal.tsx`, `StartupMentionMenu.tsx`, `SelectAssistantProjectModal.tsx`, `AddDocButton.tsx` | Pickers and attachments |
+| `AssistantPage.tsx`, `AssistantChatPage.tsx` | `/assistant` and `/assistant/chat/[id]` |
 
-**`screen/`**: `ScreeningResultsPanel.tsx`, `OwnershipGraph.tsx` (`@xyflow/react`; startup at the bottom, owners above; red flagged, amber review), `RiskTable.tsx`, `RiskCard.tsx`, `EntityDetailModal.tsx`, `OwnershipChainVisual.tsx`, `WatchmanMatchDetails.tsx`, `ScreeningProgressSteps.tsx`, `ScreenerAssistantMessage.tsx` (startup chat message, incl. approval cards), `chatTypes.ts`.
+**`screening/`**: `ScreeningResultsPanel.tsx`, `OwnershipGraph.tsx` (`@xyflow/react`; startup at the bottom, owners above; red flagged, amber review), `RiskTable.tsx`, `RiskCard.tsx`, `EntityDetailModal.tsx`, `OwnershipChainVisual.tsx`, `WatchmanMatchDetails.tsx`, `ScreeningProgressSteps.tsx`.
 
-**`startups/`**: `StartupsPage.tsx`, `StartupScreenerPage.tsx`, `NewStartupModal.tsx`, `CsvIngestReview.tsx`, `CapTableCsvView.tsx`, `StartupAnalysisDock.tsx`, `StartupDocumentsPanel.tsx`, `StartupChatPanel.tsx`, `ScreeningFollowUpActions.tsx`, `ScreeningDeltaBanner.tsx`, `ScreeningDigestBanner.tsx`, `IcMemoDownloadCard.tsx`, `PortfolioMonitoringCard.tsx`, `CompareStartupsModal.tsx`, `StartupAuditMenu.tsx`, `auditEventDisplay.tsx`, `WatchFolderButton.tsx`.
+**`startups/`**: `StartupsPage.tsx`, `StartupScreenerPage.tsx`, `NewStartupModal.tsx`, `CsvIngestReview.tsx`, `CapTableCsvView.tsx`, `StartupAnalysisDock.tsx`, `StartupDocumentsPanel.tsx`, `StartupChatPanel.tsx`, `ScreenerAssistantMessage.tsx` (startup chat message, incl. approval cards), `ScreeningFollowUpActions.tsx`, `ScreeningDeltaBanner.tsx`, `ScreeningDigestBanner.tsx`, `IcMemoDownloadCard.tsx`, `PortfolioMonitoringCard.tsx`, `CompareStartupsModal.tsx`, `StartupAuditMenu.tsx`, `WatchFolderButton.tsx`. `hooks/useScreenerChat.ts`: startup page chat on `POST /chat`, one streaming routine for a new turn and an approval resume, CSV and result carried across turns. `lib/`: `chatTypes.ts`, `auditEventDisplay.tsx`, `screenerInitialPrompt.ts` (default screening prompt), `icMemoPrompt.ts`, `downloadIcMemo.ts` (.doc, PDF via desktop print).
 
-**`projects/`**: `ProjectExplorer.tsx` (flat document list for the startup-scoped chat; drag a document into the chat to attach it).
+**`documents/`**: `DocPanel.tsx` (document / citation views), `DocView.tsx` (PDF.js), `DocxView.tsx` (docx-preview), `StartupDocumentView.tsx`, `AddDocumentsModal.tsx`, `AddProjectDocsModal.tsx`, `FileDirectory.tsx`, `ProjectPicker.tsx`, `ProjectExplorer.tsx` (flat document list for the startup-scoped chat; drag a document into the chat to attach it). `hooks/`: `useDirectoryData.ts`, `useFetchSingleDoc.ts`, `useFetchDocxBytes.ts` (document bytes, PDF vs DOCX, shared cache). `lib/`: `highlightQuote.ts`, `highlightDocxQuote.ts`, `workflowAssetIds.ts`.
 
-**`tabular/`**: `TabularReviewView.tsx` (`TRView`), `TRTable.tsx`, `TabularCell.tsx`, `TRSidePanel.tsx`, `TRChatPanel.tsx`, `TREditColumnMenu.tsx`, `AddColumnModal.tsx`, `AddNewTRModal.tsx`, `columnPresets.ts`, `columnFormat.ts`, `pillUtils.ts`, `citation-utils.ts`, `exportToExcel.ts`.
+**`tabular/`**: `TabularReviewsPage.tsx`, `TabularReviewView.tsx` (`TRView`), `TRTable.tsx`, `TabularCell.tsx`, `TRSidePanel.tsx`, `TRChatPanel.tsx` (+ `TRAssistantMessage.tsx`, `TRChatInput.tsx`, `TRChatHistoryDropdown.tsx`), `TREditColumnMenu.tsx`, `AddColumnModal.tsx`, `AddNewTRModal.tsx`. `lib/`: `columnPresets.ts`, `columnFormat.ts`, `pillUtils.ts`, `citationUtils.ts`, `exportToExcel.ts`.
 
-**`workflows/`**: `WorkflowList.tsx`, `DisplayWorkflowModal.tsx`, `NewWorkflowModal.tsx`, `WorkflowPromptEditor.tsx`, `WFEditColumnModal.tsx`, `WFColumnViewModal.tsx`, `practices.ts` (practice-area labels).
+**`workflows/`**: `WorkflowList.tsx`, `WorkflowEditorPage.tsx`, `DisplayWorkflowModal.tsx` (+ `WorkflowPreviewPanels.tsx`, `WorkflowProjectPicker.tsx`), `NewWorkflowModal.tsx`, `WorkflowPromptEditor.tsx`, `WFEditColumnModal.tsx`, `WFColumnViewModal.tsx`, `lib/practices.ts` (practice-area labels).
 
-**`shared/`**: `AppSidebar.tsx`, `SidebarChatItem.tsx`, `DesktopShell.tsx`, `ChatMarkdown.tsx`, `MessageOptionChips.tsx`, `PreResponseWrapper.tsx`, `DocPanel.tsx` (document / citation views), `DocView.tsx` (PDF.js), `DocxView.tsx` (docx-preview), `StartupDocumentView.tsx`, `highlightQuote.ts`, `highlightDocxQuote.ts`, `AddDocumentsModal.tsx`, `AddProjectDocsModal.tsx`, `FileDirectory.tsx`, `useDirectoryData.ts`, `ProjectPicker.tsx`, `OwnerOnlyModal.tsx` (read-only sample notice), `RowActions.tsx`, `HeaderSearchBtn.tsx`, `ToolbarTabs.tsx`, `RenameableTitle.tsx`, `ResizeDivider.tsx`, `types.ts` (`App*` types).
-
-### 13.5 Hooks, contexts and libraries
+### 13.6 Shared code
 
 | File | Purpose |
 |---|---|
-| `app/hooks/useAssistantChat.ts` | Assistant state machine: SSE events, approvals, plans, screening results, generated documents, saving chats |
-| `app/hooks/useScreenerChat.ts` | Startup page chat on `POST /chat`: one streaming routine for a new turn and an approval resume; CSV and result carried across turns |
-| `app/hooks/useFetchSingleDoc.ts`, `useFetchDocxBytes.ts` | Document bytes (PDF vs DOCX) with a shared cache |
-| `app/hooks/useGenerateChatTitle.ts`, `useIsMobile.ts` | Small hooks |
-| `app/contexts/ChatHistoryContext.tsx`, `SidebarContext.tsx`, `OnboardingTourContext.tsx` | Chat list, sidebar state, driver.js tour |
-| `app/lib/capScreenApi.ts` | Projects, documents, chats, streaming, tabular, workflows |
-| `app/lib/screenerApi.ts` | Startup chat stream + resume, tool labels |
-| `app/lib/auditLogApi.ts` | Audit log client |
-| `lib/startupsApi.ts`, `aiControlCenterApi.ts`, `desktopDataApi.ts`, `portfolioApi.ts` | Domain clients |
-| `lib/screenerTypes.ts` | Re-exports `backend/src/types/screening.ts` + `CsvIngestAnalysis`, `GraphPreview`, progress types |
-| `lib/downloadIcMemo.ts`, `icMemoPrompt.ts`, `screeningExplainApi.ts` | Memo export (.doc, PDF via desktop print), memo prompt, on-demand narrative |
-| `lib/assistantScreening.ts`, `assistantStartupHandoff.ts`, `screenerInitialPrompt.ts` | Latest screening from messages, page hand-off, default screening prompt |
-| `lib/parseMessageOptions.ts`, `normalizeAppMessages.ts`, `onboardingTour.ts`, `workflowAssetIds.ts` | Option chips, clean persisted messages, tour, asset ids |
-| `lib/apiCache.ts`, `requestDedup.ts`, `utils.ts`, `escapeHtml.ts`, `types.ts` | Client TTL cache, in-flight dedup, `cn()` and Dice coefficient, escaping, misc types |
-| `components/app-logo.tsx`, `chat/capscreen-icon.tsx`, `providers.tsx`, `ui/*` | Brand marks, animated chat icon, context providers, shadcn primitives (`button`, `input`, `password-input`, `dropdown-menu`) |
+| `components/layout/` | `AppSidebar.tsx`, `SidebarChatItem.tsx`, `AppLogo.tsx`, `DesktopShell.tsx`, `PageHeader.tsx`, `HeaderSearchBtn.tsx`, `ToolbarTabs.tsx`, `ResizeDivider.tsx` |
+| `components/chat/` | `ChatMarkdown.tsx`, `MessageOptionChips.tsx`, `PreResponseWrapper.tsx`, `CapScreenIcon.tsx` (animated chat icon) |
+| `components/common/` | `EmptyState.tsx`, `RowActions.tsx`, `RenameableTitle.tsx`, `OwnerOnlyModal.tsx` (read-only sample notice) |
+| `components/ui/` | shadcn primitives (`button`, `input`, `password-input`, `dropdown-menu`) |
+| `components/Providers.tsx` | Context providers for the root layout |
+| `contexts/` | `AuthContext`, `UserProfileContext`, `ChatHistoryContext` (chat list), `SidebarContext`, `OnboardingTourContext` (driver.js tour) |
+| `hooks/useIsMobile.ts` | Narrow-window check |
+| `api/` | One client per backend module; `apiCache.ts` (client TTL cache), `requestDedup.ts` (in-flight dedup) |
+| `types/app.ts` | `App*` types: projects, documents, chats, messages, citations, columns, tabular, workflows |
+| `types/screening.ts` | Re-exports `backend/src/types/screening.ts` + `CsvIngestAnalysis`, `GraphPreview`, progress types |
+| `lib/` | `desktop.ts` (typed bridge: `desktop()`, `isDesktop()`, hydration-safe `useDesktop()`), `chatFocus.ts`, `parseMessageOptions.ts`, `normalizeAppMessages.ts`, `onboardingTour.ts`, `connectors.ts`, `utils.ts` (`cn()`, Dice coefficient), `escapeHtml.ts` |
 
 ---
 
@@ -962,8 +984,8 @@ routes ─▶ controller ─▶ service ─▶ repository ─▶ models/* ─▶
 desktop/main ─▶ sidecars (Watchman, backend, UI) ─▶ protocol (proxy + token)
              ─▶ vault, session ─▶ authFlow ─▶ auth service (cloud)
              ─▶ notifications ─▶ backend /api/portfolio/digest
-frontend pages ─▶ components ─▶ app/lib/*Api + lib/*Api ─▶ apiBase() ─▶ capscreen://app/__api ─▶ backend
-frontend/lib/screenerTypes ─(type-only)▶ backend/src/types/screening
+frontend app/ (routes) ─▶ features/* ─▶ api/* ─▶ apiBase() ─▶ capscreen://app/__api ─▶ backend
+frontend/types/screening ─(type-only)▶ backend/src/types/screening
 ```
 
 ---
@@ -1032,7 +1054,7 @@ Net effect: about 14,000 fewer lines of source (≈ 21%), lint warnings 153 → 
 - Paused approval runs are lost on restart (`MemorySaver`); tabular grid chat has no approval UI.
 - Citation rendering in `AssistantMessage` / `TRChatPanel` / `DocPanel` remains although the backend never sends citations; it renders nothing without them.
 - `practices.ts` still offers legal practice areas (Litigation, Real Estate, …) in the new-workflow form.
-- Large files: `TRChatPanel.tsx` (1,170 lines), `AssistantMessage.tsx` (1,107, was 1,913), `useAssistantChat.ts` (991, was 1,351), the startup-scoped chat page (894, was 1,153).
+- Large files: `TabularReviewView.tsx` (~1,000 lines) and `useAssistantChat.ts` (~990) are each one component/hook with shared state and were not split. `TRChatPanel.tsx` (now ~690) and `AssistantMessage.tsx` (now ~560) had their sub-components moved into their own files.
 - Code signing, notarization and auto-update; Windows/Linux builds on their own OSes; database encryption at rest.
 
 ### 20.3 Findings from live testing
@@ -1107,6 +1129,6 @@ pnpm --filter vc-screener-backend run generate:jwt-keys
 5. The agent: `docs/AGENT_HARNESS.md` → `lib/agent/agentGraph.ts` → `lib/tools/index.ts` → `modules/assistant/` (`assistant.service.ts`, `agentStream.ts`).
 6. Models: `lib/llm/providers/registry.ts` → `controlCenter/store.ts` → `modules/aiControlCenter/aiControlCenter.service.ts`.
 7. Storage: `lib/infra/db.ts` → `sqliteStore/store.ts` → `test/sqliteStore.test.ts`.
-8. Desktop: `docs/DESKTOP_PLAN.md` → `desktop/src/main.ts` → `sidecars.ts` → `protocol.ts` → `session.ts`/`authFlow.ts`.
-9. UI: `app/(pages)/layout.tsx` → `startups/StartupScreenerPage.tsx` → `screen/ScreeningResultsPanel.tsx` + `OwnershipGraph.tsx` → `hooks/useScreenerChat.ts` → `hooks/useAssistantChat.ts`.
+8. Desktop: `docs/DESKTOP_PLAN.md` → `desktop/src/main.ts` → `sidecars/` (`supervisor.ts`, `watchman.ts`) → `bridge/protocol.ts` → `auth/session.ts`/`authFlow.ts`.
+9. UI: `app/(pages)/layout.tsx` → `features/startups/components/StartupScreenerPage.tsx` → `features/screening/components/ScreeningResultsPanel.tsx` + `OwnershipGraph.tsx` → `features/startups/hooks/useScreenerChat.ts` → `features/assistant/hooks/useAssistantChat.ts`.
 10. Run it: `pnpm desktop`, set up a model in Settings → AI Control Center (`/settings/ai`), create a startup, upload `sample-cap-table.csv`, and follow the logs in `<userData>/logs/`.

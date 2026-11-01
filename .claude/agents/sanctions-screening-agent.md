@@ -32,8 +32,8 @@ backend/src/lib/screening/graph.ts
 backend/src/lib/screening/watchman.ts
 backend/src/lib/classify.ts
 backend/src/lib/explain.ts
-frontend/src/app/components/screen/
-frontend/src/lib/screenerTypes.ts
+frontend/src/features/screening/components/
+frontend/src/types/screening.ts
 ```
 
 ## Behavioral guidelines

@@ -46,7 +46,7 @@ Network egress: public sanctions-list downloads (Watchman, every 12 h) and cloud
 
 - Next.js App Router, React 19, TypeScript — built `output: "standalone"` for the desktop bundle
 - Tailwind CSS + Shadcn/ui; `@xyflow/react` ownership graph; `recharts`
-- `lib/apiBase.ts` — backend origin comes from the preload bridge (`window.capscreenDesktop`); never read `NEXT_PUBLIC_API_BASE_URL` directly
+- `api/apiBase.ts` — backend origin comes from the preload bridge (`window.capscreenDesktop`); never read `NEXT_PUBLIC_API_BASE_URL` directly
 - `lib/desktop.ts` — typed bridge (`useDesktop()` for render-time use; hydration-safe)
 
 ---
@@ -61,8 +61,8 @@ Accounts are the **only** cloud component. Sign-in works like Claude Code: the a
 | Hosted portal (sign-in UI) | `backend/src/modules/auth/portal/portal.ts` — one self-contained page; serves `/desktop/authorize`, `/verify-email`, `/reset-password` |
 | Vercel entry | `backend/api/index.ts`, `backend/vercel.json` (project root: `backend/`) |
 | Accounts DB | MongoDB Atlas — `CAPSCREEN_DB=mongodb` switches `lib/infra/db.ts` to Atlas (auth service only) |
-| Desktop client | `desktop/src/authFlow.ts` (protocol, Electron-free) + `desktop/src/session.ts` (keychain, restore, 14-day offline grace, refresh every 12 h) |
-| Gate | `desktop/src/main.ts` + `splash.ts` (`signInHtml`) — shown until signed in; sidecars boot in parallel |
+| Desktop client | `desktop/src/auth/authFlow.ts` (protocol, Electron-free) + `desktop/src/auth/session.ts` (keychain, restore, 14-day offline grace, refresh every 12 h) |
+| Gate | `desktop/src/auth/signInGate.ts` + `window/shellPages.ts` (`signInHtml`) — shown until signed in; sidecars boot in parallel (`main.ts`) |
 | Attribution | Shell writes `<userData>/identity.json`; `middleware/requireAuth.ts` uses it for `userEmail` (audit, reviews). Data owner stays `local-user`. |
 
 Auth service env (Vercel): `CAPSCREEN_DB=mongodb`, `MONGODB_URI`, `JWT_ACCESS_TOKEN_SECRET_PRIVATE`/`_PUBLIC` (`pnpm --filter vc-screener-backend run generate:jwt-keys`), `FRONTEND_URL` = the service's own URL (email links), `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (email verification; without it signups are auto-confirmed), optional `DESKTOP_REFRESH_TOKEN_EXPIRATION_DAYS` (default 30).
@@ -181,30 +181,63 @@ attached and nothing has been screened yet, the first turn is forced to call `sc
 
 ```
 frontend/src/
-  app/
-    (pages)/
-      assistant/            — compliance assistant (InitialView → ChatView)
-      startups/             — StartupsPage; [id] = StartupScreenerPage (the one startup workspace); old startup chat URLs redirect to it (next.config.ts)
-      tabular-reviews/      — review list + TRView
-      workflows/            — WorkflowList + workflow editor
-      settings/             — Settings: account, ai (AI Control Center), screening (thresholds), sanctions, data (backup & audit), about
-      account/              — signed-in account (from the desktop shell)
-    components/
-      screen/               — ScreeningResultsPanel, OwnershipGraph, RiskTable, RiskCard, EntityDetailModal, …
-      startups/             — StartupsPage, StartupScreenerPage, StartupChatPanel, StartupAnalysisDock, StartupDocumentsPanel, CSV views, banners
-      assistant/            — ChatView, ChatInput, AssistantMessage, ApprovalCard, AgentPlan, side panel
-      tabular/, workflows/, ai/, projects/ (ProjectExplorer), shared/
-    hooks/
-      useAssistantChat.ts   — assistant chat state + SSE handling (approvals, plans, screening results)
-      useScreenerChat.ts    — startup page chat on POST /chat (keeps CSV + result across turns, approvals)
-    lib/
-      capScreenApi.ts       — projects, documents, chats, tabular, workflows
-      screenerApi.ts        — startup chat stream + resume, tool labels
-  lib/
-    screenerTypes.ts        — re-exports backend/src/types/screening.ts (+ a few UI-only types)
-    startupsApi.ts, aiControlCenterApi.ts, desktopDataApi.ts, portfolioApi.ts
-    apiBase.ts, desktop.ts  — backend origin + typed preload bridge
-  contexts/                 — AuthContext / UserProfileContext (identity from the desktop shell)
+  app/                      — routes only. Each page.tsx reads its params and renders one feature component.
+    layout.tsx, error.tsx, globals.css
+    (pages)/                — assistant, startups, tabular-reviews, workflows, settings/* (URLs in the Routing table)
+  features/<feature>/       — one folder per product area, same layout in each:
+      components/               UI, including the <Name>Page component a route renders
+      hooks/                    stateful logic (data loading, chat streams)
+      lib/                      pure helpers and feature-only types (no React state, no fetch)
+    assistant/              — ChatView, ChatInput, AssistantMessage (+ AssistantMarkdown, DocumentBlocks,
+                              ToolResultBlocks), ApprovalCard, AgentPlan; hooks/useAssistantChat.ts (SSE, approvals, plans)
+    startups/               — StartupsPage, StartupScreenerPage (the one startup workspace), StartupChatPanel,
+                              StartupAnalysisDock, CSV views, banners; hooks/useScreenerChat.ts (startup chat on POST /chat)
+    screening/              — ScreeningResultsPanel, OwnershipGraph, RiskTable, RiskCard, EntityDetailModal, …
+    documents/              — DocView (PDF), DocxView, DocPanel, FileDirectory, add-document modals, ProjectExplorer
+    tabular/                — TabularReviewsPage, TRView, TRTable, TRChatPanel (+ TRAssistantMessage, TRChatInput)
+    workflows/              — WorkflowList, WorkflowEditorPage, DisplayWorkflowModal (+ preview panels, project picker)
+    ai/                     — AI Control Center page, setup wizard, providers, ModelPicker (+ ConnectProviderDialog)
+    settings/               — the other /settings/* pages + SettingsParts
+  api/                      — HTTP clients, one file per backend module (startups, chats, projects, tabularReviews,
+                              workflows, portfolio, aiControlCenter, desktopData, auditLogs, screenerChat, …)
+    client.ts                   shared fetch helper; apiBase.ts = backend origin from the preload bridge
+  components/
+    ui/                     — shadcn primitives (lowercase file names, shadcn convention)
+    layout/                 — AppSidebar, DesktopShell, PageHeader, toolbar pieces
+    chat/                   — pieces shared by every chat: ChatMarkdown, MessageOptionChips, PreResponseWrapper, CapScreenIcon
+    common/                 — EmptyState, RowActions, RenameableTitle, OwnerOnlyModal
+  contexts/                 — Auth, UserProfile (identity from the desktop shell), ChatHistory, Sidebar, OnboardingTour
+  hooks/                    — app-wide hooks (useIsMobile)
+  lib/                      — app-wide helpers: desktop.ts (typed preload bridge), chatFocus, parseMessageOptions, utils
+  types/
+    screening.ts            — re-exports backend/src/types/screening.ts (+ a few UI-only types)
+    app.ts                  — App* types: projects, documents, chats, messages, citations, tabular, workflows
+```
+
+**Where does a new file go?** A route → `app/(pages)/…/page.tsx` (thin) + `features/<f>/components/<Name>Page.tsx`.
+A call to the backend → `api/<module>.ts`. Used by one feature → that feature's folder. Used by several → `components/`,
+`hooks/`, `lib/` or `types/`. Imports use the `@/` alias across folders and `./` inside one folder. Components are
+PascalCase, one main component per file, named after the file.
+
+---
+
+## Desktop Source Map
+
+```
+desktop/src/
+  main.ts                   — entry: start the sidecars, gate on sign-in, load the app; app lifecycle events
+  preload.ts                — window.capscreenDesktop bridge (keep in sync with frontend/src/lib/desktop.ts)
+  runtime.ts                — sidecar URLs + per-launch token once booted; appUrl(), apiBase()
+  paths.ts, logging.ts      — userData / resources paths; main-process error log (logs/main.log)
+  vault.ts                  — master key for API keys, sealed by the OS keychain
+  notifications.ts          — native notification when background re-screening finds new flags
+  auth/                     — authFlow.ts (RFC 8252 + PKCE, Electron-free), session.ts (keychain, offline grace,
+                              refresh), signInGate.ts (sign-in page until signed in)
+  bridge/                   — ipc.ts (validated IPC handlers), protocol.ts (capscreen:// → UI + /__api/* with token)
+  sidecars/                 — supervisor.ts (logs, crash restarts, stopAll), watchman.ts (+ offline list snapshot,
+                              listCache.ts), backend.ts, frontend.ts, ports.ts
+  window/                   — mainWindow.ts (create/show/navigate, hide to tray on close), menu.ts, tray.ts,
+                              shellPages.ts (splash, boot error, sign-in HTML)
 ```
 
 ---

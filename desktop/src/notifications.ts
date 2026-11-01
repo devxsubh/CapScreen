@@ -1,7 +1,7 @@
 import fs from "fs";
 import { Notification } from "electron";
 import { userData } from "./paths";
-import type { RuntimeInfo } from "./sidecars";
+import type { RuntimeInfo } from "./runtime";
 
 /**
  * Watches the backend's latest re-screen digest and raises a native

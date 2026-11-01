@@ -31,7 +31,7 @@ Prefer the tool's `routingHint` over editing the base prompt in `backend/src/mod
 
 ## Step 3 — Frontend events (compliance platform UI)
 
-Match existing patterns in `frontend/src/app/components/shared/types.ts`:
+Match existing patterns in `frontend/src/types/app.ts`:
 
 ```typescript
 | { type: "tool_call_start"; name: string; isStreaming?: boolean }
@@ -45,7 +45,7 @@ Optional domain events later (like compliance platform doc_read`, `workflow_appl
 
 Wire in `useAssistantChat` / `useScreenerChat` when mapping `toolActivity` from API response.
 
-Add human label in `TOOL_LABELS` (`screenerApi.ts`).
+Add a human label in `TOOL_LABELS` (`frontend/src/api/screenerChat.ts`) and `toolCallLabel` (`frontend/src/features/assistant/lib/toolCallLabels.ts`).
 
 ---
 

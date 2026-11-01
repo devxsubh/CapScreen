@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PanelLeft } from "lucide-react";
-import { ChatHistoryProvider } from "@/app/contexts/ChatHistoryContext";
-import { SidebarContext } from "@/app/contexts/SidebarContext";
-import { OnboardingTourProvider } from "@/app/contexts/OnboardingTourContext";
-import { AppSidebar } from "@/app/components/shared/AppSidebar";
-import { DesktopShell } from "@/app/components/shared/DesktopShell";
+import { ChatHistoryProvider } from "@/contexts/ChatHistoryContext";
+import { SidebarContext } from "@/contexts/SidebarContext";
+import { OnboardingTourProvider } from "@/contexts/OnboardingTourContext";
+import { AppSidebar } from "@/components/layout/AppSidebar";
+import { DesktopShell } from "@/components/layout/DesktopShell";
 
 export default function CapScreenLayout({
     children,

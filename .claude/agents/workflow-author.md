@@ -20,7 +20,7 @@ You author **assistant workflows** for the VC screener — compliance platform s
 }
 ```
 
-File: `frontend/src/app/components/workflows/builtinWorkflows.ts`
+File: `backend/src/modules/workflows/builtinWorkflows.ts` (single source for the agent and the UI)
 
 ## Screener workflow rules
 

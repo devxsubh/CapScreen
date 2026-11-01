@@ -1,4 +1,4 @@
-import type { AssistantEvent, AppMessage } from "@/app/components/shared/types";
+import type { AssistantEvent, AppMessage } from "@/types/app";
 
 function hasContentEvent(events: AssistantEvent[]): boolean {
     return events.some((e) => e.type === "content" && e.text.trim().length > 0);
