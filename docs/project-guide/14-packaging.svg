@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 450" width="1100" height="450" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Building the installers (desktop/scripts, electron-builder.yml)</title>
+<desc id="desc">Four build steps feed electron-builder. Build each OS on that OS.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="450"/>
+<text class="t h" x="30" y="40">Building the installers (desktop/scripts, electron-builder.yml)</text>
+<text class="t m mut" x="30" y="62">Four build steps feed electron-builder. Build each OS on that OS.</text>
+<rect class="ui bx" x="30" y="96" width="180" height="58" rx="9"/><text class="t b" x="120" y="131" text-anchor="middle">backend/src</text>
+<path class="ln" d="M210 125 L236 125" marker-end="url(#ah)"/>
+<rect class="code bx" x="236" y="96" width="270" height="58" rx="9"/><text class="t b" x="371" y="120" text-anchor="middle">esbuild bundle</text><text class="t s mut" x="371" y="140" text-anchor="middle">node22 CJS · corpus · pdf worker</text>
+<path class="ln" d="M506 125 L532 125" marker-end="url(#ah)"/>
+<rect class="data bx" x="532" y="96" width="200" height="58" rx="9"/><text class="t b mono" x="632" y="131" text-anchor="middle">resources/backend/</text>
+<path class="ln" d="M732 125 L770 125" marker-end="url(#ah)"/>
+<rect class="ui bx" x="30" y="176" width="180" height="58" rx="9"/><text class="t b" x="120" y="211" text-anchor="middle">frontend/</text>
+<path class="ln" d="M210 205 L236 205" marker-end="url(#ah)"/>
+<rect class="code bx" x="236" y="176" width="270" height="58" rx="9"/><text class="t b" x="371" y="200" text-anchor="middle">next build (standalone)</text><text class="t s mut" x="371" y="220" text-anchor="middle">flatten node_modules · drop .env*</text>
+<path class="ln" d="M506 205 L532 205" marker-end="url(#ah)"/>
+<rect class="data bx" x="532" y="176" width="200" height="58" rx="9"/><text class="t b mono" x="632" y="211" text-anchor="middle">resources/frontend/</text>
+<path class="ln" d="M732 205 L770 205" marker-end="url(#ah)"/>
+<rect class="ui bx" x="30" y="256" width="180" height="58" rx="9"/><text class="t b" x="120" y="291" text-anchor="middle">Watchman v1.2.1 (Go)</text>
+<path class="ln" d="M210 285 L236 285" marker-end="url(#ah)"/>
+<rect class="code bx" x="236" y="256" width="270" height="58" rx="9"/><text class="t b" x="371" y="280" text-anchor="middle">go build per OS/arch</text><text class="t s mut" x="371" y="300" text-anchor="middle">pure Go, no libpostal</text>
+<path class="ln" d="M506 285 L532 285" marker-end="url(#ah)"/>
+<rect class="data bx" x="532" y="256" width="200" height="58" rx="9"/><text class="t b mono" x="632" y="291" text-anchor="middle">resources/bin/</text>
+<path class="ln" d="M732 285 L770 285" marker-end="url(#ah)"/>
+<rect class="ui bx" x="30" y="336" width="180" height="58" rx="9"/><text class="t b" x="120" y="371" text-anchor="middle">desktop/src</text>
+<path class="ln" d="M210 365 L236 365" marker-end="url(#ah)"/>
+<rect class="code bx" x="236" y="336" width="270" height="58" rx="9"/><text class="t b" x="371" y="360" text-anchor="middle">tsc</text><text class="t s mut" x="371" y="380" text-anchor="middle">main process</text>
+<path class="ln" d="M506 365 L532 365" marker-end="url(#ah)"/>
+<rect class="data bx" x="532" y="336" width="200" height="58" rx="9"/><text class="t b mono" x="632" y="371" text-anchor="middle">dist/main.js</text>
+<path class="ln" d="M732 365 L770 365" marker-end="url(#ah)"/>
+<rect class="code bx" x="770" y="96" width="140" height="298" rx="9"/><text class="t b" x="840" y="232" text-anchor="middle">electron-builder</text><text class="t s mut" x="840" y="252" text-anchor="middle">+ icons</text><text class="t s mut" x="840" y="268" text-anchor="middle">per-OS binary</text>
+<path class="ln" d="M910 144 L940 144" marker-end="url(#ah)"/>
+<rect class="ext bx" x="940" y="110" width="140" height="68" rx="9"/><text class="t b" x="1010" y="139" text-anchor="middle">DMG</text><text class="t s mut" x="1010" y="159" text-anchor="middle">arm64 + x64</text>
+<path class="ln" d="M910 240 L940 240" marker-end="url(#ah)"/>
+<rect class="ext bx" x="940" y="206" width="140" height="68" rx="9"/><text class="t b" x="1010" y="235" text-anchor="middle">NSIS</text><text class="t s mut" x="1010" y="255" text-anchor="middle">Windows</text>
+<path class="ln" d="M910 336 L940 336" marker-end="url(#ah)"/>
+<rect class="ext bx" x="940" y="302" width="140" height="68" rx="9"/><text class="t b" x="1010" y="331" text-anchor="middle">AppImage</text><text class="t s mut" x="1010" y="351" text-anchor="middle">Linux</text>
+<text class="t s mut" x="30" y="428" text-anchor="start">Unsigned unless CSC_* signing variables are set. Next's traced sharp binary is platform-specific, so build on the target OS.</text>
+</svg>

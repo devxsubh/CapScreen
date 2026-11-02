@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 720" width="1060" height="720" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">The agent graph (lib/agent/agentGraph.ts)</title>
+<desc id="desc">A LangGraph StateGraph. Routing is two plain functions of the state: afterModel and afterTools.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1060" height="720"/>
+<text class="t h" x="30" y="40">The agent graph (lib/agent/agentGraph.ts)</text>
+<text class="t m mut" x="30" y="62">A LangGraph StateGraph. Routing is two plain functions of the state: afterModel and afterTools.</text>
+<circle class="dot" cx="70" cy="300" r="12"/>
+<text class="t xs mut" x="70" y="330" text-anchor="middle">START</text>
+<path class="ln" d="M82 300 L150 300" marker-end="url(#ah)"/>
+<circle class="ui bx" cx="250" cy="140" r="26"/><circle class="ui bx" cx="250" cy="140" r="20"/>
+<text class="t xs" x="250" y="144" text-anchor="middle">END</text>
+<rect class="ai bx" x="150" y="265" width="200" height="70" rx="9"/><text class="t b mono" x="250" y="295" text-anchor="middle">callModel</text><text class="t s mut" x="250" y="315" text-anchor="middle">stream reply, collect calls</text>
+<path class="ln" d="M250 265 L250 167" marker-end="url(#ah)"/><text class="s lbl" x="262" y="220" text-anchor="start">no tool calls</text>
+<rect class="code bx" x="560" y="265" width="200" height="70" rx="9"/><text class="t b mono" x="660" y="295" text-anchor="middle">runTools</text><text class="t s mut" x="660" y="315" text-anchor="middle">run batches, add results</text>
+<path class="ln" d="M350 288 L560 288" marker-end="url(#ah)"/><text class="s lbl" x="455" y="281" text-anchor="middle">tool calls</text>
+<path class="ln" d="M560 314 L350 314" marker-end="url(#ah)"/><text class="s lbl" x="455" y="333" text-anchor="middle">rounds &lt; max</text>
+<rect class="prompt bx" x="355" y="420" width="200" height="70" rx="9"/><text class="t b mono" x="455" y="450" text-anchor="middle">askApproval</text><text class="t s mut" x="455" y="470" text-anchor="middle">interrupt() · wait for user</text>
+<path class="ln" d="M250 335 L250 455 L355 455" marker-end="url(#ah)"/><text class="s lbl" x="262" y="400" text-anchor="start">needs approval</text>
+<path class="ln" d="M555 455 L660 455 L660 335" marker-end="url(#ah)"/><text class="s lbl" x="672" y="400" text-anchor="start">Allow / Deny</text>
+<text class="t xs mut" x="455" y="512" text-anchor="middle">state saved by the checkpointer; resumed with Command({ resume })</text>
+<rect class="warn bx" x="850" y="265" width="190" height="70" rx="9"/><text class="t b mono" x="945" y="295" text-anchor="middle">stopAtRoundLimit</text><text class="t s mut" x="945" y="315" text-anchor="middle">'hit the tool-call limit'</text>
+<path class="ln" d="M760 300 L850 300" marker-end="url(#ah)"/><text class="s lbl" x="805" y="292" text-anchor="middle">rounds = max</text>
+<path class="ln" d="M945 265 L945 140 L278 140" marker-end="url(#ah)"/><text class="s lbl" x="600" y="133" text-anchor="middle">limit message</text>
+<rect class="ui bx" x="40" y="548" width="480" height="150" rx="9"/><text class="t b" x="56" y="574" text-anchor="start">State (saved in checkpoints)</text>
+<text class="t s mono" x="56" y="604" text-anchor="start">messages</text><text class="t xs mut" x="125.52" y="604" text-anchor="start">append</text>
+<text class="t s mono" x="56" y="626" text-anchor="start">pendingCalls</text>
+<text class="t s mono" x="56" y="648" text-anchor="start">needsApproval</text>
+<text class="t s mono" x="56" y="670" text-anchor="start">declinedIds</text>
+<text class="t s mono" x="280" y="604" text-anchor="start">rounds</text>
+<text class="t s mono" x="280" y="626" text-anchor="start">answer</text><text class="t xs mut" x="334.64" y="626" text-anchor="start">concatenate</text>
+<text class="t s mono" x="280" y="648" text-anchor="start">toolActivity</text><text class="t xs mut" x="379.28" y="648" text-anchor="start">append</text>
+<text class="t s mono" x="280" y="670" text-anchor="start">systemPrompt · maxRounds</text>
+<rect class="ui bx" x="540" y="548" width="480" height="150" rx="9"/><text class="t b" x="556" y="574" text-anchor="start">Runtime context (never saved)</text>
+<text class="t s mono" x="556" y="604" text-anchor="start">registry</text><text class="t xs mut" x="625.52" y="604" text-anchor="start">tools for this run</text>
+<text class="t s mono" x="556" y="626" text-anchor="start">executeTool</text><text class="t xs mut" x="647.84" y="626" text-anchor="start">wraps the registry</text>
+<text class="t s mono" x="556" y="648" text-anchor="start">write</text><text class="t xs mut" x="603.2" y="648" text-anchor="start">SSE writer</text>
+<text class="t s mono" x="556" y="670" text-anchor="start">role</text><text class="t xs mut" x="595.76" y="670" text-anchor="start">agent</text>
+<text class="t s mono" x="780" y="604" text-anchor="start">maxTokens</text><text class="t xs mut" x="856.96" y="604" text-anchor="start">8192 / 2048</text>
+<text class="t s mono" x="780" y="626" text-anchor="start">toolChoice</text><text class="t xs mut" x="864.4" y="626" text-anchor="start">round 0 only</text>
+<text class="t s mono" x="780" y="648" text-anchor="start">askBeforeSensitiveTools</text>
+</svg>

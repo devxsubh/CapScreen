@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 520" width="1100" height="520" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">App launch (desktop/src/main.ts)</title>
+<desc id="desc">Boot and sign-in run at the same time; the app opens when both are done.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="520"/>
+<text class="t h" x="30" y="40">App launch (desktop/src/main.ts)</text>
+<text class="t m mut" x="30" y="62">Boot and sign-in run at the same time; the app opens when both are done.</text>
+<text class="zonet" x="30" y="123" text-anchor="start">WINDOW</text>
+<text class="zonet" x="30" y="173" text-anchor="start">KEYCHAIN</text>
+<text class="zonet" x="30" y="223" text-anchor="start">WATCHMAN</text>
+<text class="zonet" x="30" y="273" text-anchor="start">BACKEND</text>
+<text class="zonet" x="30" y="323" text-anchor="start">UI</text>
+<text class="zonet" x="30" y="373" text-anchor="start">SHELL</text>
+<text class="zonet" x="30" y="433" text-anchor="start">SIGN-IN</text>
+<rect class="ui bx dash" x="150" y="100" width="620" height="36" rx="9"/><text class="t s mut" x="460" y="122" text-anchor="middle">splash page</text>
+<rect class="ui bx" x="800" y="100" width="140" height="36" rx="9"/><text class="t s mut" x="870" y="122" text-anchor="middle">capscreen://app/</text>
+<rect class="ui bx" x="955" y="100" width="115" height="36" rx="9"/><text class="t s mut" x="1012.5" y="122" text-anchor="middle">→ /assistant</text>
+<rect class="data bx" x="150" y="150" width="150" height="36" rx="9"/><text class="t s mut" x="225" y="172" text-anchor="middle">unseal master key</text>
+<rect class="code bx" x="310" y="200" width="300" height="36" rx="9"/><text class="t s mut" x="460" y="222" text-anchor="middle">start Watchman (offline snapshot fallback)</text>
+<rect class="code bx" x="310" y="250" width="300" height="36" rx="9"/><text class="t s mut" x="460" y="272" text-anchor="middle">start backend (free port, token, clean env)</text>
+<rect class="code bx" x="310" y="300" width="230" height="36" rx="9"/><text class="t s mut" x="425" y="322" text-anchor="middle">start UI (Next standalone)</text>
+<rect class="code bx" x="620" y="350" width="150" height="36" rx="9"/><text class="t s mut" x="695" y="372" text-anchor="middle">protocol + pollers</text>
+<rect class="code bx" x="150" y="410" width="200" height="36" rx="9"/><text class="t s mut" x="250" y="432" text-anchor="middle">restore session</text>
+<rect class="ext bx dash" x="360" y="410" width="410" height="36" rx="9"/><text class="t s mut" x="565" y="432" text-anchor="middle">sign-in gate, if needed (browser + PKCE)</text>
+<path class="ln lnd" d="M785 92 L785 456"/>
+<text class="s lbl" x="785" y="474" text-anchor="middle">both done</text>
+<path class="ln" d="M785 118 L800 118" marker-end="url(#ah)"/>
+<path class="ln" d="M150 492 L1070 492" marker-end="url(#ah)"/><text class="s lbl" x="1040" y="484" text-anchor="middle">time</text>
+</svg>

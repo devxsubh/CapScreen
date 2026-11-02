@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 640" width="1020" height="640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">One round of tool calls (lib/agent/runTools.ts)</title>
+<desc id="desc">Reads run together, anything else runs alone, the model's order is kept, and no error crashes the turn.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1020" height="640"/>
+<text class="t h" x="30" y="40">One round of tool calls (lib/agent/runTools.ts)</text>
+<text class="t m mut" x="30" y="62">Reads run together, anything else runs alone, the model's order is kept, and no error crashes the turn.</text>
+<text class="t b" x="30" y="100" text-anchor="start">1 · The model asks for four tool calls in one reply</text>
+<rect class="code bx" x="40" y="112" width="210" height="50" rx="9"/><text class="t b mono" x="145" y="132" text-anchor="middle">query_screening_data</text><text class="t s mut" x="145" y="152" text-anchor="middle">read-only</text>
+<rect class="code bx" x="262" y="112" width="236" height="50" rx="9"/><text class="t b mono" x="380" y="132" text-anchor="middle">search_startup_documents</text><text class="t s mut" x="380" y="152" text-anchor="middle">read-only</text>
+<rect class="warn bx" x="510" y="112" width="190" height="50" rx="9"/><text class="t b mono" x="605" y="132" text-anchor="middle">generate_document</text><text class="t s mut" x="605" y="152" text-anchor="middle">changes data</text>
+<rect class="code bx" x="712" y="112" width="236" height="50" rx="9"/><text class="t b mono" x="830" y="132" text-anchor="middle">list_startup_documents</text><text class="t s mut" x="830" y="152" text-anchor="middle">read-only</text>
+<text class="t b" x="30" y="200" text-anchor="start">2 · They become three batches</text>
+<path class="ln lnd" d="M350 214 L350 340"/>
+<path class="ln lnd" d="M610 214 L610 340"/>
+<text class="t s mut" x="60" y="228" text-anchor="start">Batch 1 · run together</text>
+<text class="t s mut" x="370" y="228" text-anchor="start">Batch 2 · alone</text>
+<text class="t s mut" x="630" y="228" text-anchor="start">Batch 3 · alone</text>
+<rect class="code bx" x="60" y="242" width="270" height="32" rx="9"/><text class="t b mono" x="195" y="264" text-anchor="middle">query_screening_data</text>
+<rect class="code bx" x="60" y="284" width="270" height="32" rx="9"/><text class="t b mono" x="195" y="306" text-anchor="middle">search_startup_documents</text>
+<rect class="warn bx" x="370" y="263" width="220" height="32" rx="9"/><text class="t b mono" x="480" y="285" text-anchor="middle">generate_document</text>
+<rect class="code bx" x="630" y="263" width="250" height="32" rx="9"/><text class="t b mono" x="755" y="285" text-anchor="middle">list_startup_documents</text>
+<path class="ln" d="M60 352 L960 352" marker-end="url(#ah)"/><text class="s lbl" x="930" y="344" text-anchor="middle">time</text>
+<text class="t b" x="30" y="400" text-anchor="start">3 · Every call goes through the same steps</text>
+<rect class="code bx" x="30" y="414" width="150" height="56" rx="9"/><text class="t b" x="105" y="437" text-anchor="middle">declined?</text><text class="t s mut" x="105" y="457" text-anchor="middle">by the user</text>
+<path class="ln" d="M180 442 L192 442" marker-end="url(#ah)"/>
+<path class="ln" d="M105 470 L105 520" marker-end="url(#ah)"/><text class="s lbl" x="113" y="499" text-anchor="start">yes</text>
+<rect class="warn bx" x="30" y="520" width="150" height="46" rx="9"/><text class="t xs mut" x="105" y="540" text-anchor="middle">text result:</text><text class="t xs mut" x="105" y="555" text-anchor="middle">'declined: don't retry'</text>
+<rect class="code bx" x="192" y="414" width="150" height="56" rx="9"/><text class="t b" x="267" y="437" text-anchor="middle">known tool?</text><text class="t s mut" x="267" y="457" text-anchor="middle">in the registry</text>
+<path class="ln" d="M342 442 L354 442" marker-end="url(#ah)"/>
+<path class="ln" d="M267 470 L267 520" marker-end="url(#ah)"/><text class="s lbl" x="275" y="499" text-anchor="start">no</text>
+<rect class="warn bx" x="192" y="520" width="150" height="46" rx="9"/><text class="t xs mut" x="267" y="540" text-anchor="middle">text result:</text><text class="t xs mut" x="267" y="555" text-anchor="middle">'unknown tool'</text>
+<rect class="code bx" x="354" y="414" width="150" height="56" rx="9"/><text class="t b" x="429" y="437" text-anchor="middle">required fields?</text><text class="t s mut" x="429" y="457" text-anchor="middle">from the schema</text>
+<path class="ln" d="M504 442 L516 442" marker-end="url(#ah)"/>
+<path class="ln" d="M429 470 L429 520" marker-end="url(#ah)"/><text class="s lbl" x="437" y="499" text-anchor="start">no</text>
+<rect class="warn bx" x="354" y="520" width="150" height="46" rx="9"/><text class="t xs mut" x="429" y="540" text-anchor="middle">text result:</text><text class="t xs mut" x="429" y="555" text-anchor="middle">'missing field(s)'</text>
+<rect class="code bx" x="516" y="414" width="150" height="56" rx="9"/><text class="t b" x="591" y="437" text-anchor="middle">run the tool</text><text class="t s mut" x="591" y="457" text-anchor="middle">5 min timeout</text>
+<path class="ln" d="M666 442 L678 442" marker-end="url(#ah)"/>
+<path class="ln" d="M591 470 L591 520" marker-end="url(#ah)"/><text class="s lbl" x="599" y="499" text-anchor="start">throws / slow</text>
+<rect class="warn bx" x="516" y="520" width="150" height="46" rx="9"/><text class="t xs mut" x="591" y="540" text-anchor="middle">text result:</text><text class="t xs mut" x="591" y="555" text-anchor="middle">'Error: … failed'</text>
+<rect class="code bx" x="678" y="414" width="150" height="56" rx="9"/><text class="t b" x="753" y="437" text-anchor="middle">trim</text><text class="t s mut" x="753" y="457" text-anchor="middle">&gt; 20,000 chars</text>
+<path class="ln" d="M828 442 L840 442" marker-end="url(#ah)"/>
+<rect class="ai bx" x="840" y="414" width="150" height="56" rx="9"/><text class="t b" x="915" y="437" text-anchor="middle">tool_result</text><text class="t s mut" x="915" y="457" text-anchor="middle">back to the model</text>
+<text class="t s mut" x="30" y="600" text-anchor="start">Error results go back to the model as text, so it can recover or tell the user. A timed-out tool is abandoned, not cancelled.</text>
+</svg>

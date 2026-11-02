@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 590" width="1100" height="590" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Backend module dependencies</title>
+<desc id="desc">Arrows mean 'calls'. Modules handle HTTP; lib/ engines do the work; all data goes through repositories.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="590"/>
+<text class="t h" x="30" y="40">Backend module dependencies</text>
+<text class="t m mut" x="30" y="62">Arrows mean 'calls'. Modules handle HTTP; lib/ engines do the work; all data goes through repositories.</text>
+<rect class="code bx" x="40" y="96" width="300" height="56" rx="9"/><text class="t b" x="190" y="119" text-anchor="middle">modules/assistant, tabularReviews</text><text class="t s mut" x="190" y="139" text-anchor="middle">agentStream.ts</text>
+<rect class="code bx" x="400" y="96" width="300" height="56" rx="9"/><text class="t b" x="550" y="119" text-anchor="middle">modules/screening, capTables</text><text class="t s mut" x="550" y="139" text-anchor="middle">startups, documents</text>
+<rect class="code bx" x="760" y="96" width="300" height="56" rx="9"/><text class="t b" x="910" y="119" text-anchor="middle">modules/portfolio</text><text class="t s mut" x="910" y="139" text-anchor="middle">rescreen.service.ts</text>
+<rect class="prompt bx" x="40" y="200" width="180" height="56" rx="9"/><text class="t b" x="130" y="223" text-anchor="middle">lib/chat</text><text class="t s mut" x="130" y="243" text-anchor="middle">prompt, @-mentions</text>
+<rect class="ai bx" x="250" y="200" width="200" height="56" rx="9"/><text class="t b" x="350" y="223" text-anchor="middle">lib/agent</text><text class="t s mut" x="350" y="243" text-anchor="middle">agentGraph, runTools</text>
+<rect class="code bx" x="480" y="200" width="200" height="56" rx="9"/><text class="t b" x="580" y="223" text-anchor="middle">lib/tools</text><text class="t s mut" x="580" y="243" text-anchor="middle">registry + 13 tools</text>
+<rect class="ai bx" x="40" y="320" width="200" height="64" rx="9"/><text class="t b" x="140" y="339" text-anchor="middle">lib/llm</text><text class="t s mut" x="140" y="359" text-anchor="middle">providers,</text><text class="t s mut" x="140" y="375" text-anchor="middle">controlCenter</text>
+<rect class="code bx" x="270" y="320" width="160" height="64" rx="9"/><text class="t b" x="350" y="339" text-anchor="middle">lib/rag</text><text class="t s mut" x="350" y="359" text-anchor="middle">parse, chunk,</text><text class="t s mut" x="350" y="375" text-anchor="middle">embed, retrieve</text>
+<rect class="code bx" x="460" y="320" width="160" height="64" rx="9"/><text class="t b" x="540" y="347" text-anchor="middle">lib/documents</text><text class="t s mut" x="540" y="367" text-anchor="middle">memo writers</text>
+<rect class="code bx" x="650" y="320" width="260" height="64" rx="9"/><text class="t b" x="780" y="339" text-anchor="middle">lib/screening</text><text class="t s mut" x="780" y="359" text-anchor="middle">ingest, graph, watchman,</text><text class="t s mut" x="780" y="375" text-anchor="middle">classify, exposure, explain</text>
+<rect class="code bx" x="930" y="320" width="140" height="64" rx="9"/><text class="t b" x="1000" y="347" text-anchor="middle">lib/tabular</text><text class="t s mut" x="1000" y="367" text-anchor="middle">grid rows</text>
+<path class="ln" d="M190 152 L130 200" marker-end="url(#ah)"/>
+<path class="ln" d="M190 152 L350 200" marker-end="url(#ah)"/>
+<path class="ln" d="M450 228 L480 228" marker-end="url(#ah)"/>
+<path class="ln" d="M300 256 L140 320" marker-end="url(#ah)"/>
+<path class="ln" d="M520 256 L380 320" marker-end="url(#ah)"/>
+<path class="ln" d="M580 256 L540 320" marker-end="url(#ah)"/>
+<path class="ln" d="M640 256 L740 320" marker-end="url(#ah)"/>
+<path class="ln" d="M680 152 L800 320" marker-end="url(#ah)"/>
+<path class="ln" d="M910 152 L840 320" marker-end="url(#ah)"/>
+<path class="ln" d="M960 152 L1000 320" marker-end="url(#ah)"/>
+<path class="ln" d="M270 352 L240 352" marker-end="url(#ah)"/>
+<path class="ln lnd" d="M700 384 L700 404 L140 404 L140 384" marker-end="url(#ah)"/><text class="s lbl" x="420" y="398" text-anchor="middle">explain + CSV mapping (utility model)</text>
+<rect class="code bx" x="160" y="452" width="240" height="56" rx="9"/><text class="t b" x="280" y="475" text-anchor="middle">modules/*/…repository</text><text class="t s mut" x="280" y="495" text-anchor="middle">queries, no rules</text>
+<path class="ln" d="M400 480 L450 480" marker-end="url(#ah)"/>
+<rect class="code bx" x="450" y="452" width="140" height="56" rx="9"/><text class="t b" x="520" y="475" text-anchor="middle">models/*</text><text class="t s mut" x="520" y="495" text-anchor="middle">schemas</text>
+<path class="ln" d="M590 480 L630 480" marker-end="url(#ah)"/>
+<rect class="code bx" x="630" y="452" width="150" height="56" rx="9"/><text class="t b" x="705" y="475" text-anchor="middle">lib/infra/db</text><text class="t s mut" x="705" y="495" text-anchor="middle">picks the store</text>
+<path class="ln" d="M780 480 L820 480" marker-end="url(#ah)"/>
+<rect class="data bx" x="820" y="452" width="240" height="56" rx="9"/><text class="t b" x="940" y="475" text-anchor="middle">sqliteStore</text><text class="t s mut" x="940" y="495" text-anchor="middle">(MongoDB for auth)</text>
+<path class="ln" d="M350 384 L300 452" marker-end="url(#ah)"/>
+<text class="t s mut" x="40" y="548" text-anchor="start">lib/tools, lib/rag and lib/chat read data only through repositories. Every module's service also calls its own repository.</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 570" width="1000" height="570" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Sub-agents (delegate_task)</title>
+<desc id="desc">The same graph, compiled without a checkpointer, with read-only tools and no output to the screen.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="570"/>
+<text class="t h" x="30" y="40">Sub-agents (delegate_task)</text>
+<text class="t m mut" x="30" y="62">The same graph, compiled without a checkpointer, with read-only tools and no output to the screen.</text>
+<rect class="ai bx" x="330" y="88" width="340" height="64" rx="9"/><text class="t b" x="500" y="115" text-anchor="middle">Main agent · one round</text><text class="t s mut" x="500" y="135" text-anchor="middle">asks for delegate_task × 3, run in parallel</text>
+<path class="ln" d="M500 152 L500 184"/>
+<path class="ln" d="M180 184 L820 184"/>
+<text class="s lbl" x="500" y="178" text-anchor="middle">task in  ·  findings out</text>
+<path class="ln" d="M180 184 L180 218" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path class="ln" d="M500 184 L500 218" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path class="ln" d="M820 184 L820 218" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<rect class="ai bx dash" x="40" y="218" width="280" height="96" rx="9"/><text class="t b" x="180" y="253" text-anchor="middle">Sub-agent A</text><text class="t s mut" x="180" y="273" text-anchor="middle">'Why is Entity A flagged?'</text><text class="t s mut" x="180" y="289" text-anchor="middle">no chat history · max 5 rounds</text>
+<rect class="ai bx dash" x="360" y="218" width="280" height="96" rx="9"/><text class="t b" x="500" y="253" text-anchor="middle">Sub-agent B</text><text class="t s mut" x="500" y="273" text-anchor="middle">'What does the SHA say about B?'</text><text class="t s mut" x="500" y="289" text-anchor="middle">no chat history · max 5 rounds</text>
+<rect class="ai bx dash" x="680" y="218" width="280" height="96" rx="9"/><text class="t b" x="820" y="253" text-anchor="middle">Sub-agent C</text><text class="t s mut" x="820" y="273" text-anchor="middle">'Our policy for an 85% match?'</text><text class="t s mut" x="820" y="289" text-anchor="middle">no chat history · max 5 rounds</text>
+<path class="ln" d="M180 314 L180 360" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path class="ln" d="M500 314 L500 360" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<path class="ln" d="M820 314 L820 360" marker-end="url(#ah)" marker-start="url(#ah)"/>
+<rect class="code bx" x="40" y="360" width="920" height="70" rx="9"/><text class="t b" x="500" y="390" text-anchor="middle">Read-only tools only</text><text class="t s mut" x="500" y="410" text-anchor="middle">query_screening_data · list_mentioned_startups · search_compliance_playbook · list_startup_documents · search_startup_documents</text>
+<rect class="ui bx" x="40" y="460" width="290" height="76" rx="9"/><text class="t b" x="185" y="485" text-anchor="middle">Silent</text><text class="t s mut" x="185" y="505" text-anchor="middle">no SSE events; only the final</text><text class="t s mut" x="185" y="521" text-anchor="middle">summary goes back</text>
+<rect class="ui bx" x="355" y="460" width="290" height="76" rx="9"/><text class="t b" x="500" y="485" text-anchor="middle">Same ToolContext</text><text class="t s mut" x="500" y="505" text-anchor="middle">sees the parent's screening,</text><text class="t s mut" x="500" y="521" text-anchor="middle">mentions and open startup</text>
+<rect class="warn bx" x="670" y="460" width="290" height="76" rx="9"/><text class="t b" x="815" y="485" text-anchor="middle">Can't</text><text class="t s mut" x="815" y="505" text-anchor="middle">screen, write documents, search</text><text class="t s mut" x="815" y="521" text-anchor="middle">the web or delegate again</text>
+</svg>

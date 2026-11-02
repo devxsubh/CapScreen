@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 790" width="1000" height="790" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">The system prompt, top to bottom</title>
+<desc id="desc">Solid blocks are always there. Dashed blocks are added only when their condition holds.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="790"/>
+<text class="t h" x="30" y="40">The system prompt, top to bottom</text>
+<text class="t m mut" x="30" y="62">Solid blocks are always there. Dashed blocks are added only when their condition holds.</text>
+<text class="t b" x="60" y="100" text-anchor="start">Section</text>
+<text class="t b" x="560" y="100" text-anchor="start">Added when</text>
+<text class="zonet" x="60" y="132">ALWAYS</text>
+<rect class="code bx" x="60" y="142" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="163" text-anchor="start">1 · Base prompt</text>
+<text class="t s mut" x="560" y="163" text-anchor="start">tone, tool use, citations, when to use option lists</text>
+<rect class="code bx" x="60" y="180" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="201" text-anchor="start">2 · Tool routing hints</text>
+<text class="t s mut" x="560" y="201" text-anchor="start">every tool's routingHint</text>
+<rect class="code bx" x="60" y="218" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="239" text-anchor="start">3 · Untrusted-data guard</text>
+<text class="t s mut" x="560" y="239" text-anchor="start">text in &lt;entity_name&gt;, &lt;csv_data&gt; is data only</text>
+<text class="zonet" x="60" y="280">FROM THE SESSION (lib/chat/buildSystemPrompt.ts)</text>
+<rect class="data bx dash" x="60" y="290" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="311" text-anchor="start">4a · Full CSV in &lt;csv_data&gt;</text>
+<text class="t s mut" x="560" y="311" text-anchor="start">CSV attached, not screened yet</text>
+<rect class="data bx dash" x="60" y="328" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="349" text-anchor="start">4b · CSV line count only</text>
+<text class="t s mut" x="560" y="349" text-anchor="start">CSV attached, already screened</text>
+<rect class="data bx dash" x="60" y="366" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="387" text-anchor="start">5 · Mentioned startups</text>
+<text class="t s mut" x="560" y="387" text-anchor="start">an @-mention matched (≤ 15 entities each)</text>
+<rect class="data bx dash" x="60" y="404" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="425" text-anchor="start">6 · Active workspace id</text>
+<text class="t s mut" x="560" y="425" text-anchor="start">a startup is open</text>
+<rect class="data bx dash" x="60" y="442" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="463" text-anchor="start">7a · Prior screening counts</text>
+<text class="t s mut" x="560" y="463" text-anchor="start">a screening result exists</text>
+<rect class="data bx dash" x="60" y="480" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="501" text-anchor="start">7b · 'use web_search / playbook'</text>
+<text class="t s mut" x="560" y="501" text-anchor="start">no CSV and no result</text>
+<rect class="data bx dash" x="60" y="518" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="539" text-anchor="start">8 · Attached documents</text>
+<text class="t s mut" x="560" y="539" text-anchor="start">files attached to this message</text>
+<rect class="data bx dash" x="60" y="556" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="577" text-anchor="start">9 · Open document</text>
+<text class="t s mut" x="560" y="577" text-anchor="start">a document is open in the panel</text>
+<text class="zonet" x="60" y="618">FROM THE LATEST MESSAGE (modules/assistant)</text>
+<rect class="ui bx dash" x="60" y="628" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="649" text-anchor="start">10 · Focus instruction</text>
+<text class="t s mut" x="560" y="649" text-anchor="start">a focus was picked in the Tools menu</text>
+<rect class="ui bx dash" x="60" y="666" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="687" text-anchor="start">11 · Workflow instruction</text>
+<text class="t s mut" x="560" y="687" text-anchor="start">a workflow was picked</text>
+<rect class="ui bx dash" x="60" y="704" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="725" text-anchor="start">12 · Project assets</text>
+<text class="t s mut" x="560" y="725" text-anchor="start">workflow + an open startup</text>
+<rect class="ui bx dash" x="60" y="742" width="460" height="32" rx="7"/>
+<text class="t m" x="76" y="763" text-anchor="start">13 · No-workspace hint</text>
+<text class="t s mut" x="560" y="763" text-anchor="start">workflow, nothing loaded</text>
+<path class="ln" d="M950 130 L950 778" marker-end="url(#ah)"/>
+<text class="t xs mut" transform="translate(938 459) rotate(-90)" text-anchor="middle">order in the prompt</text>
+</svg>

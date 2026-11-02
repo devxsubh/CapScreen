@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 640" width="1150" height="640" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Screening a cap table, step by step</title>
+<desc id="desc">From the startup page to the saved result. Only step 3 (as a fallback) and step 9 call a model.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1150" height="640"/>
+<text class="t h" x="30" y="40">Screening a cap table, step by step</text>
+<text class="t m mut" x="30" y="62">From the startup page to the saved result. Only step 3 (as a fallback) and step 9 call a model.</text>
+<rect class="ui bx" x="30" y="92" width="210" height="56" rx="9"/><text class="t b" x="135" y="115" text-anchor="middle">Startup page</text><text class="t s mut" x="135" y="135" text-anchor="middle">pick or drop a CSV</text>
+<path class="ln" d="M240 120 L262 120" marker-end="url(#ah)"/>
+<rect class="code bx" x="262" y="92" width="260" height="56" rx="9"/><text class="t b" x="392" y="115" text-anchor="middle">POST …/csvs/analyze</text><text class="t s mut" x="392" y="135" text-anchor="middle">preview: graph stats + time estimate</text>
+<path class="ln" d="M522 120 L544 120" marker-end="url(#ah)"/>
+<rect class="code bx" x="544" y="92" width="260" height="56" rx="9"/><text class="t b" x="674" y="115" text-anchor="middle">POST …/csvs</text><text class="t s mut" x="674" y="135" text-anchor="middle">store the CSV · audit csv_uploaded</text>
+<path class="ln" d="M804 120 L826 120" marker-end="url(#ah)"/>
+<rect class="code bx" x="826" y="92" width="294" height="56" rx="9"/><text class="t b" x="973" y="115" text-anchor="middle">POST …/screen</text><text class="t s mut" x="973" y="135" text-anchor="middle">{ csvId, purpose }</text>
+<path class="ln" d="M973 148 L973 176" marker-end="url(#ah)"/>
+<rect class="zone" x="30" y="176" width="1090" height="262" rx="14"/><text class="zonet" x="46" y="198">runScreening  (lib/screening/runScreening.ts)</text>
+<rect class="warn bx" x="50" y="212" width="200" height="66" rx="9"/><text class="t b" x="150" y="240" text-anchor="middle">1 · Watchman up?</text><text class="t s mut" x="150" y="260" text-anchor="middle">no → fail (503)</text>
+<path class="ln" d="M250 245 L264 245" marker-end="url(#ah)"/>
+<rect class="code bx" x="264" y="212" width="200" height="66" rx="9"/><text class="t b" x="364" y="240" text-anchor="middle">2 · List info</text><text class="t s mut" x="364" y="260" text-anchor="middle">counts + SHA-256</text>
+<path class="ln" d="M464 245 L478 245" marker-end="url(#ah)"/>
+<rect class="code bx" x="478" y="212" width="200" height="66" rx="9"/><text class="t b" x="578" y="240" text-anchor="middle">3 · Ingest CSV</text><text class="t s mut" x="578" y="260" text-anchor="middle">strict → aliases → model</text>
+<path class="ln" d="M678 245 L692 245" marker-end="url(#ah)"/>
+<rect class="code bx" x="692" y="212" width="200" height="66" rx="9"/><text class="t b" x="792" y="240" text-anchor="middle">4 · Entity hints</text><text class="t s mut" x="792" y="260" text-anchor="middle">alt names, DOB, country</text>
+<path class="ln" d="M892 245 L906 245" marker-end="url(#ah)"/>
+<rect class="code bx" x="906" y="212" width="200" height="66" rx="9"/><text class="t b" x="1006" y="240" text-anchor="middle">5 · Ownership graph</text><text class="t s mut" x="1006" y="260" text-anchor="middle">nodes, edges, startup</text>
+<path class="ln" d="M1006 278 L1006 302 L132 302 L132 330" marker-end="url(#ah)"/>
+<rect class="code bx" x="50" y="330" width="164" height="74" rx="9"/><text class="t b" x="132" y="354" text-anchor="middle">6 · Search</text><text class="t s mut" x="132" y="374" text-anchor="middle">every node, parallel</text><text class="t s mut" x="132" y="390" text-anchor="middle">cached 5 min</text>
+<path class="ln" d="M214 367 L228 367" marker-end="url(#ah)"/>
+<rect class="code bx" x="228" y="330" width="164" height="74" rx="9"/><text class="t b" x="310" y="354" text-anchor="middle">7 · Tier</text><text class="t s mut" x="310" y="374" text-anchor="middle">≥ 0.95 flagged</text><text class="t s mut" x="310" y="390" text-anchor="middle">≥ 0.80 review</text>
+<path class="ln" d="M392 367 L406 367" marker-end="url(#ah)"/>
+<rect class="code bx" x="406" y="330" width="164" height="74" rx="9"/><text class="t b" x="488" y="362" text-anchor="middle">8 · Paths + UBOs</text><text class="t s mut" x="488" y="382" text-anchor="middle">BFS, cycle-safe</text>
+<path class="ln" d="M570 367 L584 367" marker-end="url(#ah)"/>
+<rect class="ai bx" x="584" y="330" width="164" height="74" rx="9"/><text class="t b" x="666" y="354" text-anchor="middle">9 · Notes</text><text class="t s mut" x="666" y="374" text-anchor="middle">utility model,</text><text class="t s mut" x="666" y="390" text-anchor="middle">review + flagged</text>
+<path class="ln" d="M748 367 L762 367" marker-end="url(#ah)"/>
+<rect class="code bx" x="762" y="330" width="164" height="74" rx="9"/><text class="t b" x="844" y="354" text-anchor="middle">10 · Rules</text><text class="t s mut" x="844" y="374" text-anchor="middle">50% · 25%,</text><text class="t s mut" x="844" y="390" text-anchor="middle">escalation</text>
+<path class="ln" d="M926 367 L940 367" marker-end="url(#ah)"/>
+<rect class="code bx" x="940" y="330" width="164" height="74" rx="9"/><text class="t b" x="1022" y="362" text-anchor="middle">11 · Sort</text><text class="t s mut" x="1022" y="382" text-anchor="middle">+ confidence 0–100</text>
+<path class="ln" d="M575 438 L575 460"/>
+<path class="ln" d="M150 460 L995 460"/>
+<path class="ln" d="M150 460 L150 480" marker-end="url(#ah)"/>
+<rect class="data bx" x="30" y="480" width="250" height="64" rx="9"/><text class="t b" x="155" y="499" text-anchor="middle">Save the result</text><text class="t s mut" x="155" y="519" text-anchor="middle">on the startup (cap table,</text><text class="t s mut" x="155" y="535" text-anchor="middle">co-investor or vendor slot)</text>
+<path class="ln" d="M430 460 L430 480" marker-end="url(#ah)"/>
+<rect class="code bx" x="310" y="480" width="250" height="64" rx="9"/><text class="t b" x="435" y="499" text-anchor="middle">Snapshot + delta</text><text class="t s mut" x="435" y="519" text-anchor="middle">what got worse</text><text class="t s mut" x="435" y="535" text-anchor="middle">since last time</text>
+<path class="ln" d="M710 460 L710 480" marker-end="url(#ah)"/>
+<rect class="code bx" x="590" y="480" width="250" height="64" rx="9"/><text class="t b" x="715" y="499" text-anchor="middle">Portfolio grid</text><text class="t s mut" x="715" y="519" text-anchor="middle">sync the monitoring</text><text class="t s mut" x="715" y="535" text-anchor="middle">review</text>
+<path class="ln" d="M990 460 L990 480" marker-end="url(#ah)"/>
+<rect class="data bx" x="870" y="480" width="250" height="64" rx="9"/><text class="t b" x="995" y="507" text-anchor="middle">Audit log</text><text class="t s mut" x="995" y="527" text-anchor="middle">screening_completed</text>
+<rect class="ui bx" x="30" y="568" width="1090" height="46" rx="9"/><text class="t b" x="575" y="597" text-anchor="middle">ScreeningResultsPanel: ownership graph · risk table · risk cards</text>
+</svg>

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 590" width="1000" height="590" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">CSV ingest: the model is the last resort</title>
+<desc id="desc">lib/screening/csvIngest.ts tries four code paths before asking the utility model to map columns.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="590"/>
+<text class="t h" x="30" y="40">CSV ingest: the model is the last resort</text>
+<text class="t m mut" x="30" y="62">lib/screening/csvIngest.ts tries four code paths before asking the utility model to map columns.</text>
+<rect class="code bx" x="60" y="92" width="540" height="56" rx="9"/><text class="t b" x="330" y="115" text-anchor="middle">1 · Reference-file check</text><text class="t s mut" x="330" y="135" text-anchor="middle">URLs + dataset metadata, no owners?</text>
+<path class="ln" d="M600 120 L680 120" marker-end="url(#ah)"/><text class="s lbl" x="640" y="113" text-anchor="middle">yes</text>
+<rect class="warn bx" x="680" y="98" width="280" height="44" rx="9"/><text class="t b" x="820" y="126" text-anchor="middle">Rejected with guidance</text>
+<path class="ln" d="M330 148 L330 172" marker-end="url(#ah)"/><text class="s lbl" x="338" y="164" text-anchor="start">no</text>
+<rect class="code bx" x="60" y="172" width="540" height="56" rx="9"/><text class="t b" x="330" y="195" text-anchor="middle">2 · Strict headers</text><text class="t s mut" x="330" y="215" text-anchor="middle">entity, entity_type, owner, owner_type, ownership_pct</text>
+<path class="ln" d="M600 200 L680 200" marker-end="url(#ah)"/><text class="s lbl" x="640" y="193" text-anchor="middle">match</text>
+<rect class="data bx" x="680" y="178" width="280" height="44" rx="9"/><text class="t b" x="820" y="206" text-anchor="middle">Cap table</text>
+<path class="ln" d="M330 228 L330 252" marker-end="url(#ah)"/><text class="s lbl" x="338" y="244" text-anchor="start">no</text>
+<rect class="code bx" x="60" y="252" width="540" height="56" rx="9"/><text class="t b" x="330" y="275" text-anchor="middle">3 · Shareholder schedule</text><text class="t s mut" x="330" y="295" text-anchor="middle">name + % columns, no company column</text>
+<path class="ln" d="M600 280 L680 280" marker-end="url(#ah)"/><text class="s lbl" x="640" y="273" text-anchor="middle">match</text>
+<rect class="data bx" x="680" y="258" width="280" height="44" rx="9"/><text class="t b" x="820" y="286" text-anchor="middle">Entity roster</text>
+<path class="ln" d="M330 308 L330 332" marker-end="url(#ah)"/><text class="s lbl" x="338" y="324" text-anchor="start">no</text>
+<rect class="code bx" x="60" y="332" width="540" height="56" rx="9"/><text class="t b" x="330" y="355" text-anchor="middle">4 · Known header aliases</text><text class="t s mut" x="330" y="375" text-anchor="middle">familiar column names mapped to fields</text>
+<path class="ln" d="M600 360 L680 360" marker-end="url(#ah)"/><text class="s lbl" x="640" y="353" text-anchor="middle">match</text>
+<rect class="data bx" x="680" y="338" width="280" height="44" rx="9"/><text class="t b" x="820" y="366" text-anchor="middle">Cap table or roster</text>
+<path class="ln" d="M330 388 L330 412" marker-end="url(#ah)"/><text class="s lbl" x="338" y="404" text-anchor="start">no</text>
+<rect class="ai bx" x="60" y="412" width="540" height="62" rx="9"/><text class="t b" x="330" y="438" text-anchor="middle">5 · Model maps the columns (the only AI step)</text><text class="t s mut" x="330" y="458" text-anchor="middle">headers + 8 sample rows in &lt;csv_data&gt; → JSON: kind, confidence, mapping</text>
+<path class="ln" d="M600 443 L680 443" marker-end="url(#ah)"/>
+<rect class="code bx" x="680" y="412" width="280" height="62" rx="9"/><text class="t b" x="820" y="430" text-anchor="middle">Check the answer</text><text class="t s mut" x="820" y="450" text-anchor="middle">columns must be real headers</text><text class="t s mut" x="820" y="466" text-anchor="middle">unknown kind → ignored</text>
+<path class="ln" d="M820 474 L820 500" marker-end="url(#ah)"/>
+<rect class="data bx" x="680" y="500" width="280" height="44" rx="9"/><text class="t b" x="820" y="528" text-anchor="middle">Cap table · roster · rejected</text>
+<path class="ln" d="M330 474 L330 500" marker-end="url(#ah)"/><text class="s lbl" x="338" y="492" text-anchor="start">no model, blocked or unsure</text>
+<rect class="warn bx" x="60" y="500" width="540" height="44" rx="9"/><text class="t b" x="330" y="528" text-anchor="middle">'Could not map this CSV' + missing fields</text>
+</svg>

@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 420" width="1180" height="420" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Frontend layers (frontend/src/)</title>
+<desc id="desc">Routes are thin; each feature owns its components, hooks and helpers; every backend call goes through api/.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1180" height="420"/>
+<text class="t h" x="30" y="40">Frontend layers (frontend/src/)</text>
+<text class="t m mut" x="30" y="62">Routes are thin; each feature owns its components, hooks and helpers; every backend call goes through api/.</text>
+<rect class="ui bx" x="30" y="110" width="150" height="70" rx="9"/><text class="t b mono" x="105" y="140" text-anchor="middle">app/</text><text class="t s mut" x="105" y="160" text-anchor="middle">routes, thin pages</text>
+<path class="ln" d="M180 145 L205 145" marker-end="url(#ah)"/>
+<rect class="ui bx" x="205" y="110" width="190" height="70" rx="9"/><text class="t b mono" x="300" y="132" text-anchor="middle">features/&lt;f&gt;/</text><text class="t s mut" x="300" y="152" text-anchor="middle">components/ incl.</text><text class="t s mut" x="300" y="168" text-anchor="middle">the &lt;Name&gt;Page</text>
+<path class="ln" d="M395 145 L420 145" marker-end="url(#ah)"/>
+<rect class="code bx" x="420" y="110" width="170" height="70" rx="9"/><text class="t b mono" x="505" y="140" text-anchor="middle">hooks/</text><text class="t s mut" x="505" y="160" text-anchor="middle">data loading, SSE</text>
+<path class="ln" d="M590 145 L615 145" marker-end="url(#ah)"/>
+<rect class="code bx" x="615" y="110" width="170" height="70" rx="9"/><text class="t b mono" x="700" y="132" text-anchor="middle">api/&lt;module&gt;.ts</text><text class="t s mut" x="700" y="152" text-anchor="middle">one per backend</text><text class="t s mut" x="700" y="168" text-anchor="middle">module</text>
+<path class="ln" d="M785 145 L810 145" marker-end="url(#ah)"/>
+<rect class="code bx" x="810" y="110" width="160" height="70" rx="9"/><text class="t b mono" x="890" y="132" text-anchor="middle">client.ts</text><text class="t s mut" x="890" y="152" text-anchor="middle">apiBase() picks</text><text class="t s mut" x="890" y="168" text-anchor="middle">the origin</text>
+<path class="ln" d="M970 132 L995 132 L995 112 L1010 112" marker-end="url(#ah)"/>
+<path class="ln" d="M970 158 L995 158 L995 186 L1010 186" marker-end="url(#ah)"/>
+<rect class="code bx" x="1010" y="88" width="150" height="50" rx="9"/><text class="t b" x="1085" y="108" text-anchor="middle">desktop</text><text class="t s mut" x="1085" y="128" text-anchor="middle">capscreen://app/__api</text>
+<rect class="ui bx" x="1010" y="162" width="150" height="50" rx="9"/><text class="t b" x="1085" y="182" text-anchor="middle">pnpm dev</text><text class="t s mut" x="1085" y="202" text-anchor="middle">localhost:3001</text>
+<rect class="ui bx" x="205" y="260" width="580" height="64" rx="9"/><text class="t b" x="495" y="287" text-anchor="middle">Shared code</text><text class="t s mut" x="495" y="307" text-anchor="middle">components/ (ui, layout, chat, common) · contexts/ · hooks/ · lib/ (desktop bridge) · types/</text>
+<path class="ln" d="M300 260 L300 180" marker-end="url(#ah)"/>
+<path class="ln" d="M505 260 L505 180" marker-end="url(#ah)"/>
+<path class="ln lnd" d="M785 292 L840 292" marker-end="url(#ah)"/><text class="s lbl" x="812" y="284" text-anchor="middle">types</text>
+<rect class="code bx" x="840" y="260" width="320" height="64" rx="9"/><text class="t b mono" x="1000" y="287" text-anchor="middle">backend/src/types/screening.ts</text><text class="t s mut" x="1000" y="307" text-anchor="middle">one contract, imported type-only</text>
+<text class="t s mut" x="30" y="376" text-anchor="start">A file used by one feature lives in that feature; a file used by several lives in components/, hooks/, lib/ or types/.</text>
+</svg>

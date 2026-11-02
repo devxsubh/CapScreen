@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 470" width="1180" height="470" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Models: roles, gate, adapters (lib/llm/providers/)</title>
+<desc id="desc">Every call names a role. getLlm resolves it, enforces local-only mode and returns a cached client.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1180" height="470"/>
+<text class="t h" x="30" y="40">Models: roles, gate, adapters (lib/llm/providers/)</text>
+<text class="t m mut" x="30" y="62">Every call names a role. getLlm resolves it, enforces local-only mode and returns a cached client.</text>
+<rect class="ai bx" x="30" y="96" width="250" height="80" rx="9"/><text class="t b mono" x="155" y="131" text-anchor="middle">agent</text><text class="t s mut" x="155" y="151" text-anchor="middle">chat agent · sub-agents</text>
+<rect class="ai bx" x="30" y="196" width="250" height="80" rx="9"/><text class="t b mono" x="155" y="223" text-anchor="middle">utility</text><text class="t s mut" x="155" y="243" text-anchor="middle">mapping · narratives · extraction</text><text class="t s mut" x="155" y="259" text-anchor="middle">documents · falls back to agent</text>
+<rect class="ai bx" x="30" y="296" width="250" height="80" rx="9"/><text class="t b mono" x="155" y="331" text-anchor="middle">embedding</text><text class="t s mut" x="155" y="351" text-anchor="middle">RAG · none → keyword search</text>
+<path class="ln" d="M280 136 L305 136 L305 220 L330 220" marker-end="url(#ah)"/>
+<path class="ln" d="M280 236 L330 236" marker-end="url(#ah)"/>
+<path class="ln" d="M280 336 L305 336 L305 252 L330 252" marker-end="url(#ah)"/>
+<rect class="code bx" x="330" y="176" width="180" height="120" rx="9"/><text class="t b mono" x="420" y="215" text-anchor="middle">getLlm(role)</text><text class="t s mut" x="420" y="235" text-anchor="middle">read the config</text><text class="t s mut" x="420" y="251" text-anchor="middle">pick provider + model</text><text class="t s mut" x="420" y="267" text-anchor="middle">build client (cached)</text>
+<rect class="data bx" x="330" y="340" width="180" height="100" rx="9"/><text class="t b" x="420" y="369" text-anchor="middle">Config</text><text class="t s mut" x="420" y="389" text-anchor="middle">AI Control Center</text><text class="t s mut" x="420" y="405" text-anchor="middle">keys sealed by keychain</text><text class="t s mut" x="420" y="421" text-anchor="middle">(pnpm dev: env vars)</text>
+<path class="ln" d="M420 340 L420 296" marker-end="url(#ah)"/>
+<path class="ln" d="M510 236 L560 236" marker-end="url(#ah)"/>
+<rect class="warn bx" x="560" y="176" width="180" height="120" rx="9"/><text class="t b" x="650" y="215" text-anchor="middle">Local-only gate</text><text class="t s mut" x="650" y="235" text-anchor="middle">local-only is on</text><text class="t s mut" x="650" y="251" text-anchor="middle">and the provider is</text><text class="t s mut" x="650" y="267" text-anchor="middle">remote → blocked</text>
+<path class="ln" d="M740 236 L765 236 L765 140 L790 140" marker-end="url(#ah)"/>
+<path class="ln" d="M740 236 L790 236" marker-end="url(#ah)"/>
+<path class="ln" d="M740 236 L765 236 L765 336 L790 336" marker-end="url(#ah)"/>
+<rect class="code bx" x="790" y="100" width="190" height="80" rx="9"/><text class="t b" x="885" y="135" text-anchor="middle">Anthropic</text><text class="t s mut" x="885" y="155" text-anchor="middle">Messages API, as is</text>
+<rect class="code bx" x="790" y="196" width="190" height="80" rx="9"/><text class="t b" x="885" y="223" text-anchor="middle">OpenAI-compatible</text><text class="t s mut" x="885" y="243" text-anchor="middle">OpenAI · Gemini · Groq</text><text class="t s mut" x="885" y="259" text-anchor="middle">OpenRouter · LM Studio</text>
+<rect class="code bx" x="790" y="296" width="190" height="80" rx="9"/><text class="t b" x="885" y="323" text-anchor="middle">Ollama (native)</text><text class="t s mut" x="885" y="343" text-anchor="middle">context sized to RAM</text><text class="t s mut" x="885" y="359" text-anchor="middle">thinking split off · t=0.2</text>
+<path class="lno" d="M980 140 L1010 140" marker-end="url(#ao)"/>
+<path class="lno" d="M980 222 L995 222 L995 160 L1010 160" marker-end="url(#ao)"/>
+<path class="ln" d="M980 250 L995 250 L995 316 L1010 316" marker-end="url(#ah)"/>
+<path class="ln" d="M980 336 L1010 336" marker-end="url(#ah)"/>
+<rect class="ext bx" x="1010" y="104" width="150" height="76" rx="9"/><text class="t b" x="1085" y="137" text-anchor="middle">Cloud APIs</text><text class="t s mut" x="1085" y="157" text-anchor="middle">your own keys</text>
+<rect class="data bx" x="1010" y="290" width="150" height="76" rx="9"/><text class="t b" x="1085" y="315" text-anchor="middle">This computer</text><text class="t s mut" x="1085" y="335" text-anchor="middle">Ollama · LM Studio</text><text class="t s mut" x="1085" y="351" text-anchor="middle">llama.cpp</text>
+<text class="t xs mut" x="560" y="324" text-anchor="start">Tool-less model: no tools are sent</text>
+<text class="t xs mut" x="560" y="340" text-anchor="start">and the prompt says to answer</text>
+<text class="t xs mut" x="560" y="356" text-anchor="start">only from the given context.</text>
+</svg>

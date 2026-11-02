@@ -4,6 +4,8 @@ A study guide to the whole repository: what the product does, how the pieces fit
 
 Snapshot: branch `cleanup/simplify` (based on `main` at `1ba6998`), about 430 tracked files and 54,000 lines of TypeScript/TSX, plus `pnpm-lock.yaml`. Section 20 lists what the cleanup on this branch removed or changed.
 
+**Diagrams.** Most sections open with a picture. The colours mean the same thing in every one: **blue** = code (deterministic), **violet** = a model call, **amber** = prompt text or a rule-driven state, **green** = storage, **orange** = network traffic that leaves the machine, **red** = errors, limits and risk. They are drawn by `docs/project-guide/build.mjs` (and `docs/agent-harness/build.mjs` for the AI ones); edit a diagram there and run `node docs/project-guide/build.mjs`. The AI side has its own, deeper guide: `docs/AGENT_HARNESS.md`.
+
 ---
 
 ## Table of contents
@@ -38,6 +40,8 @@ Snapshot: branch `cleanup/simplify` (based on `main` at `1ba6998`), about 430 tr
 
 CapScreen is a **desktop app** (Electron) for venture-capital firms. A user creates a *startup* workspace, uploads its cap table as a CSV, and CapScreen:
 
+![What CapScreen does](project-guide/01-what-it-does.svg)
+
 1. Parses the CSV into ownership records (strict format, column aliases, or LLM-inferred schema).
 2. Builds a directed **ownership graph** and walks every chain to the **ultimate beneficial owners (UBOs)**, including people hidden behind several layers of holding companies.
 3. Screens **every node** against sanctions lists (OFAC SDN, EU Consolidated, and others) using **Watchman**, an open-source Go matching engine bundled with the app.
@@ -50,13 +54,15 @@ CapScreen is a **desktop app** (Electron) for venture-capital firms. A user crea
 - **Decision support only.** It never decides guilt. It narrows the review set for a human compliance officer.
 - **Matching is deterministic.** Watchman decides matches. The AI only maps CSV columns and narrates results. The model is never asked "is this person sanctioned?"
 - **Fails closed.** If Watchman is unreachable, screening throws instead of returning "clear".
-- **Data stays local.** Cap tables, documents and screening results live in a local SQLite database. The only cloud piece is a small accounts/sign-in service. Cloud LLM calls happen only if the user assigns a cloud model, and "local-only mode" blocks them.
+- **Data stays local.** There are two databases (section 3.4). Cap tables, documents and screening results live in a local SQLite database on the user's machine. The only cloud piece is a small accounts/sign-in service whose MongoDB Atlas database holds accounts and nothing else. Cloud LLM calls happen only if the user assigns a cloud model, and "local-only mode" blocks them.
 
 Origin story (from `PRD.md`): the screener was first designed as a case study inside an existing legal-AI workspace with four surfaces (Assistant, Startups/Projects, Tabular Review, Workflows), then converted into a standalone desktop app (`docs/DESKTOP_PLAN.md`, decisions dated 2026-10-25). Most leftovers from that history (login pages, sharing, document versioning and tracked-change editing, cloud storage code) were removed on this branch; a few traces remain and are listed in section 20.
 
 ---
 
 ## 2. Repository at a glance
+
+![The repository](project-guide/02-repo.svg)
 
 ```
 rtp/                                   (repo; product name "CapScreen")
@@ -73,7 +79,10 @@ rtp/                                   (repo; product name "CapScreen")
 ├── docker-compose.dev.yml             Watchman only, for browser-only dev
 ├── docs/
 │   ├── DESKTOP_PLAN.md                desktop conversion plan + status (canonical architecture doc)
-│   ├── AGENT_HARNESS.md               LangGraph agent design
+│   ├── AGENT_HARNESS.md               AI harness, tools, RAG and every model call, with diagrams
+│   ├── agent-harness/                 the 16 diagrams AGENT_HARNESS.md shows + build.mjs that draws them
+│   ├── project-guide/                 the 19 diagrams this guide shows + build.mjs that draws them
+│   ├── diagram-kit.mjs                shared drawing helpers and colours for both build.mjs files
 │   ├── architecture-diagram.svg       runtime topology picture
 │   ├── screening-flow.svg             screening pipeline picture
 │   └── PROJECT_GUIDE.md               this file
@@ -95,6 +104,11 @@ rtp/                                   (repo; product name "CapScreen")
 
 ### 3.1 Desktop runtime topology (the real product)
 
+![Desktop architecture](architecture-diagram.svg)
+
+<details>
+<summary>Text version</summary>
+
 ```
 Electron main  (desktop/src/main.ts)
  ├─ Watchman sidecar   127.0.0.1:<free port>   self-built Go binary (no libpostal); OFAC/EU lists
@@ -106,6 +120,8 @@ Electron main  (desktop/src/main.ts)
       capscreen://app/...        → proxied to the Next server
       capscreen://app/__api/...  → proxied to the backend, x-capscreen-token added in main
 ```
+
+</details>
 
 - `<userData>` is `~/Library/Application Support/CapScreen` (macOS) or `%APPDATA%/CapScreen` (Windows).
 - Ports are random on every launch. The fixed `capscreen://app` origin keeps `localStorage` stable across launches and keeps the backend token out of the renderer entirely.
@@ -121,13 +137,33 @@ Only three things leave the machine:
 
 ### 3.3 Browser-only dev mode
 
-`pnpm dev` runs the backend on :3001 and Next on :3000 without Electron. The backend reads the root `.env` (`LLM_PROVIDER`, keys …), stores data in `~/.capscreen/`, and needs Watchman from `docker compose -f docker-compose.dev.yml up`. There is no desktop token in this mode, so the API is loopback-only but open. The earlier server deployment (EC2 + Vercel + Atlas + R2 + Upstash) is gone from the tree.
+`pnpm dev` runs the backend on :3001 and Next on :3000 without Electron. The backend reads the root `.env` (`LLM_PROVIDER`, keys …), stores data in `~/.capscreen/`, and needs Watchman from `docker compose -f docker-compose.dev.yml up`. There is no desktop token in this mode, so the API is loopback-only but open. The earlier server deployment (EC2 + R2 + Upstash, with all app data in Atlas) is gone from the tree. Vercel and Atlas remain only for the accounts service (section 11).
+
+### 3.4 Two databases
+
+The same backend code and mongoose models serve two databases. `lib/infra/db.ts` picks one at startup from `CAPSCREEN_DB`.
+
+![Two databases](project-guide/03-two-databases.svg)
+
+| | Local app database | Cloud accounts database |
+|---|---|---|
+| Engine | SQLite (`node:sqlite`) through the mongoose shim `lib/infra/sqliteStore/` | MongoDB Atlas |
+| Selected by | Default (`CAPSCREEN_DB` unset) | `CAPSCREEN_DB=mongodb` + `MONGODB_URI` |
+| Used by | Desktop backend (`src/index.ts`) and `pnpm dev` | Cloud auth service only (`src/authApp.ts`, Vercel) |
+| Location | `<userData>/capscreen.db` (desktop), `~/.capscreen/` (`pnpm dev`), or `CAPSCREEN_DB_FILE` | Atlas cluster in `MONGODB_URI` |
+| Holds | Everything else: startups, cap tables, screening results, entity reviews, documents and RAG chunks, chats, workflows, tabular reviews, audit log | Accounts only: `User`, `AuthToken`, `EmailToken`, `DesktopAuthCode` (`src/models/auth/`) |
+| One per | User's machine | Whole service, shared by all users |
+| Details | Section 10 | Section 11 |
+
+The two never exchange data. The desktop shell deletes `CAPSCREEN_DB` and `MONGODB_URI` from the backend's environment (section 4.1), so the desktop app cannot connect to Atlas. The desktop learns who is signed in through the session token, not the database, and writes the non-secret identity to `<userData>/identity.json` for audit attribution.
 
 ---
 
 ## 4. End-to-end flows
 
 ### 4.1 App launch
+
+![App launch](project-guide/04-app-launch.svg)
 
 1. `desktop/src/main.ts` registers the `capscreen://` scheme, creates the window with a splash page and calls `start()`.
 2. `start()` kicks off `boot()` **in parallel** with sign-in:
@@ -141,6 +177,10 @@ Only three things leave the machine:
 Supervision: sidecars restart with backoff after a crash (give up after 5 quick failures). Exit code **75** means "restart me" (used after a backup restore). Logs go to `<userData>/logs/<name>.log` (rotated past 10 MB) and `main.log`.
 
 ### 4.2 Screening a cap table from a startup page
+
+![Screening a cap table](project-guide/05-screening-pipeline.svg)
+
+Function by function:
 
 ```
 StartupScreenerPage  (frontend)
@@ -171,6 +211,10 @@ There is **one agent route**, `POST /chat`, used by the assistant (`useAssistant
 
 Each message may carry `workflow` and `focus` (the composer's Tools choice: `screen`, `review`, `ownership`, `research`, `memo`); the latest user message's focus adds a matching instruction to the system prompt (`FOCUS_INSTRUCTIONS` in `assistant/`).
 
+![One chat turn](agent-harness/02-chat-turn.svg)
+
+Step by step (`docs/AGENT_HARNESS.md` section 2 has the full walk-through):
+
 ```
 POST /chat (SSE)  { messages, chat_id?, csvContent?, screeningResult?, startup_id?, attached_documents?, displayed_doc? }
   parse + validate (≤50 messages, ≤16 KB each)
@@ -189,6 +233,8 @@ If paused for approval → UI shows ApprovalCard → POST /chat/runs/:runId/resu
 Chat history is saved by the client: assistant chats with `PUT /api/chats/:id/messages`, the startup page chat with `PUT /api/startups/:id/chat`. The forced first-turn tool call exists because small models did not route that case reliably (`backend/docs/tool-routing-analysis.md`).
 
 ### 4.4 Desktop sign-in (RFC 8252 loopback + PKCE)
+
+![Desktop sign-in](project-guide/06-sign-in.svg)
 
 1. App listens on `127.0.0.1:<random>/callback`, creates a PKCE verifier/challenge (S256) and random `state`.
 2. Opens the browser at `<authUrl>/desktop/authorize?redirect_uri&state&code_challenge`.
@@ -263,6 +309,8 @@ Package name `vc-screener-backend`, license AGPL-3.0-only, Node ≥ 22.12 (needs
 | `vercel.json` / `.vercelignore` | Project root `backend/`; no build step; all paths rewrite to `/api`; 30 s max duration. Keeps keys, DB files, scripts, sample data and docs out of uploads. |
 
 ### 6.3 Layers, HTTP helpers and middleware
+
+![A request through the backend](project-guide/07-backend-request.svg)
 
 Each feature lives in `src/modules/<feature>/` and is split the same way:
 
@@ -517,6 +565,8 @@ All are mongoose models; on desktop they persist to SQLite through the driver sh
 
 ### 7.1 CSV ingest pipeline (`csvIngest.ts`)
 
+![CSV ingest](agent-harness/14-csv-ingest.svg)
+
 1. **Table extraction**: delimiter detected (`,` `;` tab), quoted fields tokenized. No header + data row → error.
 2. **Reference-catalog check**: files that look like dataset catalogs (URLs + source metadata, e.g. OpenSanctions sources) become `csvKind: "reference_metadata"` and are blocked with guidance.
 3. **Strict path**: exact headers `entity, entity_type, owner, owner_type, ownership_pct` with no row errors → `parseSource: "strict"`.
@@ -528,6 +578,8 @@ All are mongoose models; on desktop they persist to SQLite through the driver sh
 Two screening modes come out: `ownership_graph` (cap table) and `entity_roster` (flat list; no graph, no exposure).
 
 ### 7.2 Ownership graph (`graph.ts`)
+
+![Ownership graph worked example](project-guide/08-ownership-example.svg)
 
 - Nodes are names; edges go **owner → entity** with attribute `pct`. Duplicate edges are ignored.
 - **Startup node**: the node with no outgoing edges (it owns nothing in the table).
@@ -544,6 +596,10 @@ Two screening modes come out: `ownership_graph` (cap table) and `entity_roster` 
 - `GET /v2/listinfo` (cached 2 min) gives list counts and SHA-256 hashes, stored on the result as `watchmanListInfo`.
 
 ### 7.4 Classification and ownership rules
+
+![From match score to risk tier](project-guide/09-risk-tiers.svg)
+
+Note that the rule *flags* and the tier are separate: `ubo_25` goes on every entity with an effective stake of 25% or more (Alice in the example above), but it only changes the tier of an entity that also has a Watchman hit.
 
 | Step | Rule (defaults; tunable in Settings → Screening, or env in dev) |
 |---|---|
@@ -562,6 +618,8 @@ For review/flagged entities only, in parallel. The prompt includes the untrusted
 
 ### 7.6 Monitoring
 
+![Background re-screening](project-guide/10-monitoring.svg)
+
 - **Snapshots and delta** (`modules/screening/screeningDelta.service.ts`): each run stores `entityRisks`; the delta lists entities that got worse. Shown by `ScreeningDeltaBanner`.
 - **Background re-screening** (`modules/portfolio/rescreen.service.ts`): every 15 min, if enabled and the last digest is older than `intervalHours` (default 24), re-screens every startup's latest cap table / co-investor / vendor CSV, writes a `ScreeningDigest`, optionally POSTs to `DIGEST_WEBHOOK_URL`. The desktop `notifications.ts` poller raises a native notification when a new digest has new flags or review items.
 
@@ -571,14 +629,7 @@ For review/flagged entities only, in parallel. The prompt includes the untrusted
 
 ### 8.1 The graph (`lib/agent/agentGraph.ts`)
 
-```
-START → callModel ──no tools──▶ END
-           │ tools
-           ├──needs approval──▶ askApproval (interrupt) ──▶ runTools
-           └────────────────────────────────────────────▶ runTools
-runTools ──rounds < max──▶ callModel
-runTools ──rounds ≥ max──▶ stopAtRoundLimit ──▶ END
-```
+![The agent graph](agent-harness/05-agent-graph.svg)
 
 - **State** (`Annotation.Root`): `systemPrompt`, `maxRounds`, `messages` (append reducer), `pendingCalls`, `needsApproval`, `declinedIds`, `rounds`, `answer` (append), `toolActivity` (append).
 - **Runtime context** (never checkpointed): tool registry, `executeTool`, SSE `write`, model role, `maxTokens` (the chat route uses 8192), `toolChoice`, `askBeforeSensitiveTools`.
@@ -589,6 +640,8 @@ runTools ──rounds ≥ max──▶ stopAtRoundLimit ──▶ END
 - Cancellation: the route aborts the `AbortSignal` when the HTTP connection closes.
 
 ### 8.2 Tool execution (`runTools.ts`)
+
+![One round of tool calls](agent-harness/06-tool-round.svg)
 
 Consecutive read-only calls run in parallel; any write runs alone, in order. Errors, bad input and timeouts (5 min) become error **messages** for the model. Results over 20,000 characters are trimmed. Declined calls return "the user declined this tool call".
 
@@ -621,6 +674,8 @@ Approvals are on for `POST /chat` (assistant and startup page). Tabular grid cha
 
 ### 9.1 Provider layer (`lib/llm/providers/`)
 
+![Models: roles, gate, adapters](agent-harness/15-providers.svg)
+
 - Provider-neutral types mirror the Anthropic wire format (`input_schema`, `tool_use`, `tool_result`), so tool definitions are written once.
 - Adapters: `AnthropicProvider` (`@anthropic-ai/sdk`), `OpenAICompatibleProvider` (`openai` SDK; OpenAI, OpenRouter, Groq, Gemini's OpenAI endpoint, LM Studio, llama.cpp, any custom URL), `OllamaProvider` (native `/api/chat`, sets the context window by RAM and keeps "thinking" out of replies).
 - **Roles**: `agent` (tool-calling chat), `utility` (narratives, CSV inference, extraction, titles; falls back to `agent`), `embedding` (RAG).
@@ -643,9 +698,13 @@ UI: Settings → AI Control Center, `/settings/ai` (section 13).
 
 ## 10. Local data layer
 
+This is the first of the two databases (section 3.4). The second, for accounts, is in section 11.
+
 ### 10.1 SQLite as a MongoDB driver
 
 `lib/infra/sqliteStore/` implements the parts of the MongoDB driver that mongoose calls, on Node's built-in `node:sqlite` (no native module):
+
+![SQLite behind mongoose](project-guide/11-sqlite-store.svg)
 
 - One table `documents(collection, id, body EJSON, updated_at)` plus `meta(schema_version)`, WAL mode.
 - The whole database is loaded into memory on open; reads never touch disk; every mutation writes through. Only the desktop backend writes the file.
@@ -674,6 +733,8 @@ restore-pending.json, restore-staging/, tmp/   backup restore staging
 
 ### 10.3 Backup, restore and audit export
 
+![Backup, restore and the audit chain](project-guide/12-backup-restore.svg)
+
 - **Backup** (`backup.ts`): `"CAPSCREENBAK1\n" | salt(16) | iv(12) | tag(16) | AES-256-GCM(gzip(manifest + files))`, key = scrypt(password, salt). Contains the database snapshot, stored files, settings and model assignments. **API keys are excluded** (sealed to this machine).
 - **Restore**: decrypt and validate, stage under `restore-staging/`, write `restore-pending.json`, exit 75; on the next start `applyPendingRestore()` swaps it in before the DB opens.
 - **Audit export** (`GET /api/desktop/audit-export`): each line carries `sha256(prev_hash + entry)`; editing, deleting or reordering any line breaks the chain.
@@ -684,7 +745,7 @@ restore-pending.json, restore-staging/, tmp/   backup restore staging
 ## 11. Cloud auth service
 
 - Code lives in the backend package (`src/authApp.ts`, `src/modules/auth/`, auth models) and deploys to Vercel with `backend/` as project root.
-- Storage: MongoDB Atlas via `CAPSCREEN_DB=mongodb` + `MONGODB_URI`. It stores **accounts only**.
+- Storage: the second database (section 3.4), MongoDB Atlas via `CAPSCREEN_DB=mongodb` + `MONGODB_URI`. It stores **accounts only** (`User`, `AuthToken`, `EmailToken`, `DesktopAuthCode`).
 - Features: signup (Resend email verification; auto-confirmed without `RESEND_API_KEY`), sign-in with lockout, verify, resend, forgot/reset password, signout, refresh-token rotation, `/me`, and the desktop OAuth endpoints. It logs missing JWT keys / email configuration at startup.
 - Desktop refresh tokens default to 30 days (`DESKTOP_REFRESH_TOKEN_EXPIRATION_DAYS`).
 - Production URL is `capscreenAuthUrl` in `desktop/package.json` (`https://capscreen-auth.vercel.app`), overridable with `CAPSCREEN_AUTH_URL`. Dev default `http://127.0.0.1:4100` (`pnpm --filter vc-screener-backend auth:dev`), or skip sign-in with `CAPSCREEN_SKIP_AUTH=1` (dev only).
@@ -698,6 +759,8 @@ Package `capscreen-desktop`, product name CapScreen, version 1.0.0. The main pro
 ### 12.1 Source files (`desktop/src/`)
 
 `main.ts` is the entry point and only wires things together; each folder owns one job.
+
+![How the window reaches the backend](project-guide/13-desktop-request.svg)
 
 | File | Responsibility |
 |---|---|
@@ -723,6 +786,8 @@ Package `capscreen-desktop`, product name CapScreen, version 1.0.0. The main pro
 | `window/shellPages.ts` | Shell HTML pages: splash, boot error, sign-in gate, browser "you can close this tab" page |
 
 ### 12.2 Build and packaging
+
+![Building the installers](project-guide/14-packaging.svg)
 
 | Script | What it does |
 |---|---|
@@ -795,6 +860,8 @@ UI conventions (match the sidebar; reuse these instead of hand-rolled styles):
 Sidebar (`components/layout/AppSidebar.tsx`): logo and collapse button; **New chat** (⇧⌘O / Ctrl+Shift+O, the way into the assistant) and **Search** (⌘K / Ctrl+K, filters chats); Startups, Tabular reviews, Workflows. Below: **Startups** (five most recently updated, colour-coded initial tiles, All startups, + for a new one) and **Chats** (grouped Today / Yesterday / Previous 7 days / Previous 30 days / Older, + for a new chat, Show more). The footer shows the assistant's model with its maker's logo and a health dot (links to AI Control), then the profile card (opens Settings). Collapsed, it's an icon rail with the CapScreen mark, the same actions and the AI status. Onboarding tour hooks: `data-tour` on New chat (`nav-assistant`), the nav items and `recent-projects`.
 
 ### 13.4 Folder layout (`src/`)
+
+![Frontend layers](project-guide/15-frontend.svg)
 
 ```
 app/            routes only (thin page.tsx files, layouts, error pages)
@@ -881,6 +948,8 @@ An **assistant** workflow is a Markdown prompt: selecting one prefixes the messa
 
 ### 14.2 Tabular review
 
+![Tabular reviews](project-guide/16-tabular.svg)
+
 - A review is a grid: rows are documents or entities, columns have prompts and formats; cells hold `{summary, flag, reasoning}`.
 - `reviewKind`: `standard` (cells generated by the LLM from documents), `entity_screening` (rows are graph entities, cells straight from the screening result), `portfolio_monitoring` (rows are startups, kept in sync after every screen and re-screen).
 - The **Status** column is for the human. Typing `cleared`, `escalated`, `blocked` or `pending` writes back to `EntityReview` or the startup's portfolio status.
@@ -889,6 +958,8 @@ An **assistant** workflow is a Markdown prompt: selecting one prefixes the messa
 ---
 
 ## 15. Security model
+
+![Security boundaries](project-guide/17-security.svg)
 
 | Layer | Control |
 |---|---|
@@ -967,6 +1038,11 @@ Dev only: `electron` 43.7.9, `electron-builder` 26.17.0, `esbuild` 0.25.4, `cros
 
 ### 17.4 Internal module dependencies
 
+![Backend module dependencies](project-guide/18-module-deps.svg)
+
+<details>
+<summary>Text version, including desktop and frontend</summary>
+
 ```
 modules/assistant, modules/tabularReviews (agentStream.ts)
    └─▶ lib/agent/agentGraph ─▶ lib/llm/providers (getLlm) ─▶ controlCenter/store
@@ -987,6 +1063,8 @@ desktop/main ─▶ sidecars (Watchman, backend, UI) ─▶ protocol (proxy + to
 frontend app/ (routes) ─▶ features/* ─▶ api/* ─▶ apiBase() ─▶ capscreen://app/__api ─▶ backend
 frontend/types/screening ─(type-only)▶ backend/src/types/screening
 ```
+
+</details>
 
 ---
 
@@ -1010,7 +1088,7 @@ Against today's OFAC/EU lists every name in `sample-cap-table.csv` comes back cl
 
 ### 18.3 Docs and images
 
-`docs/architecture-diagram.svg` and `docs/screening-flow.svg` are the README diagrams. Brand marks are in `frontend/public/` and `backend/src/assets/`; desktop icons in `desktop/resources/icons/`.
+`docs/architecture-diagram.svg` and `docs/screening-flow.svg` are the README diagrams (hand-written SVG; this guide reuses the first). `docs/project-guide/` (19 diagrams) and `docs/agent-harness/` (16) are generated by their `build.mjs` from shared helpers in `docs/diagram-kit.mjs`: plain Node, no dependencies. Brand marks are in `frontend/public/` and `backend/src/assets/`; desktop icons in `desktop/resources/icons/`.
 
 ---
 
@@ -1121,6 +1199,8 @@ pnpm --filter vc-screener-backend run generate:jwt-keys
 ---
 
 ## 23. Suggested study order
+
+![A path through the code](project-guide/19-study-order.svg)
 
 1. `README.md`, then sections 1 and 3 of this guide.
 2. `backend/sample-data/sample-cap-table.csv` + `DEMO.md`, and `backend/test/ownership.test.ts`, which states the expected numbers.

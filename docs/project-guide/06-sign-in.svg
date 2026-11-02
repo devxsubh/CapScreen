@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 620" width="1100" height="620" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Desktop sign-in (RFC 8252 loopback + PKCE)</title>
+<desc id="desc">Like Claude Code: the browser signs in, a one-time code comes back to a loopback listener, the app swaps it for tokens.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="620"/>
+<text class="t h" x="30" y="40">Desktop sign-in (RFC 8252 loopback + PKCE)</text>
+<text class="t m mut" x="30" y="62">Like Claude Code: the browser signs in, a one-time code comes back to a loopback listener, the app swaps it for tokens.</text>
+<line class="life" x1="110" y1="128" x2="110" y2="600"/>
+<rect class="code bx" x="22" y="84" width="176" height="44" rx="9"/><text class="t b" x="110" y="112" text-anchor="middle">Desktop app</text>
+<line class="life" x1="330" y1="128" x2="330" y2="600"/>
+<rect class="code bx" x="242" y="84" width="176" height="44" rx="9"/><text class="t b" x="330" y="112" text-anchor="middle">Loopback listener</text>
+<line class="life" x1="550" y1="128" x2="550" y2="600"/>
+<rect class="ui bx" x="462" y="84" width="176" height="44" rx="9"/><text class="t b" x="550" y="112" text-anchor="middle">Browser</text>
+<line class="life" x1="770" y1="128" x2="770" y2="600"/>
+<rect class="ext bx" x="682" y="84" width="176" height="44" rx="9"/><text class="t b" x="770" y="112" text-anchor="middle">Auth service</text>
+<line class="life" x1="990" y1="128" x2="990" y2="600"/>
+<rect class="data bx" x="902" y="84" width="176" height="44" rx="9"/><text class="t b" x="990" y="112" text-anchor="middle">OS keychain</text>
+<rect class="code bx" x="10" y="141" width="200" height="26" rx="6"/><text class="t s" x="110" y="159" text-anchor="middle">PKCE verifier + state</text>
+<path class="ln" d="M110 190 L330 190" marker-end="url(#ah)"/><text class="s lbl" x="220" y="183" text-anchor="middle">listen on 127.0.0.1:&lt;random&gt;/callback</text>
+<path class="ln" d="M110 226 L550 226" marker-end="url(#ah)"/><text class="s lbl" x="330" y="219" text-anchor="middle">open /desktop/authorize?redirect_uri&amp;state&amp;code_challenge</text>
+<path class="lno" d="M550 262 L770 262" marker-end="url(#ao)"/><text class="s lbl" x="660" y="255" text-anchor="middle">user signs in on the hosted portal</text>
+<path class="ln lnd" d="M770 298 L550 298" marker-end="url(#ah)"/><text class="s lbl" x="660" y="291" text-anchor="middle">one-time code (loopback redirect URIs only)</text>
+<path class="ln" d="M550 334 L330 334" marker-end="url(#ah)"/><text class="s lbl" x="440" y="327" text-anchor="middle">GET /callback?code&amp;state</text>
+<path class="ln lnd" d="M330 370 L110 370" marker-end="url(#ah)"/><text class="s lbl" x="220" y="363" text-anchor="middle">code (state checked)</text>
+<path class="lno" d="M110 406 L770 406" marker-end="url(#ao)"/><text class="s lbl" x="440" y="399" text-anchor="middle">POST /api/auth/desktop/token (code + verifier)</text>
+<path class="ln lnd" d="M770 442 L110 442" marker-end="url(#ah)"/><text class="s lbl" x="440" y="435" text-anchor="middle">access + refresh token</text>
+<path class="ln" d="M110 478 L990 478" marker-end="url(#ah)"/><text class="s lbl" x="550" y="471" text-anchor="middle">seal the session (safeStorage)</text>
+<rect class="code bx" x="10" y="499" width="200" height="26" rx="6"/><text class="t s" x="110" y="517" text-anchor="middle">write identity.json</text>
+<rect class="ui bx" x="290" y="545" width="520" height="26" rx="6"/><text class="t s" x="550" y="563" text-anchor="middle">refresh every 12 h · 14 days offline grace · revoked on sign-out</text>
+</svg>

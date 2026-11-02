@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1110 500" width="1110" height="500" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">A request through the backend (src/app.ts)</title>
+<desc id="desc">Middleware first, then one feature module, split into the same layers everywhere.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1110" height="500"/>
+<text class="t h" x="30" y="40">A request through the backend (src/app.ts)</text>
+<text class="t m mut" x="30" y="62">Middleware first, then one feature module, split into the same layers everywhere.</text>
+<rect class="ui bx" x="30" y="92" width="110" height="64" rx="9"/><text class="t b" x="85" y="130" text-anchor="middle">Request</text>
+<path class="ln" d="M140 124 L160 124" marker-end="url(#ah)"/>
+<rect class="code bx" x="160" y="92" width="140" height="64" rx="9"/><text class="t b" x="230" y="119" text-anchor="middle">helmet · CORS</text><text class="t s mut" x="230" y="139" text-anchor="middle">loopback origins</text>
+<path class="ln" d="M300 124 L320 124" marker-end="url(#ah)"/>
+<rect class="warn bx" x="320" y="92" width="160" height="64" rx="9"/><text class="t b" x="400" y="111" text-anchor="middle">desktopToken</text><text class="t s mut" x="400" y="131" text-anchor="middle">x-capscreen-token</text><text class="t s mut" x="400" y="147" text-anchor="middle">else 403</text>
+<path class="ln" d="M480 124 L500 124" marker-end="url(#ah)"/>
+<rect class="code bx" x="500" y="92" width="120" height="64" rx="9"/><text class="t b" x="560" y="130" text-anchor="middle">body ≤ 10 MB</text>
+<path class="ln" d="M620 124 L640 124" marker-end="url(#ah)"/>
+<rect class="code bx" x="640" y="92" width="160" height="64" rx="9"/><text class="t b" x="720" y="119" text-anchor="middle">requireAuth</text><text class="t s mut" x="720" y="139" text-anchor="middle">local-user + identity</text>
+<path class="ln" d="M800 124 L820 124" marker-end="url(#ah)"/>
+<rect class="code bx" x="820" y="92" width="160" height="64" rx="9"/><text class="t b" x="900" y="119" text-anchor="middle">connectDatabase</text><text class="t s mut" x="900" y="139" text-anchor="middle">open the DB once</text>
+<path class="ln" d="M900 156 L900 188 L100 188 L100 216" marker-end="url(#ah)"/>
+<rect class="code bx" x="30" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="100" y="243" text-anchor="middle">routes.ts</text><text class="t s mut" x="100" y="263" text-anchor="middle">prefix → module</text>
+<path class="ln" d="M170 248 L182 248" marker-end="url(#ah)"/>
+<rect class="code bx" x="182" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="252" y="243" text-anchor="middle">x.routes.ts</text><text class="t s mut" x="252" y="263" text-anchor="middle">paths, guards</text>
+<path class="ln" d="M322 248 L334 248" marker-end="url(#ah)"/>
+<rect class="code bx" x="334" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="404" y="243" text-anchor="middle">x.controller</text><text class="t s mut" x="404" y="263" text-anchor="middle">read req, send res</text>
+<path class="ln" d="M474 248 L486 248" marker-end="url(#ah)"/>
+<rect class="code bx" x="486" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="556" y="243" text-anchor="middle">x.service</text><text class="t s mut" x="556" y="263" text-anchor="middle">rules, HttpError</text>
+<path class="ln" d="M626 248 L638 248" marker-end="url(#ah)"/>
+<rect class="code bx" x="638" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="708" y="243" text-anchor="middle">x.repository</text><text class="t s mut" x="708" y="263" text-anchor="middle">mongoose queries</text>
+<path class="ln" d="M778 248 L790 248" marker-end="url(#ah)"/>
+<rect class="code bx" x="790" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="860" y="243" text-anchor="middle">models/*</text><text class="t s mut" x="860" y="263" text-anchor="middle">schemas</text>
+<path class="ln" d="M930 248 L942 248" marker-end="url(#ah)"/>
+<rect class="data bx" x="942" y="216" width="140" height="64" rx="9"/><text class="t b mono" x="1012" y="243" text-anchor="middle">db → store</text><text class="t s mut" x="1012" y="263" text-anchor="middle">SQLite (or Atlas)</text>
+<path class="ln" d="M556 280 L556 336" marker-end="url(#ah)"/>
+<rect class="ai bx" x="406" y="336" width="300" height="64" rx="9"/><text class="t b" x="556" y="363" text-anchor="middle">src/lib engines</text><text class="t s mut" x="556" y="383" text-anchor="middle">screening · agent · tools · llm · rag · infra</text>
+<path class="ln lnd" d="M706 368 L708 368 L708 280" marker-end="url(#ah)"/><text class="s lbl" x="716" y="320" text-anchor="start">via repositories</text>
+<path class="ln lnd" d="M610 280 L610 300 L950 300 L950 336" marker-end="url(#ah)"/><text class="s lbl" x="850" y="294" text-anchor="middle">throw badRequest / notFound</text>
+<rect class="warn bx" x="830" y="336" width="250" height="64" rx="9"/><text class="t b" x="955" y="363" text-anchor="middle">errorHandler</text><text class="t s mut" x="955" y="383" text-anchor="middle">HttpError → { detail } · else 500</text>
+<text class="t s mut" x="30" y="446" text-anchor="start">Each layer has one job: routes have no logic, controllers don't touch the database, services never see req/res,</text>
+<text class="t s mut" x="30" y="466" text-anchor="start">repositories hold no rules. lib/ engines are HTTP-free and read data only through repositories.</text>
+</svg>

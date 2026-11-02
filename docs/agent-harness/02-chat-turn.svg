@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" width="1100" height="700" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">One chat turn, end to end</title>
+<desc id="desc">POST /chat. Solid arrows are calls, dashed arrows are results or streamed events.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="700"/>
+<text class="t h" x="30" y="40">One chat turn, end to end</text>
+<text class="t m mut" x="30" y="62">POST /chat. Solid arrows are calls, dashed arrows are results or streamed events.</text>
+<line class="life" x1="110" y1="128" x2="110" y2="680"/>
+<rect class="ui bx" x="22" y="84" width="176" height="44" rx="9"/><text class="t b" x="110" y="112" text-anchor="middle">Browser</text>
+<line class="life" x1="330" y1="128" x2="330" y2="680"/>
+<rect class="code bx" x="242" y="84" width="176" height="44" rx="9"/><text class="t b" x="330" y="112" text-anchor="middle">Assistant service</text>
+<line class="life" x1="550" y1="128" x2="550" y2="680"/>
+<rect class="ai bx" x="462" y="84" width="176" height="44" rx="9"/><text class="t b" x="550" y="112" text-anchor="middle">Agent graph</text>
+<line class="life" x1="770" y1="128" x2="770" y2="680"/>
+<rect class="ai bx" x="682" y="84" width="176" height="44" rx="9"/><text class="t b" x="770" y="112" text-anchor="middle">Model</text>
+<line class="life" x1="990" y1="128" x2="990" y2="680"/>
+<rect class="code bx" x="902" y="84" width="176" height="44" rx="9"/><text class="t b" x="990" y="112" text-anchor="middle">Tools</text>
+<path class="ln" d="M110 162 L330 162" marker-end="url(#ah)"/><text class="s lbl" x="220" y="155" text-anchor="middle">POST /chat (messages + context)</text>
+<rect class="code bx" x="185" y="181" width="290" height="26" rx="6"/><text class="t s" x="330" y="199" text-anchor="middle">validate · resolve @-mentions, startup, docs</text>
+<rect class="code bx" x="185" y="217" width="290" height="26" rx="6"/><text class="t s" x="330" y="235" text-anchor="middle">build system prompt · pick forced first tool</text>
+<path class="ln lnd" d="M330 270 L110 270" marker-end="url(#ah)"/><text class="s lbl" x="220" y="263" text-anchor="middle">SSE: chat_id</text>
+<path class="ln" d="M330 306 L550 306" marker-end="url(#ah)"/><text class="s lbl" x="440" y="299" text-anchor="middle">runAgent(prompt, messages)</text>
+<rect class="ui bx" x="440" y="326" width="630" height="246" rx="8" style="fill:none"/>
+<rect class="ui bx" x="440" y="326" width="292" height="22" rx="6"/>
+<text class="t xs" x="452" y="341" text-anchor="start">loop · until no tool calls, at most 8 rounds</text>
+<path class="ln" d="M550 372 L770 372" marker-end="url(#ah)"/><text class="s lbl" x="660" y="365" text-anchor="middle">stream(prompt, tools, messages)</text>
+<path class="ln lnd" d="M770 408 L550 408" marker-end="url(#ah)"/><text class="s lbl" x="660" y="401" text-anchor="middle">text deltas + tool calls</text>
+<path class="ln lnd" d="M550 444 L110 444" marker-end="url(#ah)"/><text class="s lbl" x="330" y="437" text-anchor="middle">SSE: content_delta · tool_call_start</text>
+<path class="ln" d="M550 480 L990 480" marker-end="url(#ah)"/><text class="s lbl" x="770" y="473" text-anchor="middle">run one batch (reads in parallel)</text>
+<path class="ln lnd" d="M990 516 L110 516" marker-end="url(#ah)"/><text class="s lbl" x="550" y="509" text-anchor="middle">SSE: screening_result · plan_updated · document_created</text>
+<path class="ln lnd" d="M990 552 L550 552" marker-end="url(#ah)"/><text class="s lbl" x="770" y="545" text-anchor="middle">tool_result blocks</text>
+<path class="ln lnd" d="M550 604 L330 604" marker-end="url(#ah)"/><text class="s lbl" x="440" y="597" text-anchor="middle">done · or needs_approval(runId)</text>
+<path class="ln lnd" d="M330 644 L110 644" marker-end="url(#ah)"/><text class="s lbl" x="220" y="637" text-anchor="middle">SSE: approval_required? · final_result · [DONE]</text>
+</svg>

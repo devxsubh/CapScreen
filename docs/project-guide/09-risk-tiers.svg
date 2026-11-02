@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 440" width="1000" height="440" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">From match score to risk tier</title>
+<desc id="desc">Watchman's top score sets the starting tier; ownership rules can only move an entity up.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="440"/>
+<text class="t h" x="30" y="40">From match score to risk tier</text>
+<text class="t m mut" x="30" y="62">Watchman's top score sets the starting tier; ownership rules can only move an entity up.</text>
+<rect class="data bx" x="80" y="100" width="360" height="40" rx="6"/>
+<rect class="prompt bx" x="440" y="100" width="320" height="40" rx="6"/>
+<rect class="warn bx" x="760" y="100" width="160" height="40" rx="6"/>
+<text class="t s" x="260" y="125" text-anchor="middle">clear  ·  no hit at or above 0.80</text>
+<text class="t s" x="600" y="125" text-anchor="middle">review  ·  0.80 to &lt; 0.95</text>
+<text class="t s" x="840" y="125" text-anchor="middle">flagged  ·  ≥ 0.95</text>
+<path class="ln" d="M80 140 L80 150"/><text class="t xs mut" x="80" y="166" text-anchor="middle">0</text>
+<path class="ln" d="M440 140 L440 150"/><text class="t xs mut" x="440" y="166" text-anchor="middle">0.80</text>
+<path class="ln" d="M760 140 L760 150"/><text class="t xs mut" x="760" y="166" text-anchor="middle">0.95</text>
+<path class="ln" d="M920 140 L920 150"/><text class="t xs mut" x="920" y="166" text-anchor="middle">1.0</text>
+<text class="t xs mut" x="80" y="190" text-anchor="start">Not to scale. Watchman returns nothing below 0.80 (its minimum match), so a low score means 'no hit'.</text>
+<text class="t b" x="80" y="236" text-anchor="start">Then the ownership rules</text>
+<rect class="data bx" x="120" y="260" width="180" height="56" rx="9"/><text class="t b" x="210" y="294" text-anchor="middle">clear</text>
+<rect class="prompt bx" x="420" y="260" width="180" height="56" rx="9"/><text class="t b" x="510" y="294" text-anchor="middle">review</text>
+<rect class="warn bx" x="720" y="260" width="180" height="56" rx="9"/><text class="t b" x="810" y="294" text-anchor="middle">flagged</text>
+<path class="ln" d="M300 288 L420 288" marker-end="url(#ah)"/><text class="s lbl" x="360" y="280" text-anchor="middle">ubo_25 + a hit</text>
+<path class="ln" d="M600 288 L720 288" marker-end="url(#ah)"/><text class="s lbl" x="660" y="280" text-anchor="middle">ofac_50</text>
+<path class="ln" d="M510 372 L510 316" marker-end="url(#ah)"/><text class="s lbl" x="510" y="390" text-anchor="middle">blockable company with no hit of its own starts here</text>
+<text class="t s mut" x="80" y="424" text-anchor="start">Thresholds (0.95, 0.80, 50%, 25%) can be tightened in Settings → Screening and are recorded on every result.</text>
+</svg>

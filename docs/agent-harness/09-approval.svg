@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 680" width="1100" height="680" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Human approval for web_search</title>
+<desc id="desc">LangGraph interrupt() pauses the run; Allow or Deny resumes it. Every answer is audited.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="680"/>
+<text class="t h" x="30" y="40">Human approval for web_search</text>
+<text class="t m mut" x="30" y="62">LangGraph interrupt() pauses the run; Allow or Deny resumes it. Every answer is audited.</text>
+<line class="life" x1="110" y1="128" x2="110" y2="660"/>
+<rect class="ui bx" x="22" y="84" width="176" height="44" rx="9"/><text class="t b" x="110" y="112" text-anchor="middle">Browser</text>
+<line class="life" x1="330" y1="128" x2="330" y2="660"/>
+<rect class="code bx" x="242" y="84" width="176" height="44" rx="9"/><text class="t b" x="330" y="112" text-anchor="middle">Assistant service</text>
+<line class="life" x1="550" y1="128" x2="550" y2="660"/>
+<rect class="ai bx" x="462" y="84" width="176" height="44" rx="9"/><text class="t b" x="550" y="112" text-anchor="middle">Agent graph</text>
+<line class="life" x1="770" y1="128" x2="770" y2="660"/>
+<rect class="data bx" x="682" y="84" width="176" height="44" rx="9"/><text class="t b" x="770" y="112" text-anchor="middle">Checkpointer</text>
+<line class="life" x1="990" y1="128" x2="990" y2="660"/>
+<rect class="data bx" x="902" y="84" width="176" height="44" rx="9"/><text class="t b" x="990" y="112" text-anchor="middle">Audit log</text>
+<rect class="prompt bx" x="400" y="145" width="300" height="26" rx="6"/><text class="t s" x="550" y="163" text-anchor="middle">model asks for web_search → askApproval</text>
+<path class="ln" d="M550 196 L770 196" marker-end="url(#ah)"/><text class="s lbl" x="660" y="189" text-anchor="middle">interrupt(): save state (thread = runId)</text>
+<path class="ln lnd" d="M550 232 L330 232" marker-end="url(#ah)"/><text class="s lbl" x="440" y="225" text-anchor="middle">needs_approval(runId, calls)</text>
+<rect class="code bx" x="215" y="253" width="230" height="26" rx="6"/><text class="t s" x="330" y="271" text-anchor="middle">remember owner + context</text>
+<path class="ln lnd" d="M330 304 L110 304" marker-end="url(#ah)"/><text class="s lbl" x="220" y="297" text-anchor="middle">SSE: approval_required → ApprovalCard</text>
+<path class="ln lnd" d="M40 342 L1060 342"/>
+<text class="s lbl" x="550" y="346" text-anchor="middle">the user reads the exact query and decides (paused runs kept up to 24 h)</text>
+<path class="ln" d="M110 384 L330 384" marker-end="url(#ah)"/><text class="s lbl" x="220" y="377" text-anchor="middle">POST /chat/runs/:runId/resume { approved }</text>
+<rect class="code bx" x="195" y="405" width="270" height="26" rx="6"/><text class="t s" x="330" y="423" text-anchor="middle">check owner · take the run (only once)</text>
+<path class="ln" d="M330 456 L990 456" marker-end="url(#ah)"/><text class="s lbl" x="660" y="449" text-anchor="middle">record agent_tool_approval (tools, inputs)</text>
+<path class="ln" d="M330 492 L550 492" marker-end="url(#ah)"/><text class="s lbl" x="440" y="485" text-anchor="middle">Command({ resume: { approved } })</text>
+<path class="ln lnd" d="M770 528 L550 528" marker-end="url(#ah)"/><text class="s lbl" x="660" y="521" text-anchor="middle">restore state</text>
+<rect class="code bx" x="385" y="549" width="330" height="26" rx="6"/><text class="t s" x="550" y="567" text-anchor="middle">runTools · a declined call gets 'user declined'</text>
+<path class="ln lnd" d="M550 604 L110 604" marker-end="url(#ah)"/><text class="s lbl" x="330" y="597" text-anchor="middle">stream the rest of the turn · [DONE]</text>
+</svg>

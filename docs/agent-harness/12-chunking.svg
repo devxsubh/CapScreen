@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 400" width="1000" height="400" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">How text is chunked (lib/rag/chunkText.ts)</title>
+<desc id="desc">Whole sentences, up to 450 words per chunk, each chunk starting with the previous chunk's last sentences.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="400"/>
+<text class="t h" x="30" y="40">How text is chunked (lib/rag/chunkText.ts)</text>
+<text class="t m mut" x="30" y="62">Whole sentences, up to 450 words per chunk, each chunk starting with the previous chunk's last sentences.</text>
+<rect class="zone" x="40" y="90" width="760" height="230" rx="14"/><text class="zonet" x="56" y="112">PAGE 3</text>
+<rect class="zone" x="820" y="90" width="150" height="230" rx="14"/><text class="zonet" x="836" y="112">PAGE 4</text>
+<rect class="hl" x="330" y="146" width="178" height="130" rx="6"/>
+<rect class="code bx" x="60" y="196" width="84" height="34" rx="9"/><text class="t b" x="102" y="219" text-anchor="middle">S1</text>
+<rect class="code bx" x="152" y="196" width="62" height="34" rx="9"/><text class="t b" x="183" y="219" text-anchor="middle">S2</text>
+<rect class="code bx" x="222" y="196" width="104" height="34" rx="9"/><text class="t b" x="274" y="219" text-anchor="middle">S3</text>
+<rect class="code bx" x="334" y="196" width="70" height="34" rx="9"/><text class="t b" x="369" y="219" text-anchor="middle">S4</text>
+<rect class="code bx" x="412" y="196" width="92" height="34" rx="9"/><text class="t b" x="458" y="219" text-anchor="middle">S5</text>
+<rect class="code bx" x="512" y="196" width="66" height="34" rx="9"/><text class="t b" x="545" y="219" text-anchor="middle">S6</text>
+<rect class="code bx" x="586" y="196" width="112" height="34" rx="9"/><text class="t b" x="642" y="219" text-anchor="middle">S7</text>
+<rect class="code bx" x="706" y="196" width="60" height="34" rx="9"/><text class="t b" x="736" y="219" text-anchor="middle">S8</text>
+<path class="ln" d="M60 186 L60 176 L504 176 L504 186"/>
+<text class="t s" x="282" y="166" text-anchor="middle">Chunk 1 · up to 450 words</text>
+<path class="ln" d="M334 240 L334 250 L766 250 L766 240"/>
+<text class="t s" x="550" y="270" text-anchor="middle">Chunk 2 · begins with chunk 1's last sentences (≤ 67 words)</text>
+<text class="t xs mut" x="419" y="300" text-anchor="middle">overlap</text>
+<rect class="code bx" x="845" y="196" width="100" height="34" rx="9"/><text class="t b" x="895" y="219" text-anchor="middle">S9</text>
+<path class="ln" d="M845 186 L845 176 L945 176 L945 186"/>
+<text class="t s" x="895" y="166" text-anchor="middle">Chunk 3</text>
+<text class="t xs mut" x="895" y="270" text-anchor="middle">new page,</text>
+<text class="t xs mut" x="895" y="286" text-anchor="middle">new chunk</text>
+<text class="t s mut" x="40" y="350" text-anchor="start">Sentences end at . ! or ? before a capital letter, or at a blank line. A sentence over 450 words becomes its own chunk.</text>
+<text class="t s mut" x="40" y="372" text-anchor="start">Chunks never cross a page, so every excerpt keeps its page number for citations.</text>
+</svg>

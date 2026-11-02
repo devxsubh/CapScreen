@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" width="1100" height="560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">The repository: one pnpm workspace, three packages</title>
+<desc id="desc">The desktop package builds and runs the other two. The frontend talks to the backend over HTTP and imports its types.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="560"/>
+<text class="t h" x="30" y="40">The repository: one pnpm workspace, three packages</text>
+<text class="t m mut" x="30" y="62">The desktop package builds and runs the other two. The frontend talks to the backend over HTTP and imports its types.</text>
+<rect class="ui bx" x="30" y="90" width="320" height="330" rx="9"/><text class="t b" x="46" y="116" text-anchor="start">backend/  (vc-screener-backend)</text>
+<rect class="code bx" x="44" y="132" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="152.5" text-anchor="start">src/modules/  ·  17 feature modules</text>
+<rect class="code bx" x="44" y="170" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="190.5" text-anchor="start">src/lib/  ·  screening, agent, tools, llm, rag</text>
+<rect class="code bx" x="44" y="208" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="228.5" text-anchor="start">src/models/  ·  mongoose schemas</text>
+<rect class="code bx" x="44" y="246" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="266.5" text-anchor="start">src/http/, middleware/  ·  shared HTTP</text>
+<rect class="code bx" x="44" y="284" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="304.5" text-anchor="start">test/  ·  node:test suites</text>
+<rect class="code bx" x="44" y="322" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="342.5" text-anchor="start">sample-data/, corpus/  ·  demo + policy</text>
+<rect class="code bx" x="44" y="360" width="292" height="32" rx="9"/><text class="t xs mut" x="58" y="380.5" text-anchor="start">api/index.ts  ·  Vercel auth entry</text>
+<rect class="ui bx" x="410" y="90" width="320" height="330" rx="9"/><text class="t b" x="426" y="116" text-anchor="start">frontend/  (capscreen)</text>
+<rect class="code bx" x="424" y="132" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="152.5" text-anchor="start">src/app/  ·  routes only</text>
+<rect class="code bx" x="424" y="170" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="190.5" text-anchor="start">src/features/  ·  one folder per area</text>
+<rect class="code bx" x="424" y="208" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="228.5" text-anchor="start">src/api/  ·  one client per module</text>
+<rect class="code bx" x="424" y="246" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="266.5" text-anchor="start">src/components/  ·  ui, layout, chat</text>
+<rect class="code bx" x="424" y="284" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="304.5" text-anchor="start">src/contexts/, hooks/, lib/  ·  app-wide</text>
+<rect class="code bx" x="424" y="322" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="342.5" text-anchor="start">src/types/  ·  re-exports backend</text>
+<rect class="code bx" x="424" y="360" width="292" height="32" rx="9"/><text class="t xs mut" x="438" y="380.5" text-anchor="start">public/  ·  logos, brand marks</text>
+<rect class="ui bx" x="790" y="90" width="280" height="330" rx="9"/><text class="t b" x="806" y="116" text-anchor="start">desktop/  (capscreen-desktop)</text>
+<rect class="code bx" x="804" y="132" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="152.5" text-anchor="start">src/main.ts  ·  entry</text>
+<rect class="code bx" x="804" y="170" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="190.5" text-anchor="start">src/sidecars/  ·  start + watch</text>
+<rect class="code bx" x="804" y="208" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="228.5" text-anchor="start">src/bridge/  ·  capscreen://, IPC</text>
+<rect class="code bx" x="804" y="246" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="266.5" text-anchor="start">src/auth/  ·  PKCE sign-in</text>
+<rect class="code bx" x="804" y="284" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="304.5" text-anchor="start">src/window/  ·  window, tray</text>
+<rect class="code bx" x="804" y="322" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="342.5" text-anchor="start">scripts/  ·  bundle + build</text>
+<rect class="code bx" x="804" y="360" width="252" height="32" rx="9"/><text class="t xs mut" x="818" y="380.5" text-anchor="start">electron-builder.yml  ·  installers</text>
+<path class="ln" d="M410 200 L350 200" marker-end="url(#ah)"/><text class="s lbl" x="380" y="192" text-anchor="middle">HTTP</text>
+<path class="ln lnd" d="M410 360 L350 360" marker-end="url(#ah)"/><text class="s lbl" x="380" y="352" text-anchor="middle">types</text>
+<path class="ln" d="M790 200 L730 200" marker-end="url(#ah)"/><text class="s lbl" x="760" y="192" text-anchor="middle">builds</text>
+<path class="ln" d="M930 420 L930 446 L190 446 L190 420" marker-end="url(#ah)"/><text class="s lbl" x="560" y="440" text-anchor="middle">bundles with esbuild and runs it as a sidecar (plus the Watchman Go binary)</text>
+<rect class="ui bx" x="30" y="480" width="330" height="50" rx="9"/><text class="t b" x="195" y="500" text-anchor="middle">docs/</text><text class="t s mut" x="195" y="520" text-anchor="middle">guides + generated diagrams</text>
+<rect class="ui bx" x="385" y="480" width="330" height="50" rx="9"/><text class="t b" x="550" y="500" text-anchor="middle">.claude/</text><text class="t s mut" x="550" y="520" text-anchor="middle">agents, commands, memory, hooks</text>
+<rect class="ui bx" x="740" y="480" width="330" height="50" rx="9"/><text class="t b" x="905" y="500" text-anchor="middle">root</text><text class="t s mut" x="905" y="520" text-anchor="middle">pnpm workspace · husky · CI</text>
+</svg>

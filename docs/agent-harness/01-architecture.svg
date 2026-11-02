@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 770" width="1100" height="770" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Where AI sits in CapScreen</title>
+<desc id="desc">Models orchestrate, map columns and write text. Matching, scores, tiers and ownership rules are code.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="770"/>
+<text class="t h" x="30" y="40">Where AI sits in CapScreen</text>
+<text class="t m mut" x="30" y="62">Models orchestrate, map columns and write text. Matching, scores, tiers and ownership rules are code.</text>
+<rect class="zone" x="20" y="84" width="800" height="640" rx="14"/><text class="zonet" x="36" y="106">YOUR COMPUTER · DESKTOP APP</text>
+<rect class="zone" x="840" y="84" width="240" height="640" rx="14"/><text class="zonet" x="856" y="106">INTERNET · OPTIONAL</text>
+<rect class="ui bx" x="40" y="118" width="760" height="62" rx="9"/><text class="t b" x="420" y="144" text-anchor="middle">UI (Next.js, inside the app window)</text><text class="t s mut" x="420" y="164" text-anchor="middle">Assistant · Startup chat · Grid chat · Side panel · Plan checklist · Approval card</text>
+<path class="ln" d="M380 180 L380 222" marker-end="url(#ah)"/><text class="s lbl" x="388" y="206" text-anchor="start">request</text>
+<path class="ln" d="M470 222 L470 180" marker-end="url(#ah)"/><text class="s lbl" x="478" y="206" text-anchor="start">SSE events</text>
+<rect class="code bx" x="200" y="222" width="440" height="60" rx="9"/><text class="t b" x="420" y="247" text-anchor="middle">Chat routes</text><text class="t s mut" x="420" y="267" text-anchor="middle">POST /chat · /chat/runs/:id/resume · /tabular-review/:id/chat</text>
+<path class="ln" d="M420 282 L420 310" marker-end="url(#ah)"/>
+<rect class="prompt bx" x="40" y="320" width="170" height="120" rx="9"/><text class="t b" x="125" y="351" text-anchor="middle">Prompt builder</text><text class="t s mut" x="125" y="371" text-anchor="middle">base prompt</text><text class="t s mut" x="125" y="387" text-anchor="middle">+ tool routing hints</text><text class="t s mut" x="125" y="403" text-anchor="middle">+ session context</text><text class="t s mut" x="125" y="419" text-anchor="middle">+ focus / workflow</text>
+<path class="ln" d="M210 380 L250 380" marker-end="url(#ah)"/>
+<rect class="ai bx" x="250" y="310" width="340" height="140" rx="9"/><text class="t b" x="420" y="359" text-anchor="middle">Agent harness (LangGraph)</text><text class="t s mut" x="420" y="379" text-anchor="middle">callModel ⇄ runTools · up to 8 rounds</text><text class="t s mut" x="420" y="395" text-anchor="middle">approvals · sub-agents · plans</text><text class="t s mut" x="420" y="411" text-anchor="middle">streams every step to the UI</text>
+<path class="ln" d="M590 380 L630 380" marker-end="url(#ah)"/>
+<rect class="ai bx" x="630" y="310" width="170" height="140" rx="9"/><text class="t b" x="715" y="343" text-anchor="middle">Model providers</text><text class="t s mut" x="715" y="363" text-anchor="middle">roles: agent, utility,</text><text class="t s mut" x="715" y="379" text-anchor="middle">embedding</text><text class="t s mut" x="715" y="395" text-anchor="middle">Anthropic · OpenAI API</text><text class="t s mut" x="715" y="411" text-anchor="middle">Ollama · LM Studio</text><text class="t s mut" x="715" y="427" text-anchor="middle">local-only gate</text>
+<path class="lno" d="M800 380 L860 380" marker-end="url(#ao)"/>
+<path class="ln" d="M420 450 L420 490" marker-end="url(#ah)"/>
+<rect class="code bx" x="250" y="490" width="340" height="80" rx="9"/><text class="t b" x="420" y="517" text-anchor="middle">Tool registry · 13 tools</text><text class="t s mut" x="420" y="537" text-anchor="middle">screening · documents · knowledge</text><text class="t s mut" x="420" y="553" text-anchor="middle">plans · sub-agents · web search</text>
+<path class="lno" d="M590 530 L860 530" marker-end="url(#ao)"/><text class="s lbl" x="725" y="522" text-anchor="middle">web_search</text>
+<path class="ln" d="M420 570 L420 594"/>
+<path class="ln" d="M125 594 L515 594"/>
+<path class="ln" d="M125 594 L125 614" marker-end="url(#ah)"/>
+<path class="ln" d="M315 594 L315 614" marker-end="url(#ah)"/>
+<path class="ln" d="M515 594 L515 614" marker-end="url(#ah)"/>
+<rect class="data bx" x="40" y="614" width="170" height="84" rx="9"/><text class="t b" x="125" y="643" text-anchor="middle">SQLite + files</text><text class="t s mut" x="125" y="663" text-anchor="middle">screenings, documents,</text><text class="t s mut" x="125" y="679" text-anchor="middle">chunks, chats</text>
+<rect class="code bx" x="230" y="614" width="170" height="84" rx="9"/><text class="t b" x="315" y="643" text-anchor="middle">Document search</text><text class="t s mut" x="315" y="663" text-anchor="middle">parse · chunk</text><text class="t s mut" x="315" y="679" text-anchor="middle">embed · retrieve</text>
+<rect class="code bx" x="420" y="614" width="190" height="84" rx="9"/><text class="t b" x="515" y="643" text-anchor="middle">Screening engine</text><text class="t s mut" x="515" y="663" text-anchor="middle">CSV ingest · graph</text><text class="t s mut" x="515" y="679" text-anchor="middle">tiers · 50% / 25% rules</text>
+<path class="ln" d="M610 656 L630 656" marker-end="url(#ah)"/>
+<rect class="code bx" x="630" y="614" width="170" height="84" rx="9"/><text class="t b" x="715" y="643" text-anchor="middle">Watchman sidecar</text><text class="t s mut" x="715" y="663" text-anchor="middle">OFAC / EU lists</text><text class="t s mut" x="715" y="679" text-anchor="middle">deterministic matching</text>
+<path class="lno" d="M800 656 L860 656" marker-end="url(#ao)"/>
+<rect class="ext bx" x="860" y="320" width="200" height="120" rx="9"/><text class="t b" x="960" y="367" text-anchor="middle">Cloud model APIs</text><text class="t s mut" x="960" y="387" text-anchor="middle">only when you assign</text><text class="t s mut" x="960" y="403" text-anchor="middle">a cloud model</text>
+<rect class="ext bx" x="860" y="490" width="200" height="80" rx="9"/><text class="t b" x="960" y="525" text-anchor="middle">Tavily web search</text><text class="t s mut" x="960" y="545" text-anchor="middle">you approve each query</text>
+<rect class="ext bx" x="860" y="614" width="200" height="84" rx="9"/><text class="t b" x="960" y="643" text-anchor="middle">Sanctions lists</text><text class="t s mut" x="960" y="663" text-anchor="middle">OFAC / EU downloads</text><text class="t s mut" x="960" y="679" text-anchor="middle">every 12 hours</text>
+<rect class="code bx" x="30" y="741" width="16" height="14" rx="4"/><text class="t s mut" x="52" y="752" text-anchor="start">Code (deterministic)</text><rect class="ai bx" x="198" y="741" width="16" height="14" rx="4"/><text class="t s mut" x="220" y="752" text-anchor="start">Model call</text><rect class="prompt bx" x="306" y="741" width="16" height="14" rx="4"/><text class="t s mut" x="328" y="752" text-anchor="start">Prompt text</text><rect class="data bx" x="420" y="741" width="16" height="14" rx="4"/><text class="t s mut" x="442" y="752" text-anchor="start">Storage</text><rect class="ext bx" x="510" y="741" width="16" height="14" rx="4"/><text class="t s mut" x="532" y="752" text-anchor="start">Network</text><rect class="ui bx" x="600" y="741" width="16" height="14" rx="4"/><text class="t s mut" x="622" y="752" text-anchor="start">UI</text>
+</svg>

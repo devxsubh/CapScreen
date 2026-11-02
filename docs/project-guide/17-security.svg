@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" width="1000" height="580" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Security boundaries</title>
+<desc id="desc">Each ring is a boundary with its own control. The innermost ring is where the data lives.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="580"/>
+<text class="t h" x="30" y="40">Security boundaries</text>
+<text class="t m mut" x="30" y="62">Each ring is a boundary with its own control. The innermost ring is where the data lives.</text>
+<rect class="ext bx dash" x="30" y="84" width="940" height="466" rx="18"/>
+<text class="zonet" x="50" y="108" text-anchor="start">THE INTERNET</text>
+<text class="t s mut" x="50" y="126" text-anchor="start">Leaves the machine: list downloads · sign-in · cloud models only if assigned (local-only blocks) · web_search asks first</text>
+<rect class="ui bx" x="70" y="140" width="860" height="390" rx="16"/>
+<text class="zonet" x="90" y="164" text-anchor="start">YOUR MACHINE</text>
+<text class="t s mut" x="90" y="182" text-anchor="start">Backend, UI and Watchman bind to 127.0.0.1 only · secrets sealed by the OS keychain · desktop never reads .env</text>
+<rect class="code bx" x="110" y="196" width="780" height="314" rx="14"/>
+<text class="zonet" x="130" y="220" text-anchor="start">LOCAL API</text>
+<text class="t s mut" x="130" y="238" text-anchor="start">Per-launch token (x-capscreen-token, constant-time check) added by the main process · sandboxed renderer, validated IPC</text>
+<rect class="data bx" x="150" y="252" width="700" height="238" rx="12"/>
+<text class="zonet" x="170" y="276" text-anchor="start">DATA  ·  &lt;userData&gt;</text>
+<rect class="data bx" x="170" y="292" width="200" height="70" rx="9"/><text class="t b" x="270" y="314" text-anchor="middle">API keys</text><text class="t s mut" x="270" y="334" text-anchor="middle">AES-256-GCM,</text><text class="t s mut" x="270" y="350" text-anchor="middle">master key in keychain</text>
+<rect class="data bx" x="400" y="292" width="200" height="70" rx="9"/><text class="t b" x="500" y="314" text-anchor="middle">Backups</text><text class="t s mut" x="500" y="334" text-anchor="middle">AES-256-GCM,</text><text class="t s mut" x="500" y="350" text-anchor="middle">key from your password</text>
+<rect class="warn bx" x="630" y="292" width="200" height="70" rx="9"/><text class="t b" x="730" y="314" text-anchor="middle">Database</text><text class="t s mut" x="730" y="334" text-anchor="middle">not encrypted at rest</text><text class="t s mut" x="730" y="350" text-anchor="middle">(rely on FileVault)</text>
+<rect class="ui bx" x="170" y="384" width="660" height="84" rx="9"/><text class="t b" x="500" y="413" text-anchor="middle">Prompts and audit</text><text class="t s mut" x="500" y="433" text-anchor="middle">uploaded text and entity names are escaped and fenced in prompts</text><text class="t s mut" x="500" y="449" text-anchor="middle">audit log for uploads, screens, reviews, documents, tool approvals · hash-chained export</text>
+</svg>

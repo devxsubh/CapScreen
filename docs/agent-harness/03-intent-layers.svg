@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">How the agent decides what to do</title>
+<desc id="desc">There is no intent-classifier model. Seven layers, from code to model, narrow the choice.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="600"/>
+<text class="t h" x="30" y="40">How the agent decides what to do</text>
+<text class="t m mut" x="30" y="62">There is no intent-classifier model. Seven layers, from code to model, narrow the choice.</text>
+<rect class="ui bx" x="110" y="88" width="860" height="52" rx="9"/>
+<circle class="dot" cx="136" cy="114" r="13"/>
+<text class="xs" x="136" y="118" text-anchor="middle" fill="#fff" font-weight="700">1</text>
+<text class="t b" x="160" y="110" text-anchor="start">User's choice in the UI</text>
+<text class="t s mut" x="160" y="129" text-anchor="start">workflow · focus · @-mention · attached CSV</text>
+<rect class="code bx" x="133" y="150" width="814" height="52" rx="9"/>
+<circle class="dot" cx="159" cy="176" r="13"/>
+<text class="xs" x="159" y="180" text-anchor="middle" fill="#fff" font-weight="700">2</text>
+<text class="t b" x="183" y="172" text-anchor="start">Forced tool (code)</text>
+<text class="t s mut" x="183" y="191" text-anchor="start">CSV attached + nothing screened → round 0 must call screen_cap_table</text>
+<rect class="prompt bx" x="156" y="212" width="768" height="52" rx="9"/>
+<circle class="dot" cx="182" cy="238" r="13"/>
+<text class="xs" x="182" y="242" text-anchor="middle" fill="#fff" font-weight="700">3</text>
+<text class="t b" x="206" y="234" text-anchor="start">Per-message instructions</text>
+<text class="t s mut" x="206" y="253" text-anchor="start">workflow → call read_workflow first · focus → one extra sentence</text>
+<rect class="prompt bx" x="179" y="274" width="722" height="52" rx="9"/>
+<circle class="dot" cx="205" cy="300" r="13"/>
+<text class="xs" x="205" y="304" text-anchor="middle" fill="#fff" font-weight="700">4</text>
+<text class="t b" x="229" y="296" text-anchor="start">State-aware prompt sections</text>
+<text class="t s mut" x="229" y="315" text-anchor="start">result exists → don't re-screen · nothing loaded → web / playbook</text>
+<rect class="prompt bx" x="202" y="336" width="676" height="52" rx="9"/>
+<circle class="dot" cx="228" cy="362" r="13"/>
+<text class="xs" x="228" y="366" text-anchor="middle" fill="#fff" font-weight="700">5</text>
+<text class="t b" x="252" y="358" text-anchor="start">Tool routing hints</text>
+<text class="t s mut" x="252" y="377" text-anchor="start">one '## Tool routing' block built from every tool's routingHint</text>
+<rect class="prompt bx" x="225" y="398" width="630" height="52" rx="9"/>
+<circle class="dot" cx="251" cy="424" r="13"/>
+<text class="xs" x="251" y="428" text-anchor="middle" fill="#fff" font-weight="700">6</text>
+<text class="t b" x="275" y="420" text-anchor="start">Tool descriptions + schemas</text>
+<text class="t s mut" x="275" y="439" text-anchor="start">'ONLY call when…' · 'DO NOT call if…' · query_type enum</text>
+<rect class="ai bx" x="248" y="460" width="584" height="52" rx="9"/>
+<circle class="dot" cx="274" cy="486" r="13"/>
+<text class="xs" x="274" y="490" text-anchor="middle" fill="#fff" font-weight="700">7</text>
+<text class="t b" x="298" y="482" text-anchor="start">The model's own choice</text>
+<text class="t s mut" x="298" y="501" text-anchor="start">which tools, arguments, order, how many in parallel</text>
+<path class="ln" d="M64 92 L64 516" marker-end="url(#ah)"/>
+<text class="t xs mut" transform="translate(52 304) rotate(-90)" text-anchor="middle">more code  ·  more model judgment</text>
+<rect class="ui bx" x="110" y="561" width="16" height="14" rx="4"/><text class="t s mut" x="132" y="572" text-anchor="start">User</text><rect class="code bx" x="182" y="561" width="16" height="14" rx="4"/><text class="t s mut" x="204" y="572" text-anchor="start">Code</text><rect class="prompt bx" x="254" y="561" width="16" height="14" rx="4"/><text class="t s mut" x="276" y="572" text-anchor="start">Prompt text written by code</text><rect class="ai bx" x="464" y="561" width="16" height="14" rx="4"/><text class="t s mut" x="486" y="572" text-anchor="start">Model</text>
+</svg>

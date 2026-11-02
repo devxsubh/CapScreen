@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 560" width="1100" height="560" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Backup, restore and the audit chain (lib/infra/backup.ts)</title>
+<desc id="desc">Backups are encrypted with a password; restores swap data in before the database opens; the audit export is hash-chained.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1100" height="560"/>
+<text class="t h" x="30" y="40">Backup, restore and the audit chain (lib/infra/backup.ts)</text>
+<text class="t m mut" x="30" y="62">Backups are encrypted with a password; restores swap data in before the database opens; the audit export is hash-chained.</text>
+<text class="t b" x="30" y="100" text-anchor="start">1 · The backup file</text>
+<rect class="ui bx" x="30" y="112" width="180" height="40" rx="9"/><text class="t s mut" x="120" y="136" text-anchor="middle">"CAPSCREENBAK1\n"</text>
+<rect class="code bx" x="210" y="112" width="90" height="40" rx="9"/><text class="t s mut" x="255" y="136" text-anchor="middle">salt · 16</text>
+<rect class="code bx" x="300" y="112" width="80" height="40" rx="9"/><text class="t s mut" x="340" y="136" text-anchor="middle">iv · 12</text>
+<rect class="code bx" x="380" y="112" width="90" height="40" rx="9"/><text class="t s mut" x="425" y="136" text-anchor="middle">tag · 16</text>
+<rect class="data bx" x="470" y="112" width="600" height="40" rx="9"/><text class="t s mut" x="770" y="136" text-anchor="middle">AES-256-GCM( gzip( manifest + files ) )</text>
+<text class="t s mut" x="30" y="176" text-anchor="start">key = scrypt(password, salt) · holds the database snapshot, files, settings and model choices · never API keys</text>
+<text class="t b" x="30" y="224" text-anchor="start">2 · Restoring</text>
+<rect class="ui bx" x="30" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="98" y="269" text-anchor="middle">pick the file</text><text class="t s mut" x="98" y="285" text-anchor="middle">+ password</text>
+<path class="ln" d="M166 273 L180 273" marker-end="url(#ah)"/>
+<rect class="code bx" x="180" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="248" y="269" text-anchor="middle">decrypt and</text><text class="t s mut" x="248" y="285" text-anchor="middle">validate</text>
+<path class="ln" d="M316 273 L330 273" marker-end="url(#ah)"/>
+<rect class="code bx" x="330" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="398" y="269" text-anchor="middle">unpack into</text><text class="t s mut" x="398" y="285" text-anchor="middle">restore-staging/</text>
+<path class="ln" d="M466 273 L480 273" marker-end="url(#ah)"/>
+<rect class="code bx" x="480" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="548" y="269" text-anchor="middle">write restore-</text><text class="t s mut" x="548" y="285" text-anchor="middle">pending.json</text>
+<path class="ln" d="M616 273 L630 273" marker-end="url(#ah)"/>
+<rect class="warn bx" x="630" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="698" y="269" text-anchor="middle">backend exits</text><text class="t s mut" x="698" y="285" text-anchor="middle">with code 75</text>
+<path class="ln" d="M766 273 L780 273" marker-end="url(#ah)"/>
+<rect class="code bx" x="780" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="848" y="269" text-anchor="middle">supervisor</text><text class="t s mut" x="848" y="285" text-anchor="middle">restarts it</text>
+<path class="ln" d="M916 273 L930 273" marker-end="url(#ah)"/>
+<rect class="data bx" x="930" y="238" width="136" height="70" rx="9"/><text class="t s mut" x="998" y="261" text-anchor="middle">applyPending-</text><text class="t s mut" x="998" y="277" text-anchor="middle">Restore() before</text><text class="t s mut" x="998" y="293" text-anchor="middle">the DB opens</text>
+<text class="t b" x="30" y="362" text-anchor="start">3 · The audit export (GET /api/desktop/audit-export)</text>
+<rect class="data bx" x="30" y="378" width="200" height="64" rx="9"/><text class="t b" x="130" y="405" text-anchor="middle">entry 1</text><text class="t s mut" x="130" y="425" text-anchor="middle">hash = sha256(entry)</text>
+<path class="ln" d="M230 410 L270 410" marker-end="url(#ah)"/>
+<rect class="data bx" x="270" y="378" width="200" height="64" rx="9"/><text class="t b" x="370" y="405" text-anchor="middle">entry 2</text><text class="t s mut" x="370" y="425" text-anchor="middle">hash = sha256(prev + entry)</text>
+<path class="ln" d="M470 410 L510 410" marker-end="url(#ah)"/>
+<rect class="data bx" x="510" y="378" width="200" height="64" rx="9"/><text class="t b" x="610" y="405" text-anchor="middle">entry 3</text><text class="t s mut" x="610" y="425" text-anchor="middle">hash = sha256(prev + entry)</text>
+<path class="ln" d="M710 410 L750 410" marker-end="url(#ah)"/>
+<rect class="data bx" x="750" y="378" width="200" height="64" rx="9"/><text class="t b" x="850" y="405" text-anchor="middle">entry 4</text><text class="t s mut" x="850" y="425" text-anchor="middle">hash = sha256(prev + entry)</text>
+<rect class="warn bx" x="30" y="466" width="920" height="44" rx="9"/><text class="t b" x="490" y="494" text-anchor="middle">Edit, delete or reorder any line and every hash after it stops matching</text>
+<text class="t s mut" x="30" y="536" text-anchor="start">The database file itself is not encrypted at rest; API keys and backups are.</text>
+</svg>

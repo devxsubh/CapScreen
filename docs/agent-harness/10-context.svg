@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 520" width="1000" height="520" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">What the model sees, turn by turn</title>
+<desc id="desc">Within a turn it sees every tool call and result. Across turns only text and state carry over.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1000" height="520"/>
+<text class="t h" x="30" y="40">What the model sees, turn by turn</text>
+<text class="t m mut" x="30" y="62">Within a turn it sees every tool call and result. Across turns only text and state carry over.</text>
+<rect class="zone" x="40" y="90" width="330" height="340" rx="14"/><text class="zonet" x="56" y="112">TURN 1</text>
+<rect class="prompt bx" x="56" y="124" width="298" height="52" rx="9"/><text class="t b" x="205" y="145" text-anchor="middle">System prompt</text><text class="t s mut" x="205" y="165" text-anchor="middle">full CSV inside &lt;csv_data&gt;</text>
+<rect class="ui bx" x="56" y="186" width="298" height="52" rx="9"/><text class="t b" x="205" y="207" text-anchor="middle">Message text</text><text class="t s mut" x="205" y="227" text-anchor="middle">'Screen this cap table'</text>
+<rect class="code bx" x="56" y="248" width="298" height="52" rx="9"/><text class="t b" x="205" y="269" text-anchor="middle">Tool call + result</text><text class="t s mut" x="205" y="289" text-anchor="middle">screen_cap_table → counts</text>
+<rect class="ai bx" x="56" y="310" width="298" height="52" rx="9"/><text class="t b" x="205" y="331" text-anchor="middle">Answer</text><text class="t s mut" x="205" y="351" text-anchor="middle">'3 flagged, 2 need review…'</text>
+<path class="ln" d="M372 112 L628 112" marker-end="url(#ah)"/><text class="s lbl" x="500" y="105" text-anchor="middle">carried to the next turn</text>
+<rect class="data bx" x="390" y="132" width="220" height="36" rx="9"/><text class="t s mut" x="500" y="154" text-anchor="middle">message text (both turns)</text>
+<rect class="data bx" x="390" y="176" width="220" height="36" rx="9"/><text class="t s mut" x="500" y="198" text-anchor="middle">screening result → counts</text>
+<rect class="data bx" x="390" y="220" width="220" height="36" rx="9"/><text class="t s mut" x="500" y="242" text-anchor="middle">CSV text, only until screened</text>
+<rect class="data bx" x="390" y="264" width="220" height="36" rx="9"/><text class="t s mut" x="500" y="286" text-anchor="middle">@-mentions, re-resolved</text>
+<rect class="data bx" x="390" y="308" width="220" height="36" rx="9"/><text class="t s mut" x="500" y="330" text-anchor="middle">open startup id</text>
+<rect class="warn bx" x="390" y="360" width="220" height="54" rx="9"/><text class="t b" x="500" y="382" text-anchor="middle">Not resent</text><text class="t s mut" x="500" y="402" text-anchor="middle">turn 1 tool calls + results</text>
+<rect class="zone" x="630" y="90" width="330" height="340" rx="14"/><text class="zonet" x="646" y="112">TURN 2</text>
+<rect class="prompt bx" x="646" y="124" width="298" height="52" rx="9"/><text class="t b" x="795" y="145" text-anchor="middle">System prompt</text><text class="t s mut" x="795" y="165" text-anchor="middle">+ prior screening counts</text>
+<rect class="ui bx" x="646" y="186" width="298" height="52" rx="9"/><text class="t b" x="795" y="207" text-anchor="middle">Message text</text><text class="t s mut" x="795" y="227" text-anchor="middle">turn 1 text + 'Why is A flagged?'</text>
+<rect class="code bx" x="646" y="248" width="298" height="52" rx="9"/><text class="t b" x="795" y="269" text-anchor="middle">Tool call + result</text><text class="t s mut" x="795" y="289" text-anchor="middle">query_screening_data → detail</text>
+<rect class="ai bx" x="646" y="310" width="298" height="52" rx="9"/><text class="t b" x="795" y="331" text-anchor="middle">Answer</text><text class="t s mut" x="795" y="351" text-anchor="middle">cites score, list, path</text>
+<text class="t s mut" x="40" y="462" text-anchor="start">Limits: 50 messages · 16 KB per message · CSV 500 KB · tool result 20,000 characters · grid chat 80 rows.</text>
+<text class="t s mut" x="40" y="484" text-anchor="start">No summarisation of long chats and no memory across chats.</text>
+</svg>

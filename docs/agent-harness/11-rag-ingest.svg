@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1150 380" width="1150" height="380" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-labelledby="title desc">
+<title id="title">Document ingest (lib/rag/ingestDocument.ts)</title>
+<desc id="desc">Starts in the background after the upload returns. The document is 'processing' until it ends.</desc>
+<defs><style>
+.bg{fill:#f8fafc}
+.t{fill:#0f172a}
+.h{font-size:20px;font-weight:700}
+.b{font-size:14px;font-weight:700}
+.m{font-size:13px}
+.s{font-size:12px}
+.xs{font-size:11px}
+.mut{fill:#475569}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.bx{stroke-width:1.5}
+.dash{stroke-dasharray:6 4}
+.code{fill:#eff6ff;stroke:#3b82f6}
+.ai{fill:#f5f3ff;stroke:#8b5cf6}
+.prompt{fill:#fffbeb;stroke:#d97706}
+.data{fill:#f0fdf4;stroke:#16a34a}
+.ext{fill:#fff7ed;stroke:#ea580c}
+.ui{fill:#ffffff;stroke:#94a3b8}
+.warn{fill:#fef2f2;stroke:#ef4444}
+.hl{fill:#fde68a;opacity:.45}
+.zone{fill:none;stroke:#94a3b8;stroke-width:1.5;stroke-dasharray:8 6}
+.zonet{fill:#64748b;font-size:12px;font-weight:700;letter-spacing:.06em}
+.ln{fill:none;stroke:#475569;stroke-width:1.6}
+.lnd{stroke-dasharray:6 5}
+.lno{fill:none;stroke:#ea580c;stroke-width:1.6;stroke-dasharray:6 5}
+.ahf{fill:#475569}
+.aho{fill:#ea580c}
+.life{stroke:#cbd5e1;stroke-width:1.5;stroke-dasharray:4 4}
+.lbl{fill:#475569;paint-order:stroke;stroke:#f8fafc;stroke-width:5px;stroke-linejoin:round}
+.dot{fill:#475569}
+</style>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="ahf" d="M0 0L10 5L0 10z"/></marker>
+<marker id="ao" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path class="aho" d="M0 0L10 5L0 10z"/></marker></defs>
+<rect class="bg" width="1150" height="380"/>
+<text class="t h" x="30" y="40">Document ingest (lib/rag/ingestDocument.ts)</text>
+<text class="t m mut" x="30" y="62">Starts in the background after the upload returns. The document is 'processing' until it ends.</text>
+<rect class="ui bx" x="30" y="110" width="140" height="110" rx="9"/><text class="t b" x="100" y="144" text-anchor="middle">Upload</text><text class="t s mut" x="100" y="164" text-anchor="middle">file saved</text><text class="t s mut" x="100" y="180" text-anchor="middle">status:</text><text class="t s mut" x="100" y="196" text-anchor="middle">processing</text>
+<path class="ln" d="M170 165 L200 165" marker-end="url(#ah)"/>
+<rect class="code bx" x="200" y="110" width="180" height="110" rx="9"/><text class="t b" x="290" y="136" text-anchor="middle">Parse</text><text class="t s mut" x="290" y="156" text-anchor="middle">PDF: one per page</text><text class="t s mut" x="290" y="172" text-anchor="middle">DOCX / TXT / CSV:</text><text class="t s mut" x="290" y="188" text-anchor="middle">one block</text><text class="t s mut" x="290" y="204" text-anchor="middle">no OCR</text>
+<path class="ln" d="M380 165 L410 165" marker-end="url(#ah)"/>
+<rect class="code bx" x="410" y="110" width="180" height="110" rx="9"/><text class="t b" x="500" y="144" text-anchor="middle">Chunk</text><text class="t s mut" x="500" y="164" text-anchor="middle">each page separately</text><text class="t s mut" x="500" y="180" text-anchor="middle">≈ 450 words</text><text class="t s mut" x="500" y="196" text-anchor="middle">67-word overlap</text>
+<path class="ln" d="M590 165 L620 165" marker-end="url(#ah)"/>
+<rect class="ai bx" x="620" y="110" width="180" height="110" rx="9"/><text class="t b" x="710" y="144" text-anchor="middle">Embed</text><text class="t s mut" x="710" y="164" text-anchor="middle">embedding role</text><text class="t s mut" x="710" y="180" text-anchor="middle">batches of 16</text><text class="t s mut" x="710" y="196" text-anchor="middle">none → empty vectors</text>
+<path class="ln" d="M800 165 L830 165" marker-end="url(#ah)"/>
+<rect class="data bx" x="830" y="110" width="160" height="110" rx="9"/><text class="t b" x="910" y="144" text-anchor="middle">Store</text><text class="t s mut" x="910" y="164" text-anchor="middle">DocChunk rows:</text><text class="t s mut" x="910" y="180" text-anchor="middle">text · page</text><text class="t s mut" x="910" y="196" text-anchor="middle">vector</text>
+<path class="ln" d="M990 165 L1010 165" marker-end="url(#ah)"/>
+<rect class="data bx" x="1010" y="110" width="120" height="110" rx="9"/><text class="t b" x="1070" y="152" text-anchor="middle">Ready</text><text class="t s mut" x="1070" y="172" text-anchor="middle">status: ready</text><text class="t s mut" x="1070" y="188" text-anchor="middle">chunk count</text>
+<path class="ln lnd" d="M290 220 L290 280" marker-end="url(#ah)"/><text class="s lbl" x="298" y="254" text-anchor="start">no text</text>
+<path class="ln lnd" d="M500 220 L500 280" marker-end="url(#ah)"/><text class="s lbl" x="508" y="254" text-anchor="start">no chunks</text>
+<path class="ln lnd" d="M710 220 L710 280" marker-end="url(#ah)"/><text class="s lbl" x="718" y="254" text-anchor="start">any failure</text>
+<rect class="warn bx" x="200" y="280" width="600" height="50" rx="9"/><text class="t b" x="500" y="300" text-anchor="middle">status: error</text><text class="t s mut" x="500" y="320" text-anchor="middle">message saved (max 500 characters); shown in the document list</text>
+</svg>
